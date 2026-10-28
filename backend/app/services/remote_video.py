@@ -15,12 +15,32 @@ MAX_REDIRECTS = 5
 MAX_DOWNLOAD_SECONDS = 120
 
 
+def _resolve(host: str, port: int, timeout: float) -> list:
+    """getaddrinfo has no timeout of its own; bound it so DNS cannot outlive the download budget."""
+    result: dict[str, object] = {}
+
+    def lookup() -> None:
+        try:
+            result["addresses"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except Exception as exc:  # noqa: BLE001 - re-raised in the caller thread
+            result["error"] = exc
+
+    thread = threading.Thread(target=lookup, daemon=True)
+    thread.start()
+    thread.join(timeout)
+    if thread.is_alive():
+        raise TimeoutError("Video host DNS lookup timed out")
+    if "error" in result:
+        raise result["error"]  # type: ignore[misc]
+    return result["addresses"]  # type: ignore[return-value]
+
+
 def _connection(url: str, timeout: float) -> tuple[http.client.HTTPConnection, str]:
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
         raise ValueError("Video URL must be public HTTP or HTTPS")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    addresses = socket.getaddrinfo(parsed.hostname, port, type=socket.SOCK_STREAM)
+    addresses = _resolve(parsed.hostname, port, timeout)
     ips = {item[4][0] for item in addresses}
     if not ips or any(not ipaddress.ip_address(ip).is_global for ip in ips):
         raise ValueError("Video URL must resolve only to public IP addresses")
