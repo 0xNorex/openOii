@@ -11,9 +11,6 @@ importers:
       '@fontsource/bangers':
         specifier: ^5.2.8
         version: 5.2.8
-      '@fontsource/caveat':
-        specifier: ^5.2.8
-        version: 5.2.8
       '@fontsource/fredoka':
         specifier: ^5.2.10
         version: 5.2.10
@@ -432,9 +429,6 @@ packages:
 
   '@fontsource/bangers@5.2.8':
     resolution: {integrity: sha512-fFFXg+IHf05TEQ4U0gS8f7B0JHrhAN7oEw/Q8wR0APPLXnhnQSfZz2QDjg0kmVuM+IsM28ODga+0rSpnHLqFfQ==}
-
-  '@fontsource/caveat@5.2.8':
-    resolution: {integrity: sha512-9fUUfFE2IQFKbx+xOcaeQxxmh8iJguEb8z+j1PeueO4UUx+XfT4pRm/B04ZDvFA794/iRxY/IibmP8ZKtIf4rw==}
 
   '@fontsource/fredoka@5.2.10':
     resolution: {integrity: sha512-DyzPCmTf0PkBbAu+gNvnPzfD/dYIXlyp+Zcb76jEQyt/vmRKGZgkH8FFF9W2sICDaA5p+GLk1XGFjWh5PPX+lg==}
@@ -3157,8 +3151,6 @@ snapshots:
   '@floating-ui/utils@0.2.10': {}
 
   '@fontsource/bangers@5.2.8': {}
-
-  '@fontsource/caveat@5.2.8': {}
 
   '@fontsource/fredoka@5.2.10': {}
 

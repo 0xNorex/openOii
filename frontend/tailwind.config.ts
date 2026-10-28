@@ -90,7 +90,6 @@ export default {
       fontFamily: {
         heading: ["Fredoka", "Comic Neue", "sans-serif"],
         sans: ["Nunito", "Comic Neue", "sans-serif"],
-        sketch: ["Caveat", "cursive"],
         mono: ["JetBrains Mono", "Menlo", "monospace"],
         comic: ["Bangers", "Impact", "sans-serif"],
       },
