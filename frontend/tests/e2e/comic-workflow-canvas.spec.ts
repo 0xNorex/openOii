@@ -321,3 +321,30 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 
 	expect(consoleErrors).toEqual([]);
 });
+
+test("mobile studio is one readable column at 390×844", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/project/7");
+
+	const preview = page.getByRole("region", { name: "项目预览" });
+	await expect(preview).toBeVisible();
+	await expect(page.locator(".react-flow")).toHaveCount(0);
+	await expect(page.locator("aside[aria-label='工作流活动']")).toHaveCount(0);
+
+	// 从上到下：状态 → 待处理 → 成片 → 分镜 → 角色 → 最近动态
+	const headings = await preview.getByRole("heading").allInnerTexts();
+	const order = ["分镜", "角色", "最近动态"].map((name) =>
+		headings.findIndex((text) => text.startsWith(name)),
+	);
+	expect(order.every((index) => index >= 0)).toBe(true);
+	expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+	await expect(page.getByTestId("mobile-final-video")).toBeVisible();
+	await expect(page.getByRole("link", { name: /下载成片/ })).toBeVisible();
+	await expect(page.locator('[data-shell="prompt-bar"]')).toBeVisible();
+
+	const overflow = await page.evaluate(
+		() => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+	);
+	expect(overflow).toBeLessThanOrEqual(0);
+});

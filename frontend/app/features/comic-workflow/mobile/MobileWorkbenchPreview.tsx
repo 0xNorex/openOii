@@ -57,9 +57,8 @@ export function MobileWorkbenchPreview({
 			</div>
 
 			{inbox ? (
-				<div className="overflow-hidden rounded-lg border-2 border-primary/30 bg-paper-100">
-					{inbox}
-				</div>
+				// InboxPanel 自带 p-3 与卡片边框：抵消外边距，与其它区块对齐
+				<div className="-mx-3 -my-3">{inbox}</div>
 			) : null}
 
 			{videoSrc ? (
