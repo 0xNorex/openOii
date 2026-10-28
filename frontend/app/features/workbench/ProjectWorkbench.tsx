@@ -19,7 +19,7 @@ import { buildComicWorkflow } from "~/features/comic-workflow/graph/buildComicWo
 import { AgentPanel, type AgentPanelTab } from "~/features/comic-workflow/agent/AgentPanel";
 import type { InboxActions } from "~/features/comic-workflow/agent/InboxPanel";
 import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
-import { InspectorColumn } from "~/features/comic-workflow/inspector/InspectorColumn";
+import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
 import { PromptBar } from "~/features/workbench/PromptBar";
 import {
 	deriveStudioStatus,
@@ -50,6 +50,9 @@ const VersionCompareDrawer = lazy(() =>
 	})),
 );
 
+// 窄于 1280px 时 Agent 面板与检查器互斥：开一个就收另一个，给画布留出空间
+const isNarrowStudio = () => typeof window !== "undefined" && window.innerWidth < 1280;
+
 export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const queryClient = useQueryClient();
 	const runState = useRunState(projectId);
@@ -65,9 +68,20 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const hasActiveRun = runIsGenerating || Boolean(runCurrentRunId);
 	const hasRecovery = Boolean(runRecoveryControl);
 	// 窄于 1440px 默认收起，避免浮层盖住画布；待确认时仍会自动展开
-	const [agentCollapsed, setAgentCollapsed] = useState(
+	const [agentCollapsed, setAgentCollapsedState] = useState(
 		() => typeof window !== "undefined" && window.innerWidth < 1440,
 	);
+	const [inspectorOpen, setInspectorOpenState] = useState(
+		() => typeof window === "undefined" || window.innerWidth >= 1280,
+	);
+	const setAgentCollapsed = useCallback((collapsed: boolean) => {
+		setAgentCollapsedState(collapsed);
+		if (!collapsed && isNarrowStudio()) setInspectorOpenState(false);
+	}, []);
+	const setInspectorOpen = useCallback((open: boolean) => {
+		setInspectorOpenState(open);
+		if (open && isNarrowStudio()) setAgentCollapsedState(true);
+	}, []);
 	const [agentTab, setAgentTab] = useState<AgentPanelTab>("activity");
 	const [assetsOpen, setAssetsOpen] = useState(false);
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -170,6 +184,12 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					? `角色 · ${selectedWorkflowNode.title}`
 					: `项目 · ${selectedWorkflowNode.title}`
 			: null;
+
+	// 选中目标变化时打开检查器；手动收起后同一选中不再强行弹开
+	const selectionKey = selectedNodeIds.length > 0 ? selectedNodeIds.join(",") : (selectedNodeId ?? "");
+	useEffect(() => {
+		if (selectionKey) setInspectorOpen(true);
+	}, [selectionKey, setInspectorOpen]);
 
 	const handleSelectedNodeIdChange = useCallback((nodeId: string | null) => {
 		setSelectedNodeId(nodeId);
@@ -496,6 +516,16 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								inboxItems={inboxItems}
 								inboxActions={inboxActions}
 							/>
+							<InspectorPanel
+								projectId={projectId}
+								selectedNode={selectedWorkflowNode}
+								selectedNodeIds={selectedNodeIds}
+								structureLocked={hasActiveRun || runAwaitingConfirm}
+								universeId={project?.universe_id ?? null}
+								briefNode={briefNode}
+								open={inspectorOpen}
+								onOpenChange={setInspectorOpen}
+							/>
 						</div>
 						{/* PromptBar 常驻画布下方：选中 → 提示 → 定点重跑 的核心入口 */}
 						<PromptBar
@@ -508,16 +538,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					</div>
 				) : null}
 
-				{!isMobileWorkbench ? (
-					<InspectorColumn
-						projectId={projectId}
-						selectedNode={selectedWorkflowNode}
-						selectedNodeIds={selectedNodeIds}
-						structureLocked={hasActiveRun || runAwaitingConfirm}
-						universeId={project?.universe_id ?? null}
-						briefNode={briefNode}
-					/>
-				) : null}
 			</main>
 
 			{isMobileWorkbench ? (

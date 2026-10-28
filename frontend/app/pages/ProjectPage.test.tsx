@@ -327,6 +327,16 @@ vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
   ),
 }));
 
+vi.mock('~/features/comic-workflow/inspector/InspectorPanel', () => ({
+  InspectorPanel: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="inspector-panel" data-open={open ? 'true' : 'false'}>
+      <button type="button" onClick={() => onOpenChange(!open)}>
+        切换检查器
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('~/features/workbench/PromptBar', () => ({
   PromptBar: ({ onSendFeedback }: { onSendFeedback?: (content: string) => void }) => (
     <button type="button" onClick={() => onSendFeedback?.('继续调整故事节奏')}>
@@ -612,6 +622,25 @@ describe('ProjectPage live hydration', () => {
     expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'true');
     await user.click(screen.getByRole('button', { name: '打开待处理' }));
     expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'false');
+  });
+
+  it('keeps the agent panel and inspector mutually exclusive below 1280px', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<ProjectPage />);
+
+    // jsdom 视口 1024px：检查器默认收起，Agent 面板也收起
+    expect(screen.getByTestId('inspector-panel')).toHaveAttribute('data-open', 'false');
+    await user.click(screen.getByRole('button', { name: '切换检查器' }));
+    expect(screen.getByTestId('inspector-panel')).toHaveAttribute('data-open', 'true');
+
+    await user.click(screen.getByRole('button', { name: '切换活动面板' }));
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'false');
+    expect(screen.getByTestId('inspector-panel')).toHaveAttribute('data-open', 'false');
+
+    await user.click(screen.getByRole('button', { name: '切换检查器' }));
+    expect(screen.getByTestId('inspector-panel')).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'true');
   });
 
   it('keeps generate enabled when only the video provider is invalid', () => {

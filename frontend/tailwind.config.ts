@@ -51,10 +51,6 @@ export default {
         normal: "var(--duration-normal)",
         slow: "var(--duration-slow)",
       },
-      width: {
-        inspector: "var(--workbench-inspector)",
-        "inspector-collapsed": "var(--workbench-inspector-collapsed)",
-      },
       colors: {
         // Owned semantic palette; values live in styles/tokens.css.
         primary: "rgb(var(--color-primary) / <alpha-value>)",
