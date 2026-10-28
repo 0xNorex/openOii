@@ -47,7 +47,7 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 						{entry.status === "running" ? " · 进行中" : null}
 					</span>
 					{entry.durationMs !== undefined ? (
-						<span className="shrink-0 font-mono text-xs tabular-nums text-ink-subtle">
+						<span className="shrink-0 font-mono text-xs tabular-nums text-ink-muted">
 							{formatDuration(entry.durationMs)}
 						</span>
 					) : null}
