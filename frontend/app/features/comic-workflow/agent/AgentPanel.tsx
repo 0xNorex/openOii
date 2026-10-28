@@ -14,8 +14,6 @@ interface AgentPanelProps {
 	isGenerating: boolean;
 	collapsed: boolean;
 	onCollapsedChange: (collapsed: boolean) => void;
-	/** Mobile: render inline in the page flow instead of floating over the canvas. */
-	inline?: boolean;
 	tab: AgentPanelTab;
 	onTabChange: (tab: AgentPanelTab) => void;
 	inboxItems: InboxItem[];
@@ -32,14 +30,13 @@ export function AgentPanel({
 	isGenerating,
 	collapsed,
 	onCollapsedChange,
-	inline = false,
 	tab,
 	onTabChange,
 	inboxItems,
 	inboxActions,
 }: AgentPanelProps) {
 	const pendingCount = inboxItems.length;
-	if (collapsed && !inline) {
+	if (collapsed) {
 		return (
 			<PlainButton
 				className="absolute left-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-ink/15 bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
@@ -59,12 +56,7 @@ export function AgentPanel({
 
 	return (
 		<aside
-			className={clsx(
-				"flex flex-col overflow-hidden bg-surface",
-				inline
-					? "h-[28rem] border-t border-ink/10"
-					: "absolute bottom-24 left-3 top-3 z-panel w-[360px] max-w-[calc(100%-1.5rem)] rounded-lg border border-ink/15 shadow-panel",
-			)}
+			className="absolute bottom-24 left-3 top-3 z-panel flex w-[360px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
 			aria-label="工作流活动"
 			data-shell="agent-panel"
 		>
@@ -95,8 +87,7 @@ export function AgentPanel({
 						</PlainButton>
 					))}
 				</div>
-				{inline ? null : (
-					<IconButton
+				<IconButton
 						className="text-ink-muted hover:text-ink"
 						onClick={() => onCollapsedChange(true)}
 						aria-label="收起活动面板"
@@ -105,7 +96,6 @@ export function AgentPanel({
 					>
 						<ChevronDoubleLeftIcon className="h-3.5 w-3.5" aria-hidden="true" />
 					</IconButton>
-				)}
 			</div>
 			<div
 				className="flex min-h-0 flex-1 flex-col overflow-hidden"

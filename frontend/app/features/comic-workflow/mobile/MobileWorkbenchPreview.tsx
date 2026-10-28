@@ -1,6 +1,5 @@
-import { ArrowDownTrayIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
-import { useMemo } from "react";
-import { Button } from "~/components/ui/Button";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { useMemo, type ReactNode } from "react";
 import { getStaticUrl } from "~/services/api";
 import type { Character, Shot } from "~/types";
 import { type StudioStatus, studioStatusDotClass } from "../state/deriveStudioStatus";
@@ -12,9 +11,10 @@ interface MobileWorkbenchPreviewProps {
 	videoUrl: string | null;
 	shots: Shot[];
 	characters: Character[];
-	/** failed/recoverable 时的重试通路（复用 onGenerate/onResume） */
-	onRetry?: () => void;
-	retryDisabled?: boolean;
+	/** 待处理卡片（确认 / 继续 / 重试都在这里，紧跟状态头）。 */
+	inbox?: ReactNode;
+	/** 最近动态（页面最底部）。 */
+	activity?: ReactNode;
 }
 
 export function MobileWorkbenchPreview({
@@ -23,17 +23,13 @@ export function MobileWorkbenchPreview({
 	videoUrl,
 	shots,
 	characters,
-	onRetry,
-	retryDisabled = false,
+	inbox,
+	activity,
 }: MobileWorkbenchPreviewProps) {
 	const videoSrc = getStaticUrl(videoUrl);
 	// 与桌面成片下载同源：后端 final-video 端点
 	const downloadUrl =
 		getStaticUrl(`/api/v1/projects/${projectId}/final-video`) ?? videoSrc;
-	const canRetry =
-		Boolean(onRetry) &&
-		(studioStatus.state === "failed" ||
-			studioStatus.state === "recoverable");
 	const orderedShots = useMemo(
 		() => [...shots].sort((a, b) => a.order - b.order),
 		[shots],
@@ -45,10 +41,6 @@ export function MobileWorkbenchPreview({
 			aria-label="项目预览"
 			data-shell="mobile-workbench-preview"
 		>
-			<p className="m-0 text-xs text-ink-muted">
-				完整画布编辑请用桌面端打开
-			</p>
-
 			<div className="rounded-lg border-2 border-ink/10 bg-paper-100 p-3">
 				<div className="flex items-center gap-2">
 					<span
@@ -62,19 +54,13 @@ export function MobileWorkbenchPreview({
 				<p className="m-0 mt-1 text-xs text-ink-muted">
 					{studioStatus.description}
 				</p>
-				{canRetry ? (
-					<Button
-						variant="primary"
-						size="sm"
-						className="mt-2 gap-1"
-						onClick={onRetry}
-						disabled={retryDisabled}
-					>
-						<ArrowPathIcon className="h-3.5 w-3.5" aria-hidden="true" />
-						重试失败阶段
-					</Button>
-				) : null}
 			</div>
+
+			{inbox ? (
+				<div className="overflow-hidden rounded-lg border-2 border-primary/30 bg-paper-100">
+					{inbox}
+				</div>
+			) : null}
 
 			{videoSrc ? (
 				<div className="overflow-hidden rounded-lg border-2 border-ink/10 bg-paper-100">
@@ -189,6 +175,19 @@ export function MobileWorkbenchPreview({
 					</ul>
 				</div>
 			) : null}
+
+			{activity ? (
+				<div>
+					<h2 className="m-0 mb-1.5 text-sm font-bold">最近动态</h2>
+					<div className="overflow-hidden rounded-lg border-2 border-ink/10">
+						{activity}
+					</div>
+				</div>
+			) : null}
+
+			<p className="m-0 text-xs text-ink-muted">
+				完整画布编辑请用桌面端打开
+			</p>
 		</section>
 	);
 }

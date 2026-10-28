@@ -774,11 +774,11 @@ describe('ProjectPage live hydration', () => {
     try {
       renderWithProviders(<ProjectPage />);
 
-      // <lg：不挂载画布，改为只读预览 + 侧栏上下分栏
+      // <lg：不挂载画布，改为单列预览（待处理和最近动态都在预览里）
       expect(screen.queryByTestId('stage-view')).not.toBeInTheDocument();
       expect(screen.getByTestId('mobile-workbench-preview')).toBeInTheDocument();
       expect(screen.getByText('完整画布编辑请用桌面端打开')).toBeInTheDocument();
-      expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+      expect(screen.queryByTestId('agent-panel')).not.toBeInTheDocument();
     } finally {
       vi.unstubAllGlobals();
     }

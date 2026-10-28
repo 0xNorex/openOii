@@ -69,11 +69,4 @@ describe("AgentPanel", () => {
 		expect(screen.queryByTestId("chat-panel")).not.toBeInTheDocument();
 		expect(screen.getByText("规划已完成，等待确认")).toBeInTheDocument();
 	});
-
-	it("renders inline on mobile without a collapse control", () => {
-		render(<AgentPanel {...base} inline collapsed onCollapsedChange={vi.fn()} />);
-
-		expect(screen.getByTestId("chat-panel")).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "收起活动面板" })).not.toBeInTheDocument();
-	});
 });

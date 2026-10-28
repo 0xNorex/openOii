@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { Character, Shot } from "~/types";
 import { getStudioStatusMeta } from "../state/deriveStudioStatus";
@@ -54,37 +53,17 @@ describe("MobileWorkbenchPreview", () => {
 		).toBeInTheDocument();
 	});
 
-	it("offers a retry action for failed runs", async () => {
-		const user = userEvent.setup();
-		const onRetry = vi.fn();
-
+	it("puts the inbox right after the status and the activity at the end", () => {
 		renderPreview({
-			studioStatus: getStudioStatusMeta("failed"),
-			onRetry,
+			inbox: <p>INBOX</p>,
+			activity: <p>ACTIVITY</p>,
 		});
 
-		await user.click(screen.getByRole("button", { name: /重试失败阶段/ }));
-
-		expect(onRetry).toHaveBeenCalledTimes(1);
-	});
-
-	it("offers a retry action for recoverable runs", () => {
-		renderPreview({
-			studioStatus: getStudioStatusMeta("recoverable"),
-			onRetry: vi.fn(),
-		});
-
-		expect(
-			screen.getByRole("button", { name: /重试失败阶段/ }),
-		).toBeInTheDocument();
-	});
-
-	it("hides the retry action when idle", () => {
-		renderPreview({ onRetry: vi.fn() });
-
-		expect(
-			screen.queryByRole("button", { name: /重试失败阶段/ }),
-		).not.toBeInTheDocument();
+		const text = screen.getByLabelText("项目预览").textContent ?? "";
+		expect(text.indexOf("INBOX")).toBeLessThan(text.indexOf("分镜"));
+		expect(text.indexOf("ACTIVITY")).toBeGreaterThan(text.indexOf("分镜"));
+		expect(screen.getByRole("heading", { name: "最近动态" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /重试失败阶段/ })).not.toBeInTheDocument();
 	});
 
 	it("renders the final video player with a download link", () => {

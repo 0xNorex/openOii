@@ -25,6 +25,8 @@ interface ChatPanelProps {
 	projectId: number;
 	onCancel: () => void;
 	isGenerating: boolean;
+	/** Only show the newest N entries (mobile summary). */
+	limit?: number;
 }
 
 function getStageIcon(stage: WorkflowStage) {
@@ -40,6 +42,7 @@ export function ChatPanel({
 	projectId,
 	onCancel,
 	isGenerating,
+	limit,
 }: ChatPanelProps) {
   const {
     currentAgent,
@@ -55,10 +58,10 @@ export function ChatPanel({
     staleTime: Infinity,
   }).data ?? EMPTY_MESSAGES;
 
-  const entries = useMemo(
-    () => deriveActivityTimeline(messages, { running: isGenerating && !awaitingConfirm }),
-    [messages, isGenerating, awaitingConfirm],
-  );
+  const entries = useMemo(() => {
+    const all = deriveActivityTimeline(messages, { running: isGenerating && !awaitingConfirm });
+    return limit ? all.slice(-limit) : all;
+  }, [messages, isGenerating, awaitingConfirm, limit]);
 
   const fallbackStage = currentStage || "plan";
   const info = getWorkflowStageInfo(fallbackStage) ?? {

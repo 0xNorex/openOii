@@ -17,7 +17,8 @@ import { Card } from "~/components/ui/Card";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { buildComicWorkflow } from "~/features/comic-workflow/graph/buildComicWorkflow";
 import { AgentPanel, type AgentPanelTab } from "~/features/comic-workflow/agent/AgentPanel";
-import type { InboxActions } from "~/features/comic-workflow/agent/InboxPanel";
+import { InboxPanel, type InboxActions } from "~/features/comic-workflow/agent/InboxPanel";
+import { ChatPanel } from "~/components/chat/ChatPanel";
 import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
 import { PromptBar, type PromptChip } from "~/features/workbench/PromptBar";
@@ -490,27 +491,22 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						videoUrl={project.video_url}
 						shots={shots}
 						characters={characters}
-						onRetry={hasRecovery ? handleResume : handleGenerate}
-						retryDisabled={
-							generatePending || (hasActiveRun && !hasRecovery)
+						inbox={
+							inboxItems.length > 0 ? (
+								<InboxPanel items={inboxItems} actions={inboxActions} />
+							) : null
+						}
+						activity={
+							<ChatPanel
+								projectId={projectId}
+								onCancel={handleCancel}
+								isGenerating={hasActiveRun}
+								limit={5}
+							/>
 						}
 					/>
 				) : null}
 
-				{isMobileWorkbench ? (
-					<AgentPanel
-						inline
-						projectId={projectId}
-						onCancel={handleCancel}
-						isGenerating={hasActiveRun}
-						collapsed={false}
-						onCollapsedChange={setAgentCollapsed}
-						tab={agentTab}
-						onTabChange={setAgentTab}
-						inboxItems={inboxItems}
-						inboxActions={inboxActions}
-					/>
-				) : null}
 				{!isMobileWorkbench ? (
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<div className="relative isolate min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
