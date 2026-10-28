@@ -247,14 +247,28 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await page.waitForSelector('[data-shape-id="shape:workflow-card-shot-1"]');
 
 	// Brief 不在画布上：它是右栏 Inspector 的项目级上下文
-	await expect(page.getByRole("region", { name: "Elements" })).toBeVisible();
+	await expect(page.getByRole("region", { name: "Elements" })).toBeAttached();
 	await expect(page.getByRole("region", { name: "九宫格分镜" })).toBeVisible();
-	await expect(page.getByRole("region", { name: "Output" })).toBeVisible();
 	await expect(page.getByRole("region", { name: "Brief" })).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "一致性评估" })).toHaveCount(0);
 
+	// 活动栏默认展开
+	const sidebar = page.locator("aside[aria-label='工作流活动']");
+	await expect(sidebar.getByRole("tab", { name: "活动" })).toHaveAttribute("aria-selected", "true");
+
 	await page.getByRole("button", { name: "适应视图" }).click();
 	const card = page.locator('[data-shape-id="shape:workflow-card-shot-1"]');
+	// 适配后卡片标题的屏幕字号 ≥ 12px（缩放下限）
+	await expect
+		.poll(() =>
+			card.evaluate((el) => {
+				// 画布缩放 = 卡片屏幕宽度 / 布局宽度（宽元素，取整误差小）
+				const scale = el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth;
+				const title = el.querySelector("p.font-heading");
+				return title ? parseFloat(getComputedStyle(title).fontSize) * scale : 0;
+			}),
+		)
+		.toBeGreaterThanOrEqual(11.95);
 	const before = await card.boundingBox();
 	expect(before).not.toBeNull();
 	if (!before) return;
@@ -275,9 +289,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await page.getByRole("button", { name: "整理画布" }).click();
 	await expect(card).toBeVisible();
 
-	const sidebar = page.locator("aside");
-	await page.getByRole("button", { name: "展开工作区" }).click();
-	await sidebar.getByRole("tab", { name: "属性" }).click();
+	await card.click();
 	await expect(page.getByRole("button", { name: "概览" })).toBeVisible();
 	await expect(page.getByRole("button", { name: "内容" })).toBeVisible();
 	await expect(page.getByRole("button", { name: "操作" })).toBeVisible();
@@ -296,7 +308,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await sidebar.getByRole("tab", { name: "资产" }).click();
 	await expect(sidebar.getByRole("heading", { name: "资产库" })).toBeVisible();
 	await sidebar.getByRole("tab", { name: "活动" }).click();
-	await expect(sidebar.getByPlaceholder("描述如何调整所选内容…")).toBeVisible();
+	await expect(page.getByPlaceholder("描述如何调整所选内容…")).toBeVisible();
 
 	expect(consoleErrors).toEqual([]);
 });

@@ -58,7 +58,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const hasActiveRun = runIsGenerating || Boolean(runCurrentRunId);
 	const hasRecovery = Boolean(runRecoveryControl);
 	const [sidebarTab, setSidebarTab] = useState<WorkspaceSidebarTab>("chat");
-	const [workspaceCollapsed, setWorkspaceCollapsed] = useState(true);
+	const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 	const [versionOpen, setVersionOpen] = useState(false);

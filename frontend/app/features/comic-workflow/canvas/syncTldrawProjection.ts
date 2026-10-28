@@ -15,7 +15,7 @@ import type { WorkflowCardShape, WorkflowFrameShape } from "./shapes/types";
 
 const WORKFLOW_ARROW_META = "openoii-comic-workflow-arrow";
 const WORKFLOW_NODE_META = "openoii-comic-workflow-node";
-const WORKFLOW_FRAME_META = "openoii-comic-workflow-frame";
+export const WORKFLOW_FRAME_META = "openoii-comic-workflow-frame";
 
 export type WorkflowInteractionMode = "layout" | "sort" | "locked";
 

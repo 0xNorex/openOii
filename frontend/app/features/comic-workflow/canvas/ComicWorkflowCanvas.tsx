@@ -1,3 +1,4 @@
+import { fitStoryboard } from "./fitStoryboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -162,7 +163,7 @@ export function ComicWorkflowCanvas({
 				syncTldrawProjection({ editor, graph, layout, interactionMode });
 				lastSignatureRef.current = `${graphSignature}:${interactionMode}`;
 				setTimeout(() => {
-					editor.zoomToFit({ animation: { duration: motionDuration("slow") } });
+					fitStoryboard(editor, motionDuration("slow"));
 				}, 100);
 			}
 			setIsInitialized(true);
@@ -189,7 +190,7 @@ export function ComicWorkflowCanvas({
 		const editor = editorRef.current;
 		if (editor) {
 			setTimeout(() => {
-					editor.zoomToFit({ animation: { duration: motionDuration("normal") } });
+				fitStoryboard(editor, motionDuration("normal"));
 			}, 80);
 		}
 	}, [syncProjection]);

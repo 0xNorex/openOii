@@ -5,6 +5,12 @@
 @tailwind utilities;
 
 @layer base {
+  /* placeholder 用语义令牌，浏览器默认灰在纸色底上对比度不够 */
+  ::placeholder {
+    color: var(--ink-muted);
+    opacity: 1;
+  }
+
   *,
   *::before,
   *::after {

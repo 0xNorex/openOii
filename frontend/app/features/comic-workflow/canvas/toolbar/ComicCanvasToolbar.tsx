@@ -1,3 +1,4 @@
+import { fitStoryboard } from "../fitStoryboard";
 import { useCallback, useState, type ReactNode } from "react";
 import { track, useEditor } from "tldraw";
 import {
@@ -54,7 +55,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 	}, [editor]);
 
 	const handleZoomToFit = useCallback(() => {
-		editor.zoomToFit({ animation: { duration: motionDuration("normal") } });
+		fitStoryboard(editor, motionDuration("normal"));
 	}, [editor]);
 
 	const handleFillEmpty = useCallback(
