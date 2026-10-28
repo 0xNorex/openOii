@@ -18,6 +18,7 @@
     "@fontsource/bangers": "^5.2.8",
     "@heroicons/react": "^2.2.0",
     "@tanstack/react-query": "^5.62.0",
+    "@xyflow/react": "^12.12.0",
     "clsx": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
