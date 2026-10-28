@@ -89,8 +89,6 @@ components:
 
 **Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents (Bangers wordmark, CMYK offset frame, halftone) only on the wordmark, the final-video card and moment, and empty states. Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
 
-> **Transition note:** the front-matter values and §1–§6 below still describe the tokens shipped today. They are rewritten in the same PR that changes `tokens.css` (Phase 1 of `docs/specs/frontend-studio-redesign-plan.md`, ADR 0002). Where they conflict with ADR 0010, ADR 0010 wins.
-
 **Shell geometry (tokens):**
 
 | Token | Role |
@@ -115,7 +113,8 @@ components:
 
 1. **画布占满，面板浮在上面。** Agent 面板在左（360px），检查器在右（320px），都能收成胶囊。
    窄于 1440px 时 Agent 面板默认收起；窄于 1280px 时两者互斥，开一个就收另一个。
-   手机（`<sm`）上没有画布，Agent 面板回到文档流。
+   手机（`<sm`）上没有画布：单列显示状态、待处理（同一个 InboxPanel）、成片/分镜预览和最近 5 条动态，
+   底部提示用桌面端编辑完整画布。重试只在待处理和 TopBar。
 2. **检查器承载一切属性面**，包括 Brief。未选中任何卡片时显示“项目”视图（Brief + 宇宙时间线）；
    换选中目标时自动展开，手动收起后同一选中不再弹开。
 3. **PromptBar 浮在画布底部居中**（最宽 720px），是唯一的文本输入入口，「选中 → 提示 → 定点重跑」默认可见。
@@ -123,6 +122,12 @@ components:
      无选区时 `整个项目`，处于审批门时 `规划 · 待确认`。
    - Enter 发送，Shift+Enter 换行；占位文字随上下文变化。
    - 画布工具条叠在 PromptBar 上方；窄于 1400px 时工具条只显示图标，放得进两块面板之间。
+
+**画布（React Flow，`@xyflow/react`）：** `canvas/flow/FlowWorkflowView.tsx` 渲染，
+`toFlowNodes.ts` 把工作流图转成节点：每个 section 是一个 frame 父节点，卡片相对 frame 定位并限制在其内。
+选择工具框选、滚轮平移；Shift/⌘/Ctrl 多选；分镜排序模式下只有镜头可拖（松手即 `reorderShots`），
+自由布局模式只拖 frame（位置存 `localStorage`，「重置布局」清空）。适配视图避开两侧浮层和底部 PromptBar，
+板子放得下就居中，否则从左上角开始。保留 React Flow 署名。
 
 画布几何（卡片尺寸、九宫格列数、frame 内距 gap）的 SSOT 是
 `app/features/comic-workflow/graph/layoutComicWorkflow.ts`——React Flow 消费的是
@@ -148,7 +153,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 **Layout rules:**
 
 1. **No document scroll** — `html`/`body`/`#root` overflow hidden; only `.page-body` / panel panes scroll.
-2. **Interaction soft freeze** — selection binding, Agent Column chat, cell regenerate, generate/confirm/cancel keep meaning (ADR 0003).
+2. **Interaction soft freeze** — selection binding, the activity timeline and inbox, cell regenerate, generate/confirm/cancel keep meaning (ADR 0003).
 3. **One display face per screen** — Bangers at most once.
 4. **Dense chrome** — header/toolbar use `--touch-target-dense` for chips; primary actions keep `--touch-target-min` (44px).
 5. **Shell classes** — TopBar → `.chrome-row` + `data-shell="topbar"`; StudioControls (status pill, run actions) → TopBar `center` slot, `data-shell="studio-controls"`; pages → `.page-shell` / `.page-body`.
@@ -158,21 +163,23 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 
 ## 1. Overview
 
-**Creative North Star: "The Comic Workbench"**
+**North star: a calm creation studio with a light comic accent.**
 
-A comic artist's workbench: professional, energetic, and immediately recognizable as a craft space, not a corporate tool. The surface is warm cream paper under ink. CMYK offset shadows and halftone dot textures are structural references to the printing process that gives comics their visual identity. Every design choice answers "does this feel like the workshop where comics get made?"
+openOii is a tool for making comic videos, so the work (the storyboard) gets the screen and the chrome stays quiet.
+The workbench is a full-bleed React Flow canvas; the agent panel, the inspector and the PromptBar float over it.
+Warm grey paper and ink neutrals, one magenta-rose brand hue, the system CJK font stack.
+The comic identity survives only where spec §7.6 allows it: the Bangers wordmark, the final-video card and its
+completion moment, and empty states.
 
-The system speaks two fluencies simultaneously: comic-book visual language (Bangers display type, CMYK shadows, halftone backgrounds) and tool-clarity interaction (predictable grid layouts, consistent component vocabulary, 200ms state transitions). Comic energy without comic chaos. The workbench has inks, ruling pens, and registration marks, but the artist reaches for the right tool without thinking.
+It rejects three looks: cold grey SaaS (Jira), the generic AI generator (white card grids and purple gradients),
+and heavy comic everywhere (offset shadows, halftone and display type on every surface).
 
-This system explicitly rejects three aesthetics: the grey SaaS panel (Notion/Jira coldness), the generic AI generator (white card grids + purple gradients), and the childlike doodle (over-rounded corners, candy colors, infantile typography). If it looks like a Jira ticket, the warmth is missing. If it looks like a Midjourney landing page, the personality is missing. If it looks like a kindergarten sticker chart, the craft is missing.
-
-**Key Characteristics:**
-- CMYK offset shadows as structural elevation, not decoration
-- Halftone dot textures as surface identity markers
-- Speech-bubble chat pattern grounded in comic convention
-- Tactile button press (translate on active, shadow collapse) with physical feedback
-- Dual-theme: light / dark, both kept (ADR 0010)
-- **Dense desk density** — more cells and messages on screen without losing craft identity
+**Key characteristics:**
+- Full-bleed canvas, floating panels that collapse to pills (§0 layout).
+- Borders and paper tones carry hierarchy; shadows are only for things that float.
+- One place for each job: decisions in the 待处理 inbox, text input in the PromptBar, properties in the inspector.
+- Light and dark themes (ADR 0010); every text token meets WCAG AA on every surface.
+- Mobile is a read-and-decide view, not a canvas editor.
 
 ## 2. Colors
 
@@ -233,11 +240,14 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ### Navigation
 - **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), `bg-paper-100`. Active project uses a primary tint. Delete button revealed on hover only.
-- **TopBar:** 44px height (2.75rem, `--workbench-header`), 2px thick bottom border, compact dot+icon+label stage indicators. Bold progress dots in stage accent color. Stage labels semibold.
+- **TopBar:** 44px (2.75rem, `--workbench-header`), 1px bottom border. On the workbench the centre holds the status pill (stage, progress, elapsed time) and 生成 / 停止.
 
 ### Activity timeline
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
 - Follows the newest entry; scrolling up stops following and shows "跳到最新".
+
+### Dialogs
+- Native `<dialog>` via `showModal()`, so the top layer sits above every floating panel. `.dialog-panel` with `shadow-dialog`.
 
 ### Approval inbox
 - Every decision lives in the agent panel's 待处理 tab: approval gate (确认继续 / 提修改意见), interrupted run (继续 / 取消), blocking shots, last failure (从失败阶段重试). The top bar, prompt bar and cards don't repeat these buttons.
@@ -249,11 +259,13 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Do** keep comic accents to the places listed in spec §7.6: the wordmark, the final-video card and its completion moment, and empty states.
 - **Do** use borders and the paper tones for hierarchy; shadows are for things that float.
 - **Do** use mono only for ids, durations and technical fields.
+- **Do** keep one entry point per job (inbox for decisions, PromptBar for text, inspector for properties).
+- **Do** run `impeccable detect` against the live pages before landing UI work: zero `low-contrast` and `undersized-ui-text`.
 
 ### Don't:
 - **Don't** use pure #000 or #fff for any element. Every neutral must be tinted toward the brand hue.
-- **Don't** create grey SaaS panels. If a sidebar looks like it belongs in Jira, it needs Workshop Linen warmth.
-- **Don't** use generic AI tool aesthetics: white card grids with purple gradients are the exact opposite of The Comic Workbench.
+- **Don't** create cold grey SaaS panels. Neutrals stay on the warm paper scale.
+- **Don't** use generic AI tool aesthetics: white card grids with purple gradients are the opposite of this studio.
 - **Don't** apply childlike doodle aesthetics: over-rounded corners, candy colors, infantile typography. This is a professional workshop, not a sticker chart.
 - **Don't** use border-left or border-right greater than 1px as a colored accent stripe. Use full borders, background tints, or nothing.
 - **Don't** use gradient text (`background-clip: text` with gradient). Solid colors only.
@@ -261,3 +273,5 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Don't** add offset hard shadows or halftone outside spec §7.6.
 - **Don't** use display fonts (Bangers) in UI labels, buttons, or data. Display is for splash, not for interaction.
 - **Don't** reinvent standard affordances (custom scrollbars, weird form controls, non-standard modals). The workbench has familiar tools.
+- **Don't** pin a fourth always-on surface over the canvas; it goes into a panel tab, a popover or a dialog.
+- **Don't** put text under 12px anywhere, including canvas labels.
