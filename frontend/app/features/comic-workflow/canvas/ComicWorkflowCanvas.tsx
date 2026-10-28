@@ -35,6 +35,8 @@ interface ComicWorkflowCanvasProps {
 	onSelectedNodeIdChange?: (nodeId: string | null) => void;
 	/** Multi-select 九宫格 / cast binding (ordered, primary first). */
 	onSelectedNodeIdsChange?: (nodeIds: string[]) => void;
+	/** Opens the asset library from the canvas toolbar. */
+	onOpenAssets?: () => void;
 }
 
 const components: TLComponents = {
@@ -60,6 +62,7 @@ export function ComicWorkflowCanvas({
 	projectId,
 	onSelectedNodeIdChange,
 	onSelectedNodeIdsChange,
+	onOpenAssets,
 }: ComicWorkflowCanvasProps) {
 	const editorRef = useRef<Editor | null>(null);
 	const [isInitialized, setIsInitialized] = useState(false);
@@ -239,6 +242,7 @@ export function ComicWorkflowCanvas({
 						sortDisabled={structureLocked}
 						onToggleSortMode={() => setSortMode((v) => !v)}
 						fillDisabled={structureLocked}
+						onOpenAssets={onOpenAssets}
 					/>
 				</Tldraw>
 			</div>

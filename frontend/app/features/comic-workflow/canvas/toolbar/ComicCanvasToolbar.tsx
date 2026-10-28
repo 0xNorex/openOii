@@ -2,6 +2,7 @@ import { fitStoryboard } from "../fitStoryboard";
 import { useCallback, useState, type ReactNode } from "react";
 import { track, useEditor } from "tldraw";
 import {
+	ArchiveBoxIcon,
 	ArrowsPointingOutIcon,
 	CursorArrowRaysIcon,
 	HandRaisedIcon,
@@ -21,6 +22,8 @@ interface ComicCanvasToolbarProps {
 	sortDisabled?: boolean;
 	onToggleSortMode?: () => void;
 	fillDisabled?: boolean;
+	/** Opens the asset library drawer. */
+	onOpenAssets?: () => void;
 }
 
 export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
@@ -30,6 +33,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 	sortDisabled = false,
 	onToggleSortMode,
 	fillDisabled = false,
+	onOpenAssets,
 }: ComicCanvasToolbarProps) {
 	const editor = useEditor();
 	const currentTool = editor.getCurrentToolId();
@@ -159,6 +163,14 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 			>
 				<span className="font-mono text-xs font-bold">视</span>
 			</ToolButton>
+			{onOpenAssets ? (
+				<>
+					<Divider />
+					<ToolButton label="打开资产库" showLabel labelText="资产" onClick={onOpenAssets}>
+						<ArchiveBoxIcon className="h-4 w-4" />
+					</ToolButton>
+				</>
+			) : null}
 
 		</div>
 	);

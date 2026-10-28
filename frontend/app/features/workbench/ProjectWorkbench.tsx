@@ -15,10 +15,7 @@ import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { buildComicWorkflow } from "~/features/comic-workflow/graph/buildComicWorkflow";
-import {
-	WorkspaceSidebar,
-	type WorkspaceSidebarTab,
-} from "~/features/comic-workflow/sidebar/WorkspaceSidebar";
+import { AgentPanel } from "~/features/comic-workflow/agent/AgentPanel";
 import { InspectorColumn } from "~/features/comic-workflow/inspector/InspectorColumn";
 import { PromptBar } from "~/features/workbench/PromptBar";
 import {
@@ -41,6 +38,9 @@ const WorkflowCanvas = lazy(() =>
 		default: m.ComicWorkflowCanvas,
 	})),
 );
+const AssetDrawer = lazy(() =>
+	import("~/components/panels/AssetDrawer").then((m) => ({ default: m.AssetDrawer })),
+);
 const VersionCompareDrawer = lazy(() =>
 	import("~/components/panels/VersionCompareDrawer").then((m) => ({
 		default: m.VersionCompareDrawer,
@@ -61,8 +61,11 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const runModePreference = useEditorStore((s) => s.runMode);
 	const hasActiveRun = runIsGenerating || Boolean(runCurrentRunId);
 	const hasRecovery = Boolean(runRecoveryControl);
-	const [sidebarTab, setSidebarTab] = useState<WorkspaceSidebarTab>("chat");
-	const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
+	// 窄于 1440px 默认收起，避免浮层盖住画布；待确认时仍会自动展开
+	const [agentCollapsed, setAgentCollapsed] = useState(
+		() => typeof window !== "undefined" && window.innerWidth < 1440,
+	);
+	const [assetsOpen, setAssetsOpen] = useState(false);
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 	const [versionOpen, setVersionOpen] = useState(false);
@@ -123,8 +126,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 
 	useEffect(() => {
 		if (runAwaitingConfirm && runModePreference === "manual") {
-			setSidebarTab("chat");
-			setWorkspaceCollapsed(false);
+			setAgentCollapsed(false);
 		}
 	}, [runAwaitingConfirm, runModePreference]);
 
@@ -353,8 +355,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						onResume={handleResume}
 						onCancel={handleCancel}
 						onOpenInbox={() => {
-							setSidebarTab("chat");
-							setWorkspaceCollapsed(false);
+							setAgentCollapsed(false);
 						}}
 						generateDisabled={generatePending || hasActiveRun}
 						onOpenVersions={handleOpenVersions}
@@ -389,18 +390,17 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					/>
 				) : null}
 
-				<WorkspaceSidebar
-					activeTab={sidebarTab}
-					onTabChange={setSidebarTab}
-					projectId={projectId}
-					onConfirm={handleConfirm}
-					onCancel={handleCancel}
-					onSendFeedback={handleFeedback}
-					isGenerating={hasActiveRun}
-					collapsed={isMobileWorkbench ? false : workspaceCollapsed}
-					onCollapsedChange={setWorkspaceCollapsed}
-					universeId={project?.universe_id ?? null}
-				/>
+				{isMobileWorkbench ? (
+					<AgentPanel
+						inline
+						projectId={projectId}
+						onConfirm={handleConfirm}
+						onCancel={handleCancel}
+						isGenerating={hasActiveRun}
+						collapsed={false}
+						onCollapsedChange={setAgentCollapsed}
+					/>
+				) : null}
 				{!isMobileWorkbench ? (
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<div className="relative isolate min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
@@ -416,8 +416,18 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 									projectId={projectId}
 									onSelectedNodeIdChange={handleSelectedNodeIdChange}
 									onSelectedNodeIdsChange={handleSelectedNodeIdsChange}
+									onOpenAssets={() => setAssetsOpen(true)}
 								/>
 							</Suspense>
+							<AgentPanel
+								projectId={projectId}
+								onConfirm={handleConfirm}
+								onCancel={handleCancel}
+								isGenerating={hasActiveRun}
+								collapsed={agentCollapsed}
+								onCollapsedChange={setAgentCollapsed}
+								pendingCount={studioStatus.pendingCount}
+							/>
 						</div>
 						{/* PromptBar 常驻画布下方：选中 → 提示 → 定点重跑 的核心入口 */}
 						<PromptBar
@@ -454,6 +464,12 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					onSendFeedback={handleFeedback}
 					onConfirm={handleConfirm}
 				/>
+			) : null}
+
+			{assetsOpen ? (
+				<Suspense fallback={null}>
+					<AssetDrawer open projectId={projectId} onClose={() => setAssetsOpen(false)} />
+				</Suspense>
 			) : null}
 
 			{versionOpen && (

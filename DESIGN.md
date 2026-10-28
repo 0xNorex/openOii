@@ -96,7 +96,7 @@ components:
 | Token | Role |
 |-------|------|
 | `--workbench-header` | TopBar (2.75rem); on the workbench its centre holds the status pill and run actions |
-| `--workbench-activity` / `-collapsed` | 左栏 Agent Activity width (18rem / 2.75rem rail) |
+| (none) | Agent 面板浮在画布左侧，固定 `w-[360px]`，可收成胶囊 |
 | `--workbench-inspector` / `-collapsed` | 右栏检查器 width (20rem / 2.75rem rail) |
 
 **Workbench 四区骨架（现状；ADR 0010 Phase 2 起改为“全幅画布 + 浮层面板”的 Studio 布局，见 spec §5）：**

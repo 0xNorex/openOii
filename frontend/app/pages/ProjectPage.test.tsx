@@ -291,34 +291,26 @@ vi.mock('~/services/api', () => ({
   },
 }));
 
-vi.mock('~/features/comic-workflow/sidebar/WorkspaceSidebar', () => ({
-  WorkspaceSidebar: ({
-    activeTab,
-    onTabChange,
+vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
+  AgentPanel: ({
+    collapsed,
+    onCollapsedChange,
     isGenerating,
-    onSendFeedback,
     onConfirm,
     onCancel,
   }: {
-    activeTab?: string;
-    onTabChange?: (tab: string) => void;
+    collapsed?: boolean;
+    onCollapsedChange?: (collapsed: boolean) => void;
     isGenerating?: boolean;
-    onSendFeedback?: (content: string) => void;
     onConfirm?: (content?: string) => void;
     onCancel?: () => void;
   }) => (
-    <div data-testid="workspace-sidebar" data-active-tab={activeTab}>
+    <div data-testid="agent-panel" data-collapsed={collapsed ? 'true' : 'false'}>
       <span data-testid="chat-generating-state">
         {isGenerating ? 'generating' : 'idle'}
       </span>
-      <button type="button" onClick={() => onTabChange?.('assets')}>
-        打开资产面板
-      </button>
-      <button type="button" onClick={() => onTabChange?.('chat')}>
-        打开对话面板
-      </button>
-      <button type="button" onClick={() => onSendFeedback?.('继续调整故事节奏')}>
-        发送反馈
+      <button type="button" onClick={() => onCollapsedChange?.(!collapsed)}>
+        切换活动面板
       </button>
       <button type="button" onClick={() => onConfirm?.('请微调这一版')}>
         确认并继续
@@ -327,6 +319,14 @@ vi.mock('~/features/comic-workflow/sidebar/WorkspaceSidebar', () => ({
         停止生成
       </button>
     </div>
+  ),
+}));
+
+vi.mock('~/features/workbench/PromptBar', () => ({
+  PromptBar: ({ onSendFeedback }: { onSendFeedback?: (content: string) => void }) => (
+    <button type="button" onClick={() => onSendFeedback?.('继续调整故事节奏')}>
+      发送反馈
+    </button>
   ),
 }));
 
@@ -357,9 +357,9 @@ vi.mock('~/components/layout/StudioControls', () => ({
       <button type="button" onClick={onGenerate}>开始生成</button>
       <button type="button" onClick={onCancel}>取消</button>
       <button type="button" onClick={onResume}>恢复运行</button>
-      {awaitingConfirm ? (
-        <button type="button" onClick={onOpenInbox}>去确认</button>
-      ) : null}
+      <button type="button" onClick={onOpenInbox}>
+        {awaitingConfirm ? '去确认' : '打开待处理'}
+      </button>
     </div>
   ),
 }));
@@ -597,21 +597,19 @@ describe('ProjectPage live hydration', () => {
     expect(screen.getByRole('button', { name: '开始生成' })).toBeEnabled();
   });
 
-  it('keeps workspace panel navigation owned by the sidebar', async () => {
+  it('starts collapsed on narrow desktops and reopens from the status pill', async () => {
     const user = userEvent.setup();
 
     renderWithProviders(<ProjectPage />);
 
-    expect(screen.getByTestId('top-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('workspace-sidebar')).toHaveAttribute('data-active-tab', 'chat');
-
-    await user.click(screen.getByRole('button', { name: '打开资产面板' }));
-
-    expect(screen.getByTestId('workspace-sidebar')).toHaveAttribute('data-active-tab', 'assets');
-
-    await user.click(screen.getByRole('button', { name: '打开对话面板' }));
-
-    expect(screen.getByTestId('workspace-sidebar')).toHaveAttribute('data-active-tab', 'chat');
+    // jsdom 视口 1024px < 1440px：默认收起
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'true');
+    await user.click(screen.getByRole('button', { name: '切换活动面板' }));
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'false');
+    await user.click(screen.getByRole('button', { name: '切换活动面板' }));
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'true');
+    await user.click(screen.getByRole('button', { name: '打开待处理' }));
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute('data-collapsed', 'false');
   });
 
   it('keeps generate enabled when only the video provider is invalid', () => {
@@ -643,7 +641,7 @@ describe('ProjectPage live hydration', () => {
     renderWithProviders(<ProjectPage />);
 
     expect(screen.getByText('正在加载项目…')).toBeInTheDocument();
-    expect(screen.queryByTestId('workspace-sidebar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('agent-panel')).not.toBeInTheDocument();
   });
 
   it('renders the workspace progressively while secondary resources are still loading', () => {
@@ -658,7 +656,7 @@ describe('ProjectPage live hydration', () => {
     // 只等项目主数据；角色/分镜/消息各区域自行渐进加载
     expect(screen.queryByText('正在加载项目…')).not.toBeInTheDocument();
     expect(screen.getByTestId('stage-view')).toBeInTheDocument();
-    expect(screen.getByTestId('workspace-sidebar')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
   });
 
   it('clears project-scoped client state when route project changes', async () => {
@@ -751,7 +749,7 @@ describe('ProjectPage live hydration', () => {
       expect(screen.queryByTestId('stage-view')).not.toBeInTheDocument();
       expect(screen.getByTestId('mobile-workbench-preview')).toBeInTheDocument();
       expect(screen.getByText('完整画布编辑请用桌面端打开')).toBeInTheDocument();
-      expect(screen.getByTestId('workspace-sidebar')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
     } finally {
       vi.unstubAllGlobals();
     }

@@ -52,8 +52,6 @@ export default {
         slow: "var(--duration-slow)",
       },
       width: {
-        activity: "var(--workbench-activity)",
-        "activity-collapsed": "var(--workbench-activity-collapsed)",
         inspector: "var(--workbench-inspector)",
         "inspector-collapsed": "var(--workbench-inspector-collapsed)",
       },

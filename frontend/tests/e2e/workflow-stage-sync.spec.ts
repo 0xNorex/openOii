@@ -200,7 +200,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function openChatPanel(page: Page) {
-	await page.locator("aside").getByRole("tab", { name: "活动" }).click();
+	// 窄桌面下 Agent 面板默认收起成胶囊；需要时展开
+	const pill = page.getByRole("button", { name: "展开活动面板" });
+	if (await pill.isVisible()) await pill.click();
+	await expect(page.locator("aside[aria-label='工作流活动']")).toBeVisible();
 }
 
 test("canvas progressively reveals sections following 3-stage plan→render→compose pipeline", async ({

@@ -93,8 +93,6 @@
      * 四区固定骨架：Activity｜Canvas｜Inspector 三栏 + 底部 PromptBar。
      * Activity 与 Inspector 都是常驻栏（不再浮在画布上），Canvas 是唯一弹性面。 */
     --workbench-header: 2.75rem; /* TopBar */
-    --workbench-activity: 18rem; /* 左：Agent Activity */
-    --workbench-activity-collapsed: 2.75rem;
     --workbench-inspector: 20rem; /* 右：选中项检查器 */
     --workbench-inspector-collapsed: 2.75rem;
     /* 画布几何（卡片/九宫格/frame 内距）的 SSOT 是 layoutComicWorkflow.ts：

@@ -252,9 +252,9 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(page.getByRole("region", { name: "Brief" })).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "一致性评估" })).toHaveCount(0);
 
-	// 活动栏默认展开
-	const sidebar = page.locator("aside[aria-label='工作流活动']");
-	await expect(sidebar.getByRole("tab", { name: "活动" })).toHaveAttribute("aria-selected", "true");
+	// 窄于 1440px 时 Agent 面板默认收起成胶囊，不挡画布
+	const agentPanel = page.locator("aside[aria-label='工作流活动']");
+	await expect(page.getByRole("button", { name: "展开活动面板" })).toBeVisible();
 
 	await page.getByRole("button", { name: "适应视图" }).click();
 	const card = page.locator('[data-shape-id="shape:workflow-card-shot-1"]');
@@ -309,9 +309,14 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(videoPreview).toBeVisible();
 	await videoPreview.getByRole("button", { name: "关闭" }).click();
 
-	await sidebar.getByRole("tab", { name: "资产" }).click();
-	await expect(sidebar.getByRole("heading", { name: "资产库" })).toBeVisible();
-	await sidebar.getByRole("tab", { name: "活动" }).click();
+	await page.getByRole("button", { name: "打开资产库" }).click();
+	await expect(page.getByRole("heading", { name: "资产库" })).toBeVisible();
+	await page.getByRole("button", { name: "关闭资产库" }).click();
+
+	await page.getByRole("button", { name: "展开活动面板" }).click();
+	await expect(agentPanel).toBeVisible();
+	await agentPanel.getByRole("button", { name: "收起活动面板" }).click();
+	await expect(agentPanel).toHaveCount(0);
 	await expect(page.getByPlaceholder("描述如何调整所选内容…")).toBeVisible();
 
 	expect(consoleErrors).toEqual([]);

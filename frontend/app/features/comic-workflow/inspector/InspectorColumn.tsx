@@ -4,6 +4,7 @@ import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from "@heroicons/react/
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import type { ComicWorkflowNode } from "../graph/types";
 import { WorkflowInspector } from "../inspector/WorkflowInspector";
+import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
 import { IconButton } from "../../../components/ui/IconButton";
 
 interface InspectorColumnProps {
@@ -94,14 +95,25 @@ export function InspectorColumn({
 				</IconButton>
 			</div>
 
-			<div className={clsx("min-h-0 flex-1 overflow-hidden", !open && "hidden")}>
-				<WorkflowInspector
-					projectId={projectId}
-					selectedNode={activeNode}
-					selectedNodeIds={selectedNodeIds}
-					structureLocked={structureLocked}
-					universeId={universeId}
-				/>
+			<div className={clsx("flex min-h-0 flex-1 flex-col overflow-hidden", !open && "hidden")}>
+				<div className="min-h-0 flex-1 overflow-hidden">
+					<WorkflowInspector
+						projectId={projectId}
+						selectedNode={activeNode}
+						selectedNodeIds={selectedNodeIds}
+						structureLocked={structureLocked}
+						universeId={universeId}
+					/>
+				</div>
+				{/* 项目视图（无选中）附带宇宙时间线 */}
+				{!hasSelection && universeId != null ? (
+					<section
+						className="max-h-[45%] shrink-0 overflow-y-auto border-t border-ink/10"
+						aria-label="宇宙时间线"
+					>
+						<UniverseTimelinePanel universeId={universeId} currentProjectId={projectId} />
+					</section>
+				) : null}
 			</div>
 		</aside>
 	);
