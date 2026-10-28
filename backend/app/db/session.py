@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from sqlalchemy import func, or_, update
+from sqlalchemy import case, func, or_, update
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -127,8 +127,12 @@ async def init_db() -> None:
             .where(AgentRun.status.in_(active_statuses))  # type: ignore[union-attr]
             .where(stale_execution)
             .values(
-                status="failed",
-                error="Execution lease expired; run is safe to resume",
+                # Honour a cancel requested before the executor died.
+                status=case((AgentRun.cancel_requested_at.is_not(None), "cancelled"), else_="failed"),  # type: ignore[union-attr]
+                error=case(
+                    (AgentRun.cancel_requested_at.is_not(None), None),  # type: ignore[union-attr]
+                    else_="Execution lease expired; run is safe to resume",
+                ),
                 lease_owner=None,
                 lease_token=None,
                 lease_expires_at=None,

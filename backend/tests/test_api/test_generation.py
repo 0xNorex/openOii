@@ -7,6 +7,7 @@ from sqlmodel import select
 from app.api.deps import get_app_settings, get_db_session, get_ws_manager
 from app.agents.review_rules import ReviewAgent
 from app.api.v1.routes import runs as generation_routes
+from app.db.utils import utcnow
 from app.main import create_app
 from app.models.agent_run import AgentRun
 from app.schemas.project import ProjectProviderEntry
@@ -525,6 +526,21 @@ async def test_generation_state_recoverable_for_stale_running_run(async_client, 
     data = res.json()
     assert data is not None
     assert data["state"] == "recoverable"
+
+
+@pytest.mark.asyncio
+async def test_stale_cancelling_run_ends_cancelled_not_failed(async_client, test_session):
+    """Executor died after the user asked to cancel: honour the cancel."""
+    project = await create_project(test_session)
+    run = await create_run(test_session, project_id=project.id, status="cancelling", live_lease=False)
+    run.cancel_requested_at = utcnow()
+    test_session.add(run)
+    await test_session.commit()
+
+    res = await async_client.get(f"/api/v1/projects/{project.id}/runs/current")
+    assert res.status_code == 200
+    assert res.json()["active_run"]["status"] == "cancelled"
+    assert res.json()["active_run"]["error"] is None
 
 
 @pytest.mark.asyncio

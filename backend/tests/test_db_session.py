@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import select
 
 from app.db.session import _run_alembic_upgrade, init_db
+from app.db.utils import utcnow
 from app.models.agent_run import AgentRun
 from app.models.project import Project
 
@@ -43,7 +44,11 @@ async def test_init_db_marks_unleased_active_runs_recoverable(test_session, test
     run_done = AgentRun(
         project_id=project.id, status="succeeded", current_agent="director", progress=1.0
     )
-    test_session.add_all([run_queued, run_running, run_done])
+    run_cancelling = AgentRun(
+        project_id=project.id, status="cancelling", current_agent="director", progress=0.5,
+        cancel_requested_at=utcnow(),
+    )
+    test_session.add_all([run_queued, run_running, run_done, run_cancelling])
     await test_session.commit()
 
     patches = _init_db_patches(test_session, test_settings)
@@ -60,6 +65,10 @@ async def test_init_db_marks_unleased_active_runs_recoverable(test_session, test
         await test_session.execute(select(AgentRun).where(AgentRun.status == "succeeded"))
     ).scalars().all()
     assert [run.id for run in done] == [run_done.id]
+
+    await test_session.refresh(run_cancelling)
+    assert run_cancelling.status == "cancelled"
+    assert run_cancelling.error is None
 
 
 @pytest.mark.asyncio

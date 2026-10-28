@@ -419,8 +419,10 @@ async def _reconcile_active_candidate(
     if run.id in engine_ids or _has_live_lease(run):
         return run, None
 
-    run.status = "failed"
-    run.error = "Execution lease missing or expired; run is safe to resume"
+    # A cancel requested before the executor died ends as cancelled, not failed.
+    cancelled = run.cancel_requested_at is not None
+    run.status = "cancelled" if cancelled else "failed"
+    run.error = None if cancelled else "Execution lease missing or expired; run is safe to resume"
     run.lease_owner = None
     run.lease_token = None
     run.lease_expires_at = None
