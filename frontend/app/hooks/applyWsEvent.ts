@@ -363,18 +363,8 @@ export function applyWsEvent(
 			break;
 		}
 
-		case "consistency_eval_completed": {
-			const evalData = event.data as unknown as import("~/types").ConsistencyEvalCompletedEventData;
-			appendMessage(projectId, {
-				id: generateMessageId(),
-				agent: "critic",
-				role: "info",
-				content: `一致性评估完成：综合评分 ${evalData.overall_score.toFixed(1)}/100，${evalData.character_count} 个角色已评估`,
-				timestamp: new Date().toISOString(),
-			});
-			break;
-		}
-
+		// The consistency report UI was removed; the backend may still emit this.
+		case "consistency_eval_completed":
 		case "pong":
 		case "echo":
 			break;

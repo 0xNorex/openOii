@@ -6,7 +6,6 @@ import {
 	SparklesIcon,
 	ChatBubbleLeftRightIcon,
 	ClockIcon,
-	ShieldCheckIcon,
 	ArrowDownTrayIcon,
 	EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
@@ -30,8 +29,6 @@ interface StagePipelineProps {
 	generateDisabled?: boolean;
 	/** Open version history / compare drawer. */
 	onOpenVersions?: () => void;
-	/** Open consistency report panel. */
-	onOpenConsistency?: () => void;
 	/** Trigger export (e.g. webtoon). */
 	onExport?: () => void;
 	exportBusy?: boolean;
@@ -73,7 +70,6 @@ export function StagePipeline({
 	onToggleChat,
 	generateDisabled,
 	onOpenVersions,
-	onOpenConsistency,
 	onExport,
 	exportBusy = false,
 }: StagePipelineProps) {
@@ -96,7 +92,7 @@ export function StagePipeline({
 					workbenchStatus.state === "recoverable"
 				? "重试失败阶段"
 				: "重新生成";
-	const hasTools = Boolean(onOpenVersions || onOpenConsistency || onExport);
+	const hasTools = Boolean(onOpenVersions || onExport);
 
 	return (
 		<div
@@ -212,20 +208,6 @@ export function StagePipeline({
 									>
 										<ClockIcon className="h-3.5 w-3.5" aria-hidden="true" />
 										版本对比
-									</button>
-								</li>
-							) : null}
-							{onOpenConsistency ? (
-								<li role="none">
-									<button
-										type="button"
-										role="menuitem"
-										className="gap-2 text-xs"
-										onClick={() => { setToolsOpen(false); runMenuAction(onOpenConsistency); }}
-										aria-label="打开一致性报告"
-									>
-										<ShieldCheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
-										一致性报告
 									</button>
 								</li>
 							) : null}

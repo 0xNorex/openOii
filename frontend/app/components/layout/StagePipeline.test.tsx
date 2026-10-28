@@ -65,12 +65,10 @@ describe("StagePipeline", () => {
 	it("exposes unified workbench tools through the overflow menu", async () => {
 		const user = userEvent.setup();
 		const onOpenVersions = vi.fn();
-		const onOpenConsistency = vi.fn();
 		const onExport = vi.fn();
 
 		renderStagePipeline({
 			onOpenVersions,
-			onOpenConsistency,
 			onExport,
 		});
 
@@ -81,12 +79,9 @@ describe("StagePipeline", () => {
 		await user.click(trigger);
 		await user.click(screen.getByRole("menuitem", { name: "打开版本对比" }));
 		await user.click(trigger);
-		await user.click(screen.getByRole("menuitem", { name: "打开一致性报告" }));
-		await user.click(trigger);
 		await user.click(screen.getByRole("menuitem", { name: "导出 Webtoon 长图" }));
 
 		expect(onOpenVersions).toHaveBeenCalledTimes(1);
-		expect(onOpenConsistency).toHaveBeenCalledTimes(1);
 		expect(onExport).toHaveBeenCalledTimes(1);
 	});
 

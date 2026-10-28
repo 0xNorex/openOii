@@ -707,52 +707,6 @@ export interface StyleTemplateUpdatePayload {
 	preview_image_url?: string | null;
 }
 
-// Consistency Evaluation Types
-export interface FaceMatchDetailRead {
-	shot_id: number;
-	shot_order: number;
-	similarity: number;
-	detected: boolean;
-}
-
-export interface CharacterConsistencyRead {
-	character_id: number;
-	character_name: string;
-	face_similarity_mean: number;
-	face_similarity_std: number;
-	presence_rate: number;
-	overall_score: number;
-	face_matches: FaceMatchDetailRead[];
-	grade: string; // A/B/C/D/F
-}
-
-export interface ProjectConsistencyRead {
-	project_id: number;
-	overall_score: number;
-	character_reports: CharacterConsistencyRead[];
-	evaluated_at: string;
-	eval_id?: number;
-}
-
-export interface ConsistencyEvalResponse {
-	eval_id: number;
-	status: string;
-}
-
-export interface ConsistencyReportRead {
-	id: number;
-	project_id: number;
-	overall_score: number;
-	created_at: string;
-	report_data: ProjectConsistencyRead | null;
-}
-
-export interface ConsistencyEvalCompletedEventData {
-	project_id: number;
-	overall_score: number;
-	character_count: number;
-}
-
 // ── Universe / IP 宇宙 ──────────────────────────────────────
 
 export interface Universe {

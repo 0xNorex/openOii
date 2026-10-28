@@ -647,25 +647,6 @@ export const exportApi = {
 		),
 };
 
-// Consistency Evaluation API
-export const consistencyApi = {
-	triggerEval: (projectId: number) =>
-		fetchApi<import("~/types").ConsistencyEvalResponse>(
-			`/api/v1/projects/${projectId}/consistency-eval`,
-			{ method: "POST" },
-		),
-
-	getReport: (projectId: number) =>
-		fetchApi<import("~/types").ConsistencyReportRead>(
-			`/api/v1/projects/${projectId}/consistency-report`,
-		),
-
-	getHistory: (projectId: number, limit?: number) =>
-		fetchApi<import("~/types").ConsistencyReportRead[]>(
-			`/api/v1/projects/${projectId}/consistency-report/history${limit ? `?limit=${limit}` : ""}`,
-		),
-};
-
 export const universesApi = {
 	list: () =>
 		fetchApi<import("~/types").Universe[]>("/api/v1/universes"),

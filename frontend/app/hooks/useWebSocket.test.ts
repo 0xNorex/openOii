@@ -1355,10 +1355,11 @@ describe("useProjectWebSocket", () => {
           agent: "critic",
           content: expect.stringContaining("角色圣经已更新"),
         }),
-        expect.objectContaining({
-          agent: "critic",
-          content: expect.stringContaining("综合评分 91.3/100"),
-        }),
+      ])
+    );
+    expect(messages).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ content: expect.stringContaining("一致性评估") }),
       ])
     );
     // audio_generated 更新 query cache 里的 shot（见 applyServerEvent.test.ts）

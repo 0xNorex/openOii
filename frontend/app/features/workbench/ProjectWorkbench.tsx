@@ -43,11 +43,6 @@ const VersionCompareDrawer = lazy(() =>
 		default: m.VersionCompareDrawer,
 	})),
 );
-const ConsistencyPanel = lazy(() =>
-	import("~/components/panels/ConsistencyPanel").then((m) => ({
-		default: m.ConsistencyPanel,
-	})),
-);
 
 export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const queryClient = useQueryClient();
@@ -70,7 +65,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 	const [versionOpen, setVersionOpen] = useState(false);
-	const [consistencyOpen, setConsistencyOpen] = useState(false);
 	const [exporting, setExporting] = useState(false);
 	const [versionTarget, setVersionTarget] = useState<{
 		entityType: VersionEntityType;
@@ -361,7 +355,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					}}
 					generateDisabled={generatePending || hasActiveRun}
 					onOpenVersions={handleOpenVersions}
-					onOpenConsistency={() => setConsistencyOpen(true)}
 					onExport={handleExportWebtoon}
 					exportBusy={exporting}
 				/>
@@ -467,15 +460,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						initialEntityType={versionTarget?.entityType}
 						initialEntityId={versionTarget?.entityId ?? null}
 						onClose={() => setVersionOpen(false)}
-					/>
-				</Suspense>
-			)}
-
-			{consistencyOpen && (
-				<Suspense fallback={null}>
-					<ConsistencyPanel
-						projectId={project.id}
-						onClose={() => setConsistencyOpen(false)}
 					/>
 				</Suspense>
 			)}
