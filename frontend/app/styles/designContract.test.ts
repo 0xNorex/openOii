@@ -80,6 +80,18 @@ describe("Design Contract: 弹层统一走 ui/Dialog", () => {
 		expect(hits).toEqual([]);
 	});
 
+	it("原生 <button 只在 components/ui 与画布内部出现（其余用 Button / IconButton / PlainButton）", () => {
+		const hits = sources
+			.filter(
+				({ file, text }) =>
+					/<button\b/.test(text) &&
+					!file.startsWith("app/components/ui/") &&
+					!file.startsWith("app/features/comic-workflow/canvas/"),
+			)
+			.map(({ file }) => file);
+		expect(hits).toEqual([]);
+	});
+
 	it("font-brand 只用于字标", () => {
 		const hits = sources.filter(({ text }) => /\bfont-brand\b/.test(text)).map(({ file }) => file);
 		expect(hits).toEqual(["app/components/layout/TopBar.tsx"]);

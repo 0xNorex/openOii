@@ -16,6 +16,7 @@ import {
 	studioStatusDotClass,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { useEffect, useRef, useState } from "react";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface StagePipelineProps {
 	isGenerating: boolean;
@@ -171,9 +172,8 @@ export function StagePipeline({
 				{hasTools ? (
 					// 版本/一致性/导出收进溢出菜单：所有视口可达（<sm 原先整组消失，导出无入口）
 					<div ref={toolsRef} className="relative mr-0.5 border-r border-ink/10 pr-1" onKeyDown={(event) => event.key === "Escape" && setToolsOpen(false)}>
-						<button
-							type="button"
-							className={`btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-8 min-h-8 gap-1.5 px-2.5 text-sm ${chromeBtn}`}
+						<Button variant="ghost" size="sm"
+							className={chromeBtn}
 							aria-label="工作台工具"
 							aria-haspopup="menu"
 							aria-expanded={toolsOpen}
@@ -182,7 +182,7 @@ export function StagePipeline({
 						>
 							<EllipsisHorizontalIcon className="h-4 w-4" aria-hidden="true" />
 							<span className="hidden lg:inline">工具</span>
-						</button>
+						</Button>
 						{toolsOpen ? <ul
 							tabIndex={0}
 							role="menu"
@@ -191,8 +191,7 @@ export function StagePipeline({
 						>
 							{onOpenVersions ? (
 								<li role="none">
-									<button
-										type="button"
+									<PlainButton
 										role="menuitem"
 										className="gap-2 text-xs"
 										onClick={() => { setToolsOpen(false); runMenuAction(onOpenVersions); }}
@@ -200,13 +199,12 @@ export function StagePipeline({
 									>
 										<ClockIcon className="h-3.5 w-3.5" aria-hidden="true" />
 										版本对比
-									</button>
+									</PlainButton>
 								</li>
 							) : null}
 							{onExport ? (
 								<li role="none">
-									<button
-										type="button"
+									<PlainButton
 										role="menuitem"
 										className="gap-2 text-xs"
 										onClick={() => { setToolsOpen(false); runMenuAction(onExport); }}
@@ -215,7 +213,7 @@ export function StagePipeline({
 									>
 										<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
 										{exportBusy ? "导出中…" : "导出 Webtoon"}
-									</button>
+									</PlainButton>
 								</li>
 							) : null}
 						</ul> : null}

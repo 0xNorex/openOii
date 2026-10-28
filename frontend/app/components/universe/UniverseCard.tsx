@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Card } from "~/components/ui/Card";
 import type { Universe } from "~/types";
 import { SparklesIcon, UsersIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { IconButton } from "../../components/ui/IconButton";
 
 interface UniverseCardProps {
 	universe: Universe;
@@ -74,9 +75,8 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 				</Card>
 			</Link>
 
-			<button
-				type="button"
-				className="absolute right-1.5 top-1.5 rounded-full border border-ink/10 bg-paper-100/95 p-1.5 text-ink-muted opacity-0 transition-[opacity,color,background-color] duration-fast hover:bg-error/15 hover:text-error-fg group-hover:opacity-100 focus-visible:opacity-100"
+			<IconButton
+				className="absolute right-1.5 top-1.5 rounded-full bg-paper-100/95 text-ink-muted opacity-0 hover:bg-error-bg hover:text-error-fg group-hover:opacity-100 focus-visible:opacity-100"
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -86,7 +86,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 				aria-label={`删除宇宙 ${universe.name}`}
 			>
 				<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
-			</button>
+			</IconButton>
 		</div>
 	);
 }

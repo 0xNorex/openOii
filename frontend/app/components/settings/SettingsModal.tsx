@@ -18,6 +18,9 @@ import {
 	CheckCircleIcon,
 	ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { Button } from "../../components/ui/Button";
+import { IconButton } from "../../components/ui/IconButton";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 type AlertType = "success" | "error" | "warning";
 
@@ -776,15 +779,13 @@ export function SettingsModal() {
 						<span>系统设置</span>
 						<span className="hidden font-mono text-xs font-normal uppercase text-ink-muted sm:inline">providers / storage / runtime</span>
 					</h3>
-					<button
-						type="button"
+					<IconButton
 						onClick={handleCancel}
-						className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 touch-target-dense h-8 min-h-8 w-8"
 						aria-label="关闭设置"
 						title="关闭设置"
 					>
 						<XMarkIcon className="h-4 w-4" />
-					</button>
+					</IconButton>
 				</div>
 
 				{isLoading && (
@@ -817,13 +818,12 @@ export function SettingsModal() {
 									const cfg = tabConfig[section.key];
 									const isActive = activeTab === section.key;
 									return (
-										<button
+										<PlainButton
 											key={section.key}
 											ref={(node) => {
 												tabRefs.current[section.key] = node;
 											}}
 											id={`settings-tab-${section.key}`}
-											type="button"
 											role="tab"
 											aria-selected={isActive}
 											aria-controls="settings-panel"
@@ -850,7 +850,7 @@ export function SettingsModal() {
 											>
 												{section.items.length}
 											</span>
-									</button>
+									</PlainButton>
 									);
 								})}
 							</div>
@@ -881,27 +881,22 @@ export function SettingsModal() {
 								</span>
 							</div>
 
-							<button
-								type="button"
+							<Button variant="secondary" size="sm"
 								onClick={handleCancel}
-								className="btn-doodle h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
 							>
 								取消
-							</button>
+							</Button>
 
-							<button
+							<Button variant="primary" size="sm"
 								type="submit"
-								className="btn-doodle bg-primary text-primary-content h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
 								disabled={updateMutation.isPending}
 							>
 								{updateMutation.isPending && (
 									<span className="spinner-doodle h-3 w-3" />
 								)}
 								保存配置
-							</button>
-							<button
-								type="button"
-								className="btn-doodle bg-transparent h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
+							</Button>
+							<Button variant="secondary" size="sm"
 								onClick={handleTestConnection}
 								disabled={
 									updateMutation.isPending ||
@@ -913,7 +908,7 @@ export function SettingsModal() {
 									<span className="spinner-doodle h-3 w-3" />
 								)}
 								测试连接
-							</button>
+							</Button>
 						</div>
 					</form>
 				)}
@@ -960,16 +955,14 @@ export function SettingsModal() {
 				</div>
 
 				<div className="dialog-actions">
-					<button
-						type="button"
+					<Button variant="primary" size="sm"
 						onClick={() => {
 							setAlertState({ ...alertState, show: false });
 							closeModal();
 						}}
-						className="btn-doodle bg-primary text-primary-content h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
 					>
 						确定
-					</button>
+					</Button>
 				</div>
 			</Dialog>
 		</>

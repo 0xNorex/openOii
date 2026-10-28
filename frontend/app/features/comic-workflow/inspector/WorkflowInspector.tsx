@@ -29,6 +29,7 @@ import type {
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import type { ComicWorkflowNode } from "../graph/types";
+import { PlainButton } from "../../../components/ui/PlainButton";
 
 type InspectorTab = "overview" | "content" | "actions";
 
@@ -110,9 +111,8 @@ export function WorkflowInspector({
 
 			<div className="flex gap-0.5 border-b border-ink/10 p-0.5">
 				{(Object.keys(TAB_LABELS) as InspectorTab[]).map((tab) => (
-					<button
+					<PlainButton
 						key={tab}
-						type="button"
 						className={`touch-target-dense flex-1 rounded-sm text-xs font-semibold transition-colors duration-fast ${
 							activeTab === tab
 								? "bg-primary text-primary-content"
@@ -121,7 +121,7 @@ export function WorkflowInspector({
 						onClick={() => setActiveTab(tab)}
 					>
 						{TAB_LABELS[tab]}
-					</button>
+					</PlainButton>
 				))}
 			</div>
 
@@ -876,7 +876,7 @@ function ActionButton({
 }) {
 	return (
 		<Button
-			variant={danger ? "error" : primary ? "primary" : "ghost"}
+			variant={danger ? "danger" : primary ? "primary" : "ghost"}
 			size="sm"
 			className={`w-full justify-start gap-1.5 !h-8 !min-h-8 text-xs ${danger ? "text-error-fg" : ""}`}
 			disabled={disabled}

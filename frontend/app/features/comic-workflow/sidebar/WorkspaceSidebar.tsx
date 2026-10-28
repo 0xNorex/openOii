@@ -10,6 +10,8 @@ import type { Asset } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
+import { IconButton } from "../../../components/ui/IconButton";
+import { PlainButton } from "../../../components/ui/PlainButton";
 
 /**
  * 左栏 = Agent Activity。只承载「与选中无关」的常驻面板：
@@ -145,9 +147,8 @@ export function WorkspaceSidebar({
 					onKeyDown={handleTabKeyDown}
 				>
 					{TABS.map((tab) => (
-						<button
+						<PlainButton
 							key={tab.key}
-							type="button"
 							ref={(node) => {
 								tabRefs.current[tab.key] = node;
 							}}
@@ -168,13 +169,12 @@ export function WorkspaceSidebar({
 						>
 							<SvgIcon name={tab.icon} size={12} />
 							<span className={collapsed ? "sr-only" : ""}>{tab.label}</span>
-						</button>
+						</PlainButton>
 					))}
 				</div>
-				<button
-					type="button"
+				<IconButton
 					// <lg 收起后没有任何入口能再展开，因此折叠按钮只在 lg+ 出现
-					className="touch-target-dense hidden items-center justify-center text-ink-muted transition-colors duration-fast hover:bg-paper-200 lg:flex"
+					className="hidden text-ink-muted hover:text-ink lg:flex"
 					onClick={() => onCollapsedChange?.(!collapsed)}
 					aria-label={collapsed ? "展开活动栏" : "收起活动栏"}
 					title={collapsed ? "展开活动栏" : "收起活动栏"}
@@ -187,7 +187,7 @@ export function WorkspaceSidebar({
 							collapsed ? "" : "rotate-180",
 						)}
 					/>
-				</button>
+				</IconButton>
 			</div>
 
 			<div
@@ -288,9 +288,8 @@ function AssetsPanel({ projectId, active }: { projectId: number; active: boolean
 				/>
 				<div className="mt-1.5 grid grid-cols-3 gap-0.5">
 					{(["all", "character", "scene"] as const).map((type) => (
-						<button
+						<PlainButton
 							key={type}
-							type="button"
 							className={clsx(
 								"touch-target-dense h-8 min-h-8 text-xs font-semibold transition-colors duration-fast",
 								assetType === type
@@ -300,7 +299,7 @@ function AssetsPanel({ projectId, active }: { projectId: number; active: boolean
 							onClick={() => setAssetType(type)}
 						>
 							{assetTypeLabel(type)}
-						</button>
+						</PlainButton>
 					))}
 				</div>
 			</div>

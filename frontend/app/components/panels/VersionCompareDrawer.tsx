@@ -8,6 +8,7 @@ import { projectQueryKeys } from "~/query/queryKeys";
 import { getStaticUrl, projectsApi, versionsApi } from "~/services/api";
 import type { ArtifactVersion, VersionDiff, VersionEntityType } from "~/types";
 import { toast } from "~/utils/toast";
+import { IconButton } from "../../components/ui/IconButton";
 
 interface VersionCompareDrawerProps {
 	open: boolean;
@@ -199,15 +200,14 @@ export function VersionCompareDrawer({
 			<div className="sticky top-0 z-panel flex items-center gap-2 border-b-2 border-ink/10 bg-paper-100 px-3 py-2">
 				<SvgIcon name="clock-3" size={16} />
 				<h2 id="version-compare-title" className="m-0 text-md font-bold">版本对比</h2>
-				<button
-					type="button"
-					className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 rounded-full touch-target-dense ml-auto h-8 min-h-8 w-8"
+				<IconButton
+					className="ml-auto rounded-full"
 					onClick={onClose}
 					aria-label="关闭版本对比"
 					title="关闭版本对比"
 				>
 					<SvgIcon name="x" size={14} />
-				</button>
+				</IconButton>
 			</div>
 
 			<div className="space-y-3 p-3">

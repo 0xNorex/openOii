@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Button } from './Button';
+import { IconButton } from './IconButton';
 import { describe, it, expect, vi } from 'vitest';
 
 describe('Button', () => {
@@ -15,6 +16,9 @@ describe('Button', () => {
 
     rerender(<Button variant="secondary">Secondary</Button>);
     expect(screen.getByRole('button')).toHaveClass('bg-surface', 'border-border-strong');
+
+    rerender(<Button variant="danger">Danger</Button>);
+    expect(screen.getByRole('button')).toHaveClass('bg-error', 'text-error-content');
   });
 
   it('applies size styles', () => {
@@ -66,5 +70,12 @@ describe('Button', () => {
     await user.click(button);
     
     expect(handleClick).not.toHaveBeenCalled();
+  });
+
+  it('IconButton exposes its aria-label as the accessible name', () => {
+    render(<IconButton aria-label="关闭">x</IconButton>);
+    const button = screen.getByRole('button', { name: '关闭' });
+    expect(button).toHaveAttribute('type', 'button');
+    expect(button).toHaveClass('h-8', 'w-8');
   });
 });

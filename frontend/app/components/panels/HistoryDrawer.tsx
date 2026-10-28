@@ -8,6 +8,8 @@ import { Dialog } from "~/components/ui/Dialog";
 import { toast } from "~/utils/toast";
 import { ApiError } from "~/types/errors";
 import { cleanupDeletedProjectCaches } from "~/features/projects/deleteProject";
+import { IconButton } from "../../components/ui/IconButton";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface HistoryDrawerProps {
 	open: boolean;
@@ -93,16 +95,15 @@ function ProjectRow({
 							}}
 							autoFocus
 						/>
-						<button type="button" className="btn-doodle h-8 min-h-8 gap-1 px-2 text-xs bg-primary text-primary-content" onClick={onConfirmRename}>
+						<IconButton variant="primary" aria-label="确认重命名"  onClick={onConfirmRename}>
 							<SvgIcon name="check" size={12} />
-						</button>
-						<button type="button" className="btn-doodle h-8 min-h-8 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200" onClick={onCancelRename}>
+						</IconButton>
+						<IconButton aria-label="取消重命名"  onClick={onCancelRename}>
 							<SvgIcon name="x" size={12} />
-						</button>
+						</IconButton>
 					</div>
 				) : (
-					<button
-						type="button"
+					<PlainButton
 						onClick={onNavigate}
 						className="w-full text-left"
 					>
@@ -117,18 +118,17 @@ function ProjectRow({
 							{project.style && <span>{project.style}</span>}
 							{project.target_shot_count && <span>{project.target_shot_count} 镜头</span>}
 						</div>
-					</button>
+					</PlainButton>
 				)}
 			</div>
 			{!isRenaming && (
-				<button
-					type="button"
-					className="btn-doodle h-7 min-h-7 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200 flex-shrink-0 mt-0.5"
+				<IconButton aria-label="重命名"
+					className="mt-0.5 shrink-0 text-ink-muted hover:text-ink"
 					title="重命名"
 					onClick={onStartRename}
 				>
 					<SvgIcon name="pencil" size={12} />
-				</button>
+				</IconButton>
 			)}
 		</div>
 	);

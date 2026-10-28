@@ -25,6 +25,7 @@ import type { SharedCharacterRead, UniverseDetail } from "~/types";
 import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
 import { TopBar } from "~/components/layout/TopBar";
+import { IconButton } from "../components/ui/IconButton";
 
 export function UniverseDetailPage() {
 	const { universeId } = useParams<{ universeId: string }>();
@@ -349,9 +350,8 @@ export function UniverseDetailPage() {
 													</span>
 												) : null}
 											</div>
-											<button
-												type="button"
-								className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-7 min-h-7 gap-1 px-2 text-xs text-error-fg hover:text-error-fg"
+											<IconButton
+								className="text-error-fg hover:bg-error-bg"
 												aria-label={`从宇宙移除${ch.chapter_title || ch.project_title || "未命名项目"}`}
 												title="从宇宙移除"
 												onClick={() =>
@@ -359,7 +359,7 @@ export function UniverseDetailPage() {
 												}
 											>
 												<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
-											</button>
+											</IconButton>
 										</div>
 									))}
 							</div>

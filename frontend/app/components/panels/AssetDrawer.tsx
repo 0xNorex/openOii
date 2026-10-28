@@ -8,6 +8,8 @@ import { Dialog } from "~/components/ui/Dialog";
 import { toast } from "~/utils/toast";
 import type { Asset, AssetCreatePayload } from "~/types";
 import type { IconName } from "~/components/ui/SvgIcon";
+import { IconButton } from "../../components/ui/IconButton";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 type AssetType = "character" | "scene";
 
@@ -188,8 +190,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 							</span>
 						</label>
 						<div className="flex gap-2">
-							<button
-								type="button"
+							<PlainButton
 								className={`flex-1 btn-doodle h-7 min-h-7 gap-1 px-2 text-xs ${
 									assetType === "character"
 										? "bg-primary text-primary-content"
@@ -199,9 +200,8 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 							>
 								<SvgIcon name="star" size={12} className="mr-1" />
 								角色
-							</button>
-							<button
-								type="button"
+							</PlainButton>
+							<PlainButton
 								className={`flex-1 btn-doodle h-7 min-h-7 gap-1 px-2 text-xs ${
 									assetType === "scene"
 										? "bg-primary text-primary-content"
@@ -211,7 +211,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 							>
 								<SvgIcon name="image" size={12} className="mr-1" />
 								场景
-							</button>
+							</PlainButton>
 						</div>
 					</div>
 
@@ -240,9 +240,8 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 									alt="预览"
 									className="w-full h-28 object-cover rounded-lg border-2 border-ink/10"
 								/>
-								<button
-									type="button"
-									className="absolute top-1 right-1 btn-doodle h-7 min-h-7 w-7 rounded-full bg-paper-300/80 p-0 text-error-content shadow-none hover:bg-error/80"
+								<IconButton
+									className="absolute top-1 right-1 rounded-full bg-paper-100/90 text-error-fg hover:bg-error-bg"
 									onClick={() => {
 										setImageFile(null);
 										setImagePreview(null);
@@ -252,7 +251,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 									aria-label="移除图片"
 								>
 									<SvgIcon name="x" size={10} />
-								</button>
+								</IconButton>
 							</div>
 						) : (
 							<Button
@@ -489,7 +488,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 
 				<div className="flex border-b-2 border-ink/10">
 					{ASSET_TABS.map((tab) => (
-						<button
+						<PlainButton
 							key={tab.key}
 							className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium transition-colors duration-fast border-b-2 -mb-[2px] ${
 								activeTab === tab.key
@@ -500,7 +499,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 						>
 							<SvgIcon name={tab.icon} size={12} />
 							{tab.label}
-						</button>
+						</PlainButton>
 					))}
 				</div>
 

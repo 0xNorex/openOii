@@ -1,5 +1,8 @@
 import { Dialog } from "~/components/ui/Dialog";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Button } from "../../components/ui/Button";
+import { IconButton } from "../../components/ui/IconButton";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface ImagePreviewModalProps {
   src: string;
@@ -15,14 +18,13 @@ export function ImagePreviewModal({ src, alt, onClose }: ImagePreviewModalProps)
         alt={alt}
         className="max-w-full max-h-[90vh] object-contain rounded-lg"
       />
-      <button
-        type="button"
-        className="absolute -top-3 -right-3 btn-doodle rounded-full h-8 min-h-8 w-8 p-0 bg-neutral text-neutral-content"
+      <IconButton variant="secondary"
+        className="absolute -top-3 -right-3 rounded-full"
         onClick={onClose}
         aria-label="关闭"
       >
         <XMarkIcon className="w-5 h-5" aria-hidden="true" />
-      </button>
+      </IconButton>
     </Dialog>
   );
 }
@@ -52,22 +54,19 @@ export function VideoPreviewModal({
       >
         <track kind="captions" label="中文字幕" src="" />
       </video>
-      <button
-        type="button"
-        className="absolute -top-3 -right-3 btn-doodle rounded-full h-8 min-h-8 w-8 p-0 bg-neutral text-neutral-content"
+      <IconButton variant="secondary"
+        className="absolute -top-3 -right-3 rounded-full"
         onClick={onClose}
         aria-label="关闭"
       >
         <XMarkIcon className="w-5 h-5" aria-hidden="true" />
-      </button>
+      </IconButton>
       {showDownload && (
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-neutral/80 rounded-xl px-4 py-3 border border-ink/10">
           <span className="text-primary-content text-sm font-medium truncate">
             {title}
           </span>
-          <button
-            type="button"
-            className="btn-doodle h-8 min-h-8 gap-2 px-2.5 text-sm bg-info text-info-content border-2 border-ink/30"
+          <Button variant="secondary" size="sm"
             onClick={(e) => {
               e.stopPropagation();
               if (onDownload) {
@@ -88,7 +87,7 @@ export function VideoPreviewModal({
               <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
             </svg>
             下载
-          </button>
+          </Button>
         </div>
       )}
     </Dialog>
@@ -109,13 +108,12 @@ export function PreviewableImage({
   onPreview,
 }: PreviewableImageProps) {
   return (
-    <button
-      type="button"
+    <PlainButton
       className={`${className} cursor-zoom-in hover:opacity-90 transition-opacity duration-fast p-0 bg-transparent border-0`}
       onClick={() => onPreview(src, alt)}
       aria-label={`预览图片：${alt}`}
     >
       <img src={src} alt={alt} className="w-full h-full object-inherit" />
-    </button>
+    </PlainButton>
   );
 }

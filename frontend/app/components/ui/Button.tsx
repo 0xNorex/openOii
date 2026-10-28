@@ -1,12 +1,25 @@
 import { clsx } from "clsx";
 import { type ButtonHTMLAttributes, type ReactNode } from "react";
 
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonSize = "sm" | "md" | "lg";
+
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "error";
-  size?: "sm" | "md" | "lg";
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   loading?: boolean;
   children: ReactNode;
 }
+
+export const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
+  primary: "bg-primary text-primary-content border-primary hover:bg-primary/90",
+  secondary: "bg-surface text-ink border-border-strong hover:bg-paper-200",
+  ghost: "bg-transparent border-transparent hover:bg-paper-200",
+  danger: "bg-error text-error-content border-error hover:bg-error/90",
+};
+
+export const BUTTON_BASE =
+  "btn-doodle cursor-pointer inline-flex items-center justify-center disabled:opacity-50";
 
 export function Button({
   variant = "primary",
@@ -19,17 +32,6 @@ export function Button({
   type = "button",
   ...props
 }: ButtonProps) {
-  const baseStyles =
-    "btn-doodle font-semibold cursor-pointer inline-flex items-center justify-center";
-
-  const variantStyles = {
-    primary: "bg-primary text-primary-content hover:bg-primary/90",
-    secondary: "bg-surface text-ink border-border-strong hover:bg-paper-200",
-    ghost:
-      "bg-transparent border-transparent shadow-none hover:bg-paper-200",
-    error: "bg-error text-error-content hover:bg-error/90",
-  };
-
   const sizeStyles = {
     // 不设 min-h-*：让 touch-target-dense 的 min-height 在触屏 (pointer:coarse)
     // 下升到 44px，也允许调用方用 min-h-[...] 覆盖
@@ -48,8 +50,8 @@ export function Button({
   return (
     <button
       className={clsx(
-        baseStyles,
-        variantStyles[variant],
+        BUTTON_BASE,
+        BUTTON_VARIANTS[variant],
         sizeStyles[size],
         isDisabled && "opacity-50 cursor-not-allowed",
         className,

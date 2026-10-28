@@ -2,6 +2,8 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
 import { useToastStore } from "~/stores/toast.store";
 import type { Toast as ToastType } from "~/types/errors";
+import { Button } from "../../components/ui/Button";
+import { IconButton } from "../../components/ui/IconButton";
 
 interface ToastProps {
   toast: ToastType;
@@ -39,14 +41,13 @@ export function Toast({ toast }: ToastProps) {
         <h4 className="m-0 text-sm font-bold leading-snug">
           {toast.title}
         </h4>
-        <button
-          type="button"
+        <IconButton
           onClick={() => removeToast(toast.id)}
-          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 rounded-full touch-target-dense h-7 min-h-7 w-7 hover:bg-paper-200"
+          className="rounded-full"
           aria-label="关闭"
         >
           <XMarkIcon className="h-3.5 w-3.5" />
-        </button>
+        </IconButton>
       </div>
 
       <p className="m-0 text-xs leading-snug text-ink/75">
@@ -56,21 +57,15 @@ export function Toast({ toast }: ToastProps) {
       {toast.actions && toast.actions.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {toast.actions.map((action, index) => (
-            <button
+            <Button size="sm" variant={action.variant === "primary" ? "primary" : "ghost"}
               key={index}
-              type="button"
               onClick={() => {
                 action.onClick();
                 removeToast(toast.id);
               }}
-              className={`btn-doodle h-7 min-h-7 gap-1 px-2 text-xs h-7 min-h-7 border-2 border-ink/30 px-2 ${
-                action.variant === "primary"
-                  ? "bg-primary text-primary-content"
-                  : "bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:bg-paper-200"
-              }`}
             >
               {action.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -216,7 +216,8 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Primary:** `bg-primary text-primary-content`.
 - **Secondary:** `bg-surface text-ink border-border-strong`, hover `bg-paper-200`.
 - **Ghost:** transparent, no border; hover `bg-paper-200`.
-- **Error:** `bg-error text-error-content`.
+- **Danger:** `bg-error text-error-content`.
+- **Components:** `ui/Button` (variant `primary/secondary/ghost/danger`, size `sm/md/lg`), `ui/IconButton` (required `aria-label`), `ui/PlainButton` (unstyled, for tabs, menu items, selectable cards and rows). Native `<button` is only allowed in `components/ui` and the tldraw canvas; the contract test enforces it.
 - **Disabled:** 50% opacity, `cursor-not-allowed`.
 
 ### Cards / Containers

@@ -21,6 +21,7 @@ import type { Project } from "~/types";
 import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 import { Button } from "~/components/ui/Button";
 import { clsx } from "clsx";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface TopBarProps {
 	projectId?: number;
@@ -52,8 +53,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 		<div className="relative min-w-[3rem]" ref={ref}>
 			{/* overflow-hidden 只能包按钮：放到外层会把下拉面板一起裁掉 */}
 			<div className="overflow-hidden">
-				<button
-					type="button"
+				<PlainButton
 					onClick={() => setOpen(!open)}
 					className="touch-target-dense flex max-w-[6rem] items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-[14rem]"
 					aria-expanded={open}
@@ -70,7 +70,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 						className={`h-3 w-3 flex-shrink-0 transition-transform duration-fast ${open ? "rotate-180" : ""}`}
 						aria-hidden="true"
 					/>
-				</button>
+				</PlainButton>
 			</div>
 
 			{open && (

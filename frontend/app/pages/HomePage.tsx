@@ -12,6 +12,7 @@ import { SvgIcon } from "~/components/ui/SvgIcon";
 import { CreationSettings, type CreationSettingsValue } from "~/features/projects/CreationSettings";
 import { toast } from "~/utils/toast";
 import type { CreateProjectPayload } from "~/types";
+import { PlainButton } from "../components/ui/PlainButton";
 
 const AssetDrawer = lazy(() =>
 	import("~/components/panels/AssetDrawer").then((module) => ({ default: module.AssetDrawer })),
@@ -119,12 +120,12 @@ export function HomePage() {
 							actionsAlign="title"
 							actions={
 							<div className="flex flex-wrap gap-1" aria-label="创作台工具">
-								<button type="button" className={navChip + (historyOpen ? " bg-primary text-primary-content" : " text-ink-muted")} onClick={() => setHistoryOpen((open) => !open)} aria-pressed={historyOpen}>
+								<PlainButton className={navChip + (historyOpen ? " bg-primary text-primary-content" : " text-ink-muted")} onClick={() => setHistoryOpen((open) => !open)} aria-pressed={historyOpen}>
 									<SvgIcon name="clock-3" size={14} />历史
-								</button>
-								<button type="button" className={navChip + (assetsOpen ? " bg-primary text-primary-content" : " text-ink-muted")} onClick={() => setAssetsOpen((open) => !open)} aria-pressed={assetsOpen}>
+								</PlainButton>
+								<PlainButton className={navChip + (assetsOpen ? " bg-primary text-primary-content" : " text-ink-muted")} onClick={() => setAssetsOpen((open) => !open)} aria-pressed={assetsOpen}>
 									<SvgIcon name="archive" size={14} />资产
-								</button>
+								</PlainButton>
 							</div>
 							}
 						/>
@@ -165,16 +166,15 @@ export function HomePage() {
 											].map((mode) => {
 												const active = creationMode === mode.value;
 												return (
-													<button
+													<PlainButton
 														key={mode.value}
-														type="button"
 														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 border-2 px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-ink/15 bg-paper-100 text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
 														<span className="inline-flex items-center gap-1.5 font-semibold text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
 														<span className={"text-left text-xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
-													</button>
+													</PlainButton>
 												);
 											})}
 										</div>

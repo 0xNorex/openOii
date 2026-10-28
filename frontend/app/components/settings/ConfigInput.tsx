@@ -3,6 +3,7 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { configApi } from "~/services/api";
 import type { ConfigItem } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { IconButton } from "../../components/ui/IconButton";
 
 interface ConfigInputProps {
 	item: ConfigItem;
@@ -60,11 +61,10 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 						autoComplete="off"
 						placeholder={isRevealed ? "输入新值..." : ""}
 					/>
-					<button
-						type="button"
+					<IconButton aria-label={isRevealed ? "隐藏真实值" : "显示真实值"}
 						onClick={handleToggleReveal}
 						disabled={isRevealing}
-						className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-ink-muted transition-colors duration-fast hover:text-info-fg"
+						className="absolute inset-y-0 right-0 my-auto text-ink-muted hover:text-ink"
 						title={isRevealed ? "隐藏真实值" : "显示真实值"}
 					>
 						{isRevealing ? (
@@ -74,7 +74,7 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 						) : (
 							<EyeIcon className="h-4 w-4" />
 						)}
-					</button>
+					</IconButton>
 				</div>
 				{!isRevealed && isMasked && (
 					<p className="m-0 text-xs text-ink-muted">

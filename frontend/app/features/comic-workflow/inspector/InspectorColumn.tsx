@@ -4,6 +4,7 @@ import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from "@heroicons/react/
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import type { ComicWorkflowNode } from "../graph/types";
 import { WorkflowInspector } from "../inspector/WorkflowInspector";
+import { IconButton } from "../../../components/ui/IconButton";
 
 interface InspectorColumnProps {
 	projectId: number;
@@ -74,9 +75,8 @@ export function InspectorColumn({
 				<span className="min-w-0 truncate font-mono text-xs uppercase text-ink-muted">
 					{open ? (selectedNode ? "inspector" : "project brief") : ""}
 				</span>
-				<button
-					type="button"
-					className="touch-target-dense flex shrink-0 items-center justify-center text-ink-muted transition-colors duration-fast hover:bg-paper-200"
+				<IconButton
+					className="shrink-0 text-ink-muted hover:text-ink"
 					onClick={() => {
 						const next = !open;
 						setOpen(next);
@@ -91,7 +91,7 @@ export function InspectorColumn({
 					) : (
 						<ChevronDoubleLeftIcon className="h-3.5 w-3.5" aria-hidden="true" />
 					)}
-				</button>
+				</IconButton>
 			</div>
 
 			<div className={clsx("min-h-0 flex-1 overflow-hidden", !open && "hidden")}>

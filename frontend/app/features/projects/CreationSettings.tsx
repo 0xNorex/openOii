@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { Select } from "~/components/ui/Select";
 import type { Universe } from "~/types";
 import { STYLE_CATEGORIES } from "./styleCategories";
+import { Button } from "../../components/ui/Button";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 export const MAX_REFERENCE_IMAGES = 7;
 
@@ -99,26 +101,24 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 					</div>
 					<div className="flex flex-wrap gap-1.5">
 						{previews.map((url, index) => (
-							<button
+							<PlainButton
 								key={url}
-								type="button"
 								className="group relative h-10 w-10 border border-ink/15"
 								onClick={() => set({ referenceFiles: value.referenceFiles.filter((_, i) => i !== index) })}
 								aria-label={`移除参考图 ${index + 1}`}
 								disabled={disabled}
 							>
 								<img src={url} alt="" className="h-full w-full object-cover" width={40} height={40} />
-							</button>
+							</PlainButton>
 						))}
 						{value.referenceFiles.length < MAX_REFERENCE_IMAGES ? (
-							<button
-								type="button"
-								className="touch-target-dense border border-dashed border-ink/25 px-2 text-xs font-semibold hover:border-primary"
+							<Button variant="secondary" size="sm"
+								className="border-dashed"
 								onClick={() => fileInputRef.current?.click()}
 								disabled={disabled}
 							>
 								+ 添加
-							</button>
+							</Button>
 						) : null}
 					</div>
 					<input

@@ -12,6 +12,7 @@ import {
   UserIcon,
   VideoCameraIcon,
 } from "@heroicons/react/24/outline";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface MessageListProps {
   messages: AgentMessage[];
@@ -221,13 +222,12 @@ export function MessageList({ messages }: MessageListProps) {
               }`}
             >
               {isCollapsed && msg.summary ? (
-                <button
-                  type="button"
+                <PlainButton
                   onClick={() => toggleCollapse(msg.id || "")}
                   className="text-ink-muted hover:text-ink-muted transition-colors duration-fast text-xs italic w-full text-left"
                 >
                   {msg.summary}
-                </button>
+                </PlainButton>
               ) : (
                 <>
                   <div className="whitespace-pre-wrap break-words select-text" data-copyable="true">
@@ -243,13 +243,12 @@ export function MessageList({ messages }: MessageListProps) {
                     )}
                   </div>
                   {msg.summary && !isLastMessage && !isUserMessage && msg.id && !collapsed.has(msg.id) && (
-                    <button
-                      type="button"
+                    <PlainButton
                       onClick={() => { if (msg.id) toggleCollapse(msg.id); }}
                       className="text-xs text-ink-subtle hover:text-ink-muted transition-colors duration-fast mt-0.5"
                     >
                       收起
-                    </button>
+                    </PlainButton>
                   )}
                 </>
               )}

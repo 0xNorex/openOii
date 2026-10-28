@@ -21,6 +21,7 @@ import { toast } from "~/utils/toast";
 import { ApiError } from "~/types/errors";
 import type { Project } from "~/types";
 import { getProjectStatusMeta } from "~/features/projects/statusMeta";
+import { IconButton } from "../components/ui/IconButton";
 
 
 function formatDate(value: string | null | undefined) {
@@ -180,15 +181,13 @@ export function ProjectsPage() {
 									? `已选 ${selectedCount}`
 									: "未选择"}
 							</span>
-							<button
-								type="button"
-								className="btn-doodle bg-error text-error-content touch-target-dense h-8 gap-1 px-2 text-sm"
+							<Button variant="danger" size="sm"
 								onClick={handleBatchDeleteClick}
 								disabled={selectedCount === 0 || deleteMutation.isPending}
 							>
 								<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
 								批量删除（{selectedCount}）
-							</button>
+							</Button>
 						</div>
 					</div>
 				</section>
@@ -325,15 +324,14 @@ function ProjectRow({
 				</span>
 			</div>
 
-			<button
-				type="button"
-				className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 touch-target-dense col-start-3 row-start-1 h-8 min-h-8 w-8 justify-self-end p-0 text-error-fg hover:bg-error/10 sm:col-auto sm:row-auto"
+			<IconButton
+				className="col-start-3 row-start-1 justify-self-end text-error-fg hover:bg-error-bg sm:col-auto sm:row-auto"
 				onClick={onDelete}
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"
 			>
 				<TrashIcon className="h-4 w-4" aria-hidden="true" />
-			</button>
+			</IconButton>
 		</article>
 	);
 }
