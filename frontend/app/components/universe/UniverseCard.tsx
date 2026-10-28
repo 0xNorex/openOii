@@ -24,7 +24,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 	return (
 		<div className="group relative" data-shell="universe-card">
 			<Link to={`/universes/${universe.id}`} className="block">
-				<Card className="h-full border-2 !p-3 transition-[box-shadow,transform] duration-fast hover:-translate-y-px hover:shadow-brutal sm:!p-4">
+				<Card className="h-full border-2 !p-3 transition-[box-shadow,transform] duration-fast hover:-translate-y-px sm:!p-4">
 					{universe.cover_image_url ? (
 						<div className="-mx-1 -mt-1 mb-3 h-24 overflow-hidden border border-ink/10">
 							<img
@@ -37,7 +37,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 							/>
 						</div>
 					) : (
-						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-ink/10 bg-paper-200 p-2 halftone-bg-info">
+						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-ink/10 bg-paper-200 p-2">
 							<SparklesIcon className="h-6 w-6 text-primary" aria-hidden="true" />
 							<span className="font-mono text-xs uppercase tracking-widest text-ink-muted">universe / {universe.id}</span>
 						</div>
@@ -47,7 +47,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 					<p className="m-0 font-mono text-xs tracking-wide text-ink-muted">
 						更新 {formatDate(universe.updated_at)}
 					</p>
-					<h2 className="m-0 mt-0.5 font-heading text-md font-bold leading-snug">
+					<h2 className="m-0 mt-0.5 text-md font-bold leading-snug">
 						{universe.name}
 					</h2>
 

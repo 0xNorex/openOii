@@ -49,13 +49,13 @@ export function MobileWorkbenchPreview({
 				完整画布编辑请用桌面端打开
 			</p>
 
-			<div className="rounded-lg border-2 border-ink/10 bg-paper-100 p-3 shadow-brutal-sm">
+			<div className="rounded-lg border-2 border-ink/10 bg-paper-100 p-3">
 				<div className="flex items-center gap-2">
 					<span
 						className={`h-2.5 w-2.5 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
 						aria-hidden="true"
 					/>
-					<h2 className="m-0 font-heading text-sm font-bold">
+					<h2 className="m-0 text-sm font-bold">
 						{studioStatus.label}
 					</h2>
 				</div>
@@ -77,7 +77,7 @@ export function MobileWorkbenchPreview({
 			</div>
 
 			{videoSrc ? (
-				<div className="overflow-hidden rounded-lg border-2 border-ink/10 bg-paper-100 shadow-brutal-sm">
+				<div className="overflow-hidden rounded-lg border-2 border-ink/10 bg-paper-100">
 					{/* eslint-disable-next-line jsx-a11y/media-has-caption -- 成片无字幕轨 */}
 					<video
 						controls
@@ -104,7 +104,7 @@ export function MobileWorkbenchPreview({
 			) : null}
 
 			<div>
-				<h2 className="m-0 mb-1.5 font-heading text-sm font-bold">
+				<h2 className="m-0 mb-1.5 text-sm font-bold">
 					分镜
 					<span className="ml-1 font-mono text-xs font-normal tabular-nums text-ink-muted">
 						{orderedShots.length}
@@ -150,7 +150,7 @@ export function MobileWorkbenchPreview({
 
 			{characters.length > 0 ? (
 				<div>
-					<h2 className="m-0 mb-1.5 font-heading text-sm font-bold">
+					<h2 className="m-0 mb-1.5 text-sm font-bold">
 						角色
 					</h2>
 					<ul className="m-0 flex list-none gap-2 overflow-x-auto p-0 pb-1">
@@ -173,7 +173,7 @@ export function MobileWorkbenchPreview({
 											/>
 										) : (
 											<span
-												className="flex h-full items-center justify-center font-heading text-sm font-bold text-ink-muted"
+												className="flex h-full items-center justify-center text-sm font-bold text-ink-muted"
 												aria-hidden="true"
 											>
 												{character.name?.slice(0, 1) || "?"}

@@ -11,12 +11,6 @@ importers:
       '@fontsource/bangers':
         specifier: ^5.2.8
         version: 5.2.8
-      '@fontsource/fredoka':
-        specifier: ^5.2.10
-        version: 5.2.10
-      '@fontsource/nunito':
-        specifier: ^5.2.7
-        version: 5.2.7
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@18.3.1)
@@ -429,12 +423,6 @@ packages:
 
   '@fontsource/bangers@5.2.8':
     resolution: {integrity: sha512-fFFXg+IHf05TEQ4U0gS8f7B0JHrhAN7oEw/Q8wR0APPLXnhnQSfZz2QDjg0kmVuM+IsM28ODga+0rSpnHLqFfQ==}
-
-  '@fontsource/fredoka@5.2.10':
-    resolution: {integrity: sha512-DyzPCmTf0PkBbAu+gNvnPzfD/dYIXlyp+Zcb76jEQyt/vmRKGZgkH8FFF9W2sICDaA5p+GLk1XGFjWh5PPX+lg==}
-
-  '@fontsource/nunito@5.2.7':
-    resolution: {integrity: sha512-pmtBq0H9ex9nk+RtJYEJOD9pag393iHETnl/PVKleF4i06cd0ttngK5ZCTgYb5eOqR3Xdlrjtev8m7bmgYprew==}
 
   '@heroicons/react@2.2.0':
     resolution: {integrity: sha512-LMcepvRaS9LYHJGsF0zzmgKCUim/X3N/DQKc4jepAXJ7l8QxJ1PmxJzqplF2Z3FE4PqBAIGyJAQ/w4B5dsqbtQ==}
@@ -3151,10 +3139,6 @@ snapshots:
   '@floating-ui/utils@0.2.10': {}
 
   '@fontsource/bangers@5.2.8': {}
-
-  '@fontsource/fredoka@5.2.10': {}
-
-  '@fontsource/nunito@5.2.7': {}
 
   '@heroicons/react@2.2.0(react@18.3.1)':
     dependencies:

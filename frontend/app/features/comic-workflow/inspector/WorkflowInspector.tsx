@@ -100,7 +100,7 @@ export function WorkflowInspector({
 				<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 					{selectedNode.kind}
 				</p>
-				<h2 className="m-0 truncate font-heading text-sm font-bold">
+				<h2 className="m-0 truncate text-sm font-bold">
 					{selectedNode.title}
 				</h2>
 				<p className="m-0 truncate text-xs text-ink-muted">
@@ -550,7 +550,7 @@ function MultiShotActions({
 			<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 				multi-shot
 			</p>
-			<h2 className="m-0 font-heading text-sm font-bold">
+			<h2 className="m-0 text-sm font-bold">
 				已选 {shotIds.length} 格
 			</h2>
 			<p className="m-0 mt-1 text-xs text-ink-muted">

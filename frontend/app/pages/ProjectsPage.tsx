@@ -160,7 +160,7 @@ export function ProjectsPage() {
 				/>
 
 				<section
-					className="border-y-2 border-ink/15 bg-paper-100/85 shadow-brutal-sm"
+					className="border-y-2 border-ink/15 bg-paper-100/85"
 					aria-label="项目批量操作"
 				>
 					<div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between">
@@ -201,7 +201,7 @@ export function ProjectsPage() {
 					) : visibleProjects.length === 0 ? (
 						<EmptyState />
 					) : (
-						<div className="overflow-hidden border-y-2 border-ink/15 bg-paper-100 shadow-brutal-sm">
+						<div className="overflow-hidden border-y-2 border-ink/15 bg-paper-100">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
 							<div className="hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem] sm:gap-3 sm:px-3">
 								<span />
@@ -250,7 +250,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 			<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 				{label}
 			</p>
-			<p className="m-0 font-heading text-md font-bold leading-none tabular-nums">
+			<p className="m-0 text-md font-bold leading-none tabular-nums">
 				{value}
 			</p>
 		</div>
@@ -294,7 +294,7 @@ function ProjectRow({
 						aria-hidden="true"
 					/>
 					{/* <sm 标题完整换行展示，sm+ 才单行截断 */}
-					<h2 className="m-0 break-words font-heading text-sm font-bold sm:truncate">
+					<h2 className="m-0 break-words text-sm font-bold sm:truncate">
 						{project.title}
 					</h2>
 				</div>
@@ -327,7 +327,7 @@ function ProjectRow({
 
 			<button
 				type="button"
-				className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm touch-target-dense col-start-3 row-start-1 h-8 min-h-8 w-8 justify-self-end p-0 text-error-fg hover:bg-error/10 sm:col-auto sm:row-auto"
+				className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 touch-target-dense col-start-3 row-start-1 h-8 min-h-8 w-8 justify-self-end p-0 text-error-fg hover:bg-error/10 sm:col-auto sm:row-auto"
 				onClick={onDelete}
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"
@@ -357,7 +357,7 @@ function ErrorState() {
 		<div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-error/25 bg-error/5 px-3 text-center">
 			<FaceFrownIcon className="h-6 w-6 text-error-fg" aria-hidden="true" />
 			<div>
-				<p className="m-0 font-heading text-md font-bold text-error-fg">
+				<p className="m-0 text-md font-bold text-error-fg">
 					加载失败，请重试
 				</p>
 				<p className="m-0 mt-0.5 text-xs text-ink-muted">

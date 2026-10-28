@@ -39,7 +39,7 @@ export function DeskSection({
 							{icon}
 						</span>
 					) : null}
-					<h2 className="m-0 font-heading text-md font-bold leading-tight">
+					<h2 className="m-0 text-md font-bold leading-tight">
 						{title}
 					</h2>
 					{meta ? (

@@ -50,7 +50,6 @@
 
   [data-theme],
   .card-doodle,
-  .card-comic,
   .btn-doodle,
   .input-doodle,
   a,
@@ -70,7 +69,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-semibold;
   }
 
   .sr-only {
@@ -100,51 +99,29 @@
 
 @layer components {
   .card-doodle {
-    @apply bg-paper-100 border-3 border-ink/30 rounded-xl duration-normal;
-    transition-property: background-color, border-color, color, box-shadow, transform;
-    transition-timing-function: ease-in-out;
-    box-shadow: 4px 4px 0px 0px rgb(var(--color-ink) / 0.3);
+    @apply bg-paper-100 border border-paper-300 rounded-lg transition-colors duration-normal;
   }
   .card-doodle:hover {
-    @apply -translate-x-0.5 -translate-y-0.5;
-    box-shadow: 6px 6px 0px 0px rgb(var(--color-ink) / 0.3);
+    @apply border-border-strong;
   }
 
-  .card-comic {
-    @apply bg-paper-100 border-3 border-ink/40 rounded-lg duration-fast;
-    transition-property: background-color, border-color, color, box-shadow, transform;
-    transition-timing-function: ease-in-out;
-    box-shadow: 4px 4px 0px 0px oklch(var(--cmyk-cyan) / 0.7), 7px 7px 0px 0px oklch(var(--cmyk-magenta) / 0.5);
-  }
-  .card-comic:hover {
-    @apply -translate-x-0.5 -translate-y-0.5;
-    box-shadow: 5px 5px 0px 0px oklch(var(--cmyk-cyan) / 0.8), 9px 9px 0px 0px oklch(var(--cmyk-magenta) / 0.6);
-  }
-  [data-theme="dark"] .card-comic:hover {
-    border-color: rgb(var(--color-ink) / 0.5);
-    box-shadow: 5px 5px 0px 0px oklch(var(--cmyk-cyan) / 0.7), 9px 9px 0px 0px oklch(var(--cmyk-magenta) / 0.5);
+  /* 漫画点缀，只用于成片卡（spec §7.6）：2px ink 描边 + CMYK 双色 3px 偏移。 */
+  .comic-frame {
+    @apply border-2 border-ink;
+    box-shadow: 3px 3px 0 0 oklch(var(--cmyk-cyan) / 0.8), 6px 6px 0 0 oklch(var(--cmyk-magenta) / 0.6);
   }
 
   .btn-doodle {
-    @apply border-3 border-ink/30 rounded-md font-bold uppercase tracking-wide duration-fast flex items-center whitespace-nowrap gap-1;
-    transition-property: background-color, border-color, color, box-shadow, transform;
-    transition-timing-function: ease-in-out;
-    box-shadow: 4px 4px 0px 0px rgb(var(--color-ink) / 0.3);
-  }
-  .btn-doodle:hover:not(:disabled) {
-    @apply -translate-x-0.5 -translate-y-0.5;
-    box-shadow: 6px 6px 0px 0px rgb(var(--color-ink) / 0.3);
-  }
-  .btn-doodle:active:not(:disabled) {
-    @apply translate-x-1 translate-y-1;
-    box-shadow: none;
+    @apply border border-border-strong rounded-md font-semibold duration-fast flex items-center whitespace-nowrap gap-1;
+    transition-property: background-color, border-color, color;
+    transition-timing-function: ease-out;
   }
   .btn-doodle:disabled {
     @apply cursor-not-allowed;
   }
 
   .input-doodle {
-    @apply border-3 border-ink/30 rounded-md bg-paper-100 outline-none focus:border-primary transition-colors duration-fast;
+    @apply border border-border-strong rounded-md bg-paper-100 outline-none focus:border-primary transition-colors duration-fast;
   }
 
   .badge-doodle {
@@ -191,7 +168,7 @@
   }
 
   .dialog-panel {
-    @apply relative max-h-[90dvh] overflow-y-auto rounded-lg border-2 border-ink/20 bg-paper-100 shadow-brutal-sm;
+    @apply relative max-h-[90dvh] overflow-y-auto rounded-lg border border-paper-300 bg-surface shadow-dialog;
   }
 
   .dialog-sheet-right .dialog-panel {
@@ -214,36 +191,9 @@
     @apply mt-3 flex justify-end gap-2;
   }
 
-  .halftone-bg {
-    background-image: radial-gradient(circle, rgb(var(--color-ink) / 0.08) 1.2px, transparent 1.2px);
-    background-size: 7px 7px;
-  }
-
-  .halftone-bg-info {
-    background-image: radial-gradient(circle, rgb(var(--color-primary) / 0.16) 1.2px, transparent 1.2px);
-    background-size: 7px 7px;
-  }
-
-  [data-theme="dark"] .halftone-bg {
-    background-image: radial-gradient(circle, rgb(var(--color-ink) / 0.2) 1.2px, transparent 1.2px);
-  }
-  [data-theme="dark"] .halftone-bg-info {
-    background-image: radial-gradient(circle, rgb(var(--color-primary) / 0.3) 1.2px, transparent 1.2px);
-  }
-
-  /* Comic Workbench: paper surface for director desk pages */
+  /* 页面底色：纯 paper，不加网点（漫画点缀只在 spec §7.6 规定的位置）。 */
   .workbench-surface {
     background-color: rgb(var(--color-paper-100));
-    background-image:
-      radial-gradient(circle, rgb(var(--color-primary) / 0.12) 1.1px, transparent 1.1px),
-      linear-gradient(180deg, rgb(var(--color-paper-200) / 0.35) 0%, transparent 28%);
-    background-size: 7px 7px, 100% 100%;
-  }
-  [data-theme="dark"] .workbench-surface {
-    background-image:
-      radial-gradient(circle, rgb(var(--color-primary) / 0.22) 1.1px, transparent 1.1px),
-      linear-gradient(180deg, rgb(var(--color-paper-200) / 0.45) 0%, transparent 32%);
-    background-size: 7px 7px, 100% 100%;
   }
 
   .workbench-canvas-frame {
@@ -266,36 +216,11 @@
   }
 
   .speech-bubble {
-    @apply relative bg-paper-300/50 rounded-xl px-3 py-2;
-    font-family: "Bangers", "Impact", sans-serif;
-  }
-  .speech-bubble::after {
-    content: "";
-    @apply absolute -left-1.5 top-2.5;
-    width: 0;
-    height: 0;
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-right: 6px solid rgb(var(--color-paper-300) / 0.5);
-  }
-  [data-theme="dark"] .speech-bubble::after {
-    border-right: 6px solid rgb(var(--color-paper-300) / 0.7);
+    @apply relative bg-paper-200 rounded-lg px-3 py-2;
   }
 
   .speech-bubble-user {
-    @apply relative bg-primary/10 rounded-xl px-3 py-2;
-  }
-  .speech-bubble-user::after {
-    content: "";
-    @apply absolute -right-1.5 top-2.5;
-    width: 0;
-    height: 0;
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 6px solid rgb(var(--color-primary) / 0.1);
-  }
-  [data-theme="dark"] .speech-bubble-user::after {
-    border-left: 6px solid rgb(var(--color-primary) / 0.3);
+    @apply relative bg-primary/10 rounded-lg px-3 py-2;
   }
 
   .underline-sketch {
@@ -344,7 +269,7 @@
 }
 
 .infinite-canvas-container .tl-container {
-  --tl-font-family: 'Nunito', 'Comic Neue', sans-serif;
+  --tl-font-family: var(--font-sans);
   background: transparent !important;
 }
 

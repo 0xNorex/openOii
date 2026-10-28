@@ -770,7 +770,7 @@ export function SettingsModal() {
 				<div className="flex shrink-0 items-center justify-between border-b-2 border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
 					<h3
 						id="settings-modal-title"
-						className="flex items-center gap-1.5 font-heading text-md font-bold"
+						className="flex items-center gap-1.5 text-md font-bold"
 					>
 						<Cog6ToothIcon className="h-5 w-5 text-info-fg" />
 						<span>系统设置</span>
@@ -779,7 +779,7 @@ export function SettingsModal() {
 					<button
 						type="button"
 						onClick={handleCancel}
-						className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm touch-target-dense h-8 min-h-8 w-8"
+						className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 touch-target-dense h-8 min-h-8 w-8"
 						aria-label="关闭设置"
 						title="关闭设置"
 					>
@@ -789,7 +789,7 @@ export function SettingsModal() {
 
 				{isLoading && (
 					<div className="flex items-center justify-center p-8">
-						<span className=" spinner-doodle h-5 w-5" />
+						<span className="spinner-doodle h-5 w-5" />
 					</div>
 				)}
 
@@ -835,7 +835,7 @@ export function SettingsModal() {
 												border-2 border-ink/20 transition-colors duration-fast
                         ${
 													isActive
-														? "bg-info text-info-content shadow-brutal-sm"
+														? "bg-info text-info-content"
 														: "bg-paper-200 hover:bg-paper-300"
 												}
                       `}
@@ -895,7 +895,7 @@ export function SettingsModal() {
 								disabled={updateMutation.isPending}
 							>
 								{updateMutation.isPending && (
-									<span className=" spinner-doodle h-3 w-3" />
+									<span className="spinner-doodle h-3 w-3" />
 								)}
 								保存配置
 							</button>
@@ -910,7 +910,7 @@ export function SettingsModal() {
 								}
 							>
 								{isTestingConnection && (
-									<span className=" spinner-doodle h-3 w-3" />
+									<span className="spinner-doodle h-3 w-3" />
 								)}
 								测试连接
 							</button>
@@ -943,7 +943,7 @@ export function SettingsModal() {
 					</div>
 
 					<div className="min-w-0 flex-1">
-						<h3 id="settings-alert-title" className="mb-1 font-heading text-md font-bold">
+						<h3 id="settings-alert-title" className="mb-1 text-md font-bold">
 							{alertState.title}
 						</h3>
 						<p className="m-0 text-sm text-ink/80">

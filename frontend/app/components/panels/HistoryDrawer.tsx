@@ -81,7 +81,7 @@ function ProjectRow({
 					<div className="flex items-center gap-1">
 						<input
 							type="text"
-							className="input-doodle   bg-paper-100/80 flex-1 min-w-0 text-xs"
+							className="input-doodle bg-paper-100/80 flex-1 min-w-0 text-xs"
 							value={renameValue}
 							onChange={(e) => onRenameChange(e.target.value)}
 							onKeyDown={(e) => {
@@ -96,7 +96,7 @@ function ProjectRow({
 						<button type="button" className="btn-doodle h-8 min-h-8 gap-1 px-2 text-xs bg-primary text-primary-content" onClick={onConfirmRename}>
 							<SvgIcon name="check" size={12} />
 						</button>
-						<button type="button" className="btn-doodle h-8 min-h-8 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm" onClick={onCancelRename}>
+						<button type="button" className="btn-doodle h-8 min-h-8 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200" onClick={onCancelRename}>
 							<SvgIcon name="x" size={12} />
 						</button>
 					</div>
@@ -123,7 +123,7 @@ function ProjectRow({
 			{!isRenaming && (
 				<button
 					type="button"
-					className="btn-doodle h-7 min-h-7 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm flex-shrink-0 mt-0.5"
+					className="btn-doodle h-7 min-h-7 gap-1 px-2 text-xs bg-transparent border-transparent shadow-none hover:bg-paper-200 flex-shrink-0 mt-0.5"
 					title="重命名"
 					onClick={onStartRename}
 				>
@@ -230,7 +230,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="clock-3" size={14} className="text-primary" />
-						<h3 id="history-drawer-title" className="m-0 font-heading text-sm font-bold">
+						<h3 id="history-drawer-title" className="m-0 text-sm font-bold">
 							项目历史
 						</h3>
 						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">

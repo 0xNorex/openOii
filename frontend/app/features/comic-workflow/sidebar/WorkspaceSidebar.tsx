@@ -272,7 +272,7 @@ function AssetsPanel({ projectId, active }: { projectId: number; active: boolean
 						<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 							assets
 						</p>
-						<h2 className="m-0 font-heading text-sm font-bold">资产库</h2>
+						<h2 className="m-0 text-sm font-bold">资产库</h2>
 					</div>
 					<span className="rounded-full border border-ink/10 bg-paper-200 px-2 py-0.5 font-mono text-xs tabular-nums text-ink-muted">
 						{data?.total ?? 0}
@@ -352,7 +352,7 @@ function AssetTile({
 }) {
 	const imageUrl = getStaticUrl(asset.image_url);
 	return (
-		<div className="overflow-hidden rounded-md border-2 border-ink/10 bg-paper-100 shadow-brutal-sm">
+		<div className="overflow-hidden rounded-md border-2 border-ink/10 bg-paper-100">
 			<div className="aspect-[4/3] bg-paper-200">
 				{imageUrl ? (
 					<img
@@ -372,7 +372,7 @@ function AssetTile({
 					<span className="rounded-full border border-ink/10 bg-paper-200 px-1.5 py-px font-mono text-xs font-bold text-ink-muted">
 						{asset.asset_type === "character" ? "角色" : "场景"}
 					</span>
-					<h3 className="m-0 min-w-0 flex-1 truncate font-heading text-xs font-bold">
+					<h3 className="m-0 min-w-0 flex-1 truncate text-xs font-bold">
 						{asset.name}
 					</h3>
 				</div>

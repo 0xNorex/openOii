@@ -210,7 +210,7 @@ export function MessageList({ messages }: MessageListProps) {
             {!sameAgentAsPrev && (
               <div className="flex items-center gap-1 mb-0.5">
                 <AgentIcon className={`w-3 h-3 ${agentColors[msg.agent] || "text-ink/30"}`} aria-hidden="true" />
-                <span className="text-xs font-comic uppercase tracking-wide text-ink-muted">{agentNameMap[msg.agent] || msg.agent}</span>
+                <span className="text-xs font-semibold text-ink-muted">{agentNameMap[msg.agent] || msg.agent}</span>
               </div>
             )}
             <div

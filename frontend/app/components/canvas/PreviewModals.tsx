@@ -67,7 +67,7 @@ export function VideoPreviewModal({
           </span>
           <button
             type="button"
-            className="btn-doodle h-8 min-h-8 gap-2 px-2.5 text-sm bg-info text-info-content border-2 border-ink/30 shadow-brutal-sm hover:shadow-brutal hover:-translate-y-0.5"
+            className="btn-doodle h-8 min-h-8 gap-2 px-2.5 text-sm bg-info text-info-content border-2 border-ink/30"
             onClick={(e) => {
               e.stopPropagation();
               if (onDownload) {

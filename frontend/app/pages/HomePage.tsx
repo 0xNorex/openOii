@@ -135,7 +135,7 @@ export function HomePage() {
 								icon={<SvgIcon name="pencil" size={16} />}
 								title="故事创意"
 								meta={story.length + "/5000"}
-								className="min-h-[20rem] border-2 border-ink/15 bg-paper-100 p-3 shadow-brutal-sm sm:min-h-[24rem] sm:p-4"
+								className="min-h-[20rem] border-2 border-ink/15 bg-paper-100 p-3 sm:min-h-[24rem] sm:p-4"
 							>
 								<div className="flex min-h-0 flex-1 flex-col">
 									<textarea
@@ -172,7 +172,7 @@ export function HomePage() {
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
-														<span className="inline-flex items-center gap-1.5 font-heading text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
+														<span className="inline-flex items-center gap-1.5 font-semibold text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
 														<span className={"text-left text-xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
 													</button>
 												);

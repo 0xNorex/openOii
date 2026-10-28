@@ -45,7 +45,7 @@ export function PageHeader({
 					</p>
 				) : null}
 				<div className="mt-0.5 flex flex-wrap items-end gap-2">
-					<h1 className="m-0 font-heading text-2xl font-bold leading-tight text-pretty sm:text-3xl">
+					<h1 className="m-0 text-2xl font-bold leading-tight text-pretty sm:text-3xl">
 						{title}
 					</h1>
 					{meta ? (

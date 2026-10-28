@@ -84,7 +84,7 @@ export function StagePipeline({
 
 	return (
 		<div
-			className="chrome-toolbar z-panel gap-2 border-b border-ink/10 bg-paper-200/80 px-2 sm:gap-3 sm:px-3"
+			className="chrome-toolbar z-popover gap-2 border-b border-ink/10 bg-paper-200/80 px-2 sm:gap-3 sm:px-3"
 			data-shell="stage-pipeline"
 		>
 			<span className="sr-only" aria-live="polite">
@@ -173,7 +173,7 @@ export function StagePipeline({
 					<div ref={toolsRef} className="relative mr-0.5 border-r border-ink/10 pr-1" onKeyDown={(event) => event.key === "Escape" && setToolsOpen(false)}>
 						<button
 							type="button"
-							className={`btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-8 min-h-8 gap-1.5 px-2.5 text-sm ${chromeBtn}`}
+							className={`btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-8 min-h-8 gap-1.5 px-2.5 text-sm ${chromeBtn}`}
 							aria-label="工作台工具"
 							aria-haspopup="menu"
 							aria-expanded={toolsOpen}
@@ -187,7 +187,7 @@ export function StagePipeline({
 							tabIndex={0}
 							role="menu"
 							aria-label="工作台工具菜单"
-							className="absolute right-0 top-full z-popover mt-1 w-44 list-none border-2 border-ink/10 bg-paper-100 p-1 shadow-brutal-sm"
+							className="absolute right-0 top-full z-popover mt-1 w-44 list-none border-2 border-ink/10 bg-paper-100 p-1 shadow-panel"
 						>
 							{onOpenVersions ? (
 								<li role="none">

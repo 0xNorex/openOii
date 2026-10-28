@@ -273,7 +273,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		return (
 			<div className="page-shell items-center justify-center bg-paper-100">
 				<Card className="max-w-sm text-center">
-					<h1 className="mb-2 text-xl font-heading font-bold text-pretty">
+					<h1 className="mb-2 text-xl font-bold text-pretty">
 						无法加载项目
 					</h1>
 					<p className="mb-4 text-sm text-ink-muted">
@@ -305,7 +305,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		return (
 			<div className="page-shell items-center justify-center bg-paper-100">
 				<Card className="text-center">
-					<h1 className="mb-4 text-xl font-heading font-bold text-pretty">
+					<h1 className="mb-4 text-xl font-bold text-pretty">
 						项目未找到
 					</h1>
 					<Link to="/">
@@ -383,7 +383,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				/>
 				{!isMobileWorkbench ? (
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-						<div className="relative min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
+						<div className="relative isolate min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
 							<StageView
 								projectId={projectId}
 								onSelectedNodeIdChange={handleSelectedNodeIdChange}

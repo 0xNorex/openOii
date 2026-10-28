@@ -34,7 +34,7 @@ const BANNED: Array<[RegExp, string]> = [
 	[/z-\[var\(--z-/, "用裸类 z-toast / z-popover（已在 tailwind.config.ts 映射）"],
 	[/duration-\[var\(--duration-/, "用裸类 duration-fast（已在 tailwind.config.ts 映射）"],
 	[/leading-\[var\(--leading-/, "用裸类 leading-tight / leading-normal（已在 tailwind.config.ts 映射）"],
-	[/\btext-\[\d+px\]/, "脱离 type scale：用 text-xs(10) / text-xs(12)"],
+	[/\btext-\[\d+px\]/, "脱离 type scale：用 text-xs(12) / text-sm"],
 	[/\bz-\[\d{3,}\]/, "脱离 z scale：tokens.css 的 --z-* 才是唯一分层来源"],
 	[/\bz-[1-9]\d\b/, "脱离 z scale：用 z-popover / z-panel / z-toast 等命名层"],
 	[/\brounded-(?:2xl|3xl|none)\b/, "超出 --radius-* 四档：用 rounded-sm/md/lg/xl"],
@@ -43,7 +43,13 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\b(?:p|m|gap|space)-\[var\(--space-/, "用裸类 p-2 / gap-3（已在 tailwind.config.ts 映射）"],
 	[/\bleading-(?:[0-9]|\[)/, "脱离 leading 三档：leading-tight(1.15) / snug(1.35) / normal(1.5)"],
 	[/\btext-(?:default|inherit)\b/, "字体尺寸必须来自 type scale"],
+	[/\bshadow-(?:brutal|comic)/, "硬偏移阴影已删除：浮层用 shadow-panel，成片卡用 comic-frame"],
+	[/\bfont-(?:heading|comic|sketch)\b/, "字体只有 font-sans / font-mono / font-brand（字标）"],
+	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
 ];
+
+/** 漫画点缀白名单（spec §7.6）：CMYK 偏移框只在成片卡上 */
+const COMIC_FRAME_OWNERS = ["app/features/comic-workflow/canvas/shapes/WorkflowShapeUtils.tsx"];
 
 /** 弹层只有一个原语：ui/Dialog（原生 <dialog> 顶层），其余文件不许手搓 */
 const DIALOG_OWNERS = ["app/components/ui/Dialog.tsx", "app/setupTests.ts"];
@@ -67,6 +73,18 @@ describe("Design Contract: geometry 走 token 映射", () => {
 });
 
 describe("Design Contract: 弹层统一走 ui/Dialog", () => {
+	it("comic-frame 只出现在白名单文件", () => {
+		const hits = sources
+			.filter(({ file, text }) => /\bcomic-frame\b/.test(text) && !COMIC_FRAME_OWNERS.includes(file))
+			.map(({ file }) => file);
+		expect(hits).toEqual([]);
+	});
+
+	it("font-brand 只用于字标", () => {
+		const hits = sources.filter(({ text }) => /\bfont-brand\b/.test(text)).map(({ file }) => file);
+		expect(hits).toEqual(["app/components/layout/TopBar.tsx"]);
+	});
+
 	it.each(HAND_ROLLED_DIALOG)("源码不含 %s（%s）", (pattern) => {
 		const hits = sources
 			.filter(({ file, text }) => !DIALOG_OWNERS.includes(file) && pattern.test(text))

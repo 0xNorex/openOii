@@ -34,11 +34,11 @@ const SECTION_STYLE = {
 	},
 	elements: {
 		accent: "bg-primary",
-		surface: "bg-primary/5 halftone-bg",
+		surface: "bg-primary/5",
 	},
 	shotline: {
 		accent: "bg-info",
-		surface: "bg-info/5 halftone-bg",
+		surface: "bg-info/5",
 	},
 	output: {
 		accent: "bg-ink",
@@ -235,7 +235,7 @@ function MediaPreviewButton({
 	return (
 		<button
 			type="button"
-			className="btn-doodle touch-target pointer-events-auto h-12 min-h-12 w-12 bg-paper-100/90 text-ink shadow-brutal-sm hover:bg-primary hover:text-primary-content"
+			className="btn-doodle touch-target pointer-events-auto h-12 min-h-12 w-12 bg-paper-100/90 text-ink hover:bg-primary hover:text-primary-content"
 			aria-label={type === "image" ? "预览图片" : "预览视频"}
 			title={type === "image" ? "预览图片" : "预览视频"}
 			onPointerDown={stopCanvasPointer}
@@ -448,7 +448,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 					<EmptyMedia label="等待分镜图" />
 				)}
 				{/* 九宫格 cell index */}
-				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border-2 border-ink/20 bg-info px-1 font-mono text-xs font-bold text-info-content shadow-brutal-sm">
+				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border-2 border-ink/20 bg-info px-1 font-mono text-xs font-bold text-info-content">
 					{cell}
 				</span>
 				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-xs tabular-nums">
@@ -650,7 +650,7 @@ function CardHeader({
 	return (
 		<div className="flex items-start gap-2">
 			<div
-				className={`flex shrink-0 items-center justify-center rounded-md text-primary-content shadow-brutal-sm ${accentClass} ${
+				className={`flex shrink-0 items-center justify-center rounded-md text-primary-content ${accentClass} ${
 					compact ? "h-7 w-7" : "h-8 w-8"
 				}`}
 			>
@@ -658,7 +658,7 @@ function CardHeader({
 			</div>
 			<div className="min-w-0 flex-1">
 				<div className="flex min-w-0 items-center gap-1.5">
-					<p className="m-0 truncate font-heading text-sm font-bold">
+					<p className="m-0 truncate text-sm font-bold">
 						{node.title}
 					</p>
 					{statusBadge(node.status)}
@@ -724,7 +724,7 @@ export class WorkflowFrameShapeUtil extends ShapeUtil<WorkflowFrameShape> {
 				    否则暗色主题下未显式着色的文字会停留在 tldraw 的亮色近黑（1.3:1） */}
 				<section
 					aria-label={title}
-					className={`h-full w-full rounded-xl border-3 border-ink/15 p-3 text-ink shadow-brutal-sm ${
+					className={`h-full w-full rounded-xl border-3 border-ink/15 p-3 text-ink ${
 						draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
 					} ${style.surface}`}
 					onPointerDown={draggable ? undefined : stopCanvasPointer}
@@ -737,7 +737,7 @@ export class WorkflowFrameShapeUtil extends ShapeUtil<WorkflowFrameShape> {
 							</p>
 							{/* countLabel 并入标题行尾：头部固定两行，layout 侧 frameHeader=56 才装得下 */}
 							<div className="flex min-w-0 items-baseline gap-2">
-								<p className="m-0 truncate font-heading text-md font-bold leading-tight">
+								<p className="m-0 truncate text-md font-bold leading-tight">
 									{title}
 								</p>
 								{countLabel ? (
@@ -806,7 +806,9 @@ export class WorkflowCardShapeUtil extends ShapeUtil<WorkflowCardShape> {
 			<HTMLContainer style={{ width: w, height: h, pointerEvents: "all" }}>
 				<article
 					aria-label={node.title}
-					className="card-comic h-full select-none overflow-hidden border-3 border-ink/25 bg-paper-100 text-ink"
+					className={`h-full select-none overflow-hidden rounded-lg bg-paper-100 text-ink ${
+						node.kind === "output" ? "comic-frame" : "border border-paper-300"
+					}`}
 					onPointerDown={draggable ? undefined : stopCanvasPointer}
 					onClick={() => selectWorkflowNode(node.id)}
 				>

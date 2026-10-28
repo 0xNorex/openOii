@@ -20,13 +20,13 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "btn-doodle font-heading cursor-pointer inline-flex items-center justify-center";
+    "btn-doodle font-semibold cursor-pointer inline-flex items-center justify-center";
 
   const variantStyles = {
     primary: "bg-primary text-primary-content hover:bg-primary/90",
     secondary: "bg-surface text-ink border-border-strong hover:bg-paper-200",
     ghost:
-      "bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm",
+      "bg-transparent border-transparent shadow-none hover:bg-paper-200",
     error: "bg-error text-error-content hover:bg-error/90",
   };
 

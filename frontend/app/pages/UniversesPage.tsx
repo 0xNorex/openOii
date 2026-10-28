@@ -106,7 +106,7 @@ export function UniversesPage() {
 					{isLoading && (
 						<div className="flex items-center justify-center py-8">
 							<span
-								className=" spinner-doodle h-5 w-5 text-primary"
+								className="spinner-doodle h-5 w-5 text-primary"
 								aria-label="加载中"
 							/>
 						</div>
@@ -116,7 +116,7 @@ export function UniversesPage() {
 					{!isLoading && isError && (
 						<div className="flex min-h-[10rem] flex-col items-center justify-center gap-3 rounded-lg border-2 border-error/25 bg-error/5 px-3 text-center">
 							<div>
-								<p className="m-0 font-heading text-md font-bold text-error-fg">
+								<p className="m-0 text-md font-bold text-error-fg">
 									宇宙列表加载失败
 								</p>
 								<p className="m-0 mt-0.5 text-xs text-ink-muted">
@@ -185,7 +185,7 @@ export function UniversesPage() {
 							<textarea
 								id="universe-description"
 								name="universe-description"
-								className="input-doodle  bg-paper-200 w-full h-20 text-sm"
+								className="input-doodle bg-paper-200 w-full h-20 text-sm"
 								placeholder="宇宙的简要描述..."
 								value={createForm.description}
 								onChange={(e) =>
@@ -201,7 +201,7 @@ export function UniversesPage() {
 							<textarea
 								id="universe-world-setting"
 								name="universe-world-setting"
-								className="input-doodle  bg-paper-200 w-full h-24 text-sm"
+								className="input-doodle bg-paper-200 w-full h-24 text-sm"
 								placeholder="统一的世界观设定，所有章节必须遵循..."
 								value={createForm.world_setting}
 								onChange={(e) =>
@@ -217,7 +217,7 @@ export function UniversesPage() {
 							<textarea
 								id="universe-style-rules"
 								name="universe-style-rules"
-								className="input-doodle  bg-paper-200 w-full h-16 text-sm"
+								className="input-doodle bg-paper-200 w-full h-16 text-sm"
 								placeholder="角色设计、场景风格等统一规则..."
 								value={createForm.style_rules}
 								onChange={(e) =>

@@ -33,37 +33,14 @@ colors:
   dark-warning: "#F2B35A"
   dark-error: "#FF8A80"
 typography:
-  display:
-    fontFamily: "Bangers, Impact, sans-serif"
-    fontSize: "clamp(1.75rem, 5vw, 3.5rem)"
-    fontWeight: 400
-    lineHeight: 1
-    letterSpacing: "0.04em"
-  headline:
-    fontFamily: "Fredoka, Comic Neue, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: 1.2
-  title:
-    fontFamily: "Fredoka, Comic Neue, sans-serif"
-    fontSize: "1.125rem"
-    fontWeight: 600
-    lineHeight: 1.3
-  body:
-    fontFamily: "Nunito, Comic Neue, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: 1.5
-  label:
-    fontFamily: "JetBrains Mono, Menlo, monospace"
-    fontSize: "0.75rem"
-    fontWeight: 500
-    letterSpacing: "0.05em"
-  sketch:
-    fontFamily: "Caveat, cursive"
-    fontSize: "1.25rem"
-    fontWeight: 400
-    lineHeight: 1.4
+  brand:
+    fontFamily: "Bangers, var(--font-sans)"
+    note: "wordmark only"
+  sans:
+    fontFamily: "system CJK stack: -apple-system, PingFang SC, Microsoft YaHei, Noto Sans CJK SC, system-ui"
+  mono:
+    fontFamily: "ui-monospace, SF Mono, Menlo, Consolas, Noto Sans Mono CJK SC"
+    note: "ids (S01), durations, technical fields only"
 rounded:
   sm: "4px"
   md: "6px"
@@ -218,102 +195,55 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ## 3. Typography
 
-**Display Font:** Bangers (Impact fallback)
-**Heading Font:** Fredoka (Comic Neue fallback)
-**Body Font:** Nunito (Comic Neue fallback)
-**Sketch Font:** Caveat (cursive fallback)
-**Label/Mono Font:** JetBrains Mono (Menlo fallback)
-
-**Character:** The pairing is a printing-shop conversation: Bangers shouts the headline from across the room, Fredoka carries the subhead with confident roundness, Nunito does the patient body work, and JetBrains Mono handles the registration marks and technical labels. Caveat is the hand-lettered margin note, used sparingly for personality.
-
-### Hierarchy
-- **Display** (400, clamp(1.75rem, 5vw, 3.5rem), line-height 1): Comic book cover titles. Splash text on hero sections. The only place Bangers is used. Letter-spacing 0.04em for optical balance.
-- **Headline** (700, 1.5rem, line-height 1.2): Section titles, sidebar project names, modal headers. Fredoka at its boldest.
-- **Title** (600, 1.125rem, line-height 1.3): Card titles, button text at large sizes, toast messages. Fredoka at medium weight.
-- **Body** (400, 0.875rem, line-height 1.5): All running text. Paragraphs, descriptions, chat messages. Max line length 65-75ch. Nunito's rounded terminals maintain warmth at reading length.
-- **Label** (500, 0.75rem, letter-spacing 0.05em): Status indicators, metadata, timestamps, technical data. JetBrains Mono uppercase for registration-mark precision.
-- **Sketch** (400, 1.25rem, line-height 1.4): Decorative hand-lettered text. Tooltips, hint text, personality touches. Caveat only. Used no more than once per screen to preserve impact.
-
-### Named Rules
-
-**The One Display Rule.** Bangers appears at most once per screen. If a second element needs display weight, use Fredoka 700 at headline size. Display type that appears twice is display type that has lost its punch.
-
-**The Mono-For-Data Rule.** JetBrains Mono is reserved for status labels, timestamps, technical identifiers, and code. Never use it for button labels, headings, or body text. If it reads like a registration mark, it belongs in Mono. If it reads like a sentence, it does not.
+- **Sans** (`font-sans`, the default): the system CJK stack in `--font-sans`. No Chinese webfont is bundled; self-hosted installs need no font CDN.
+- **Mono** (`font-mono`): ids such as S01, durations and technical fields. Never for Chinese labels.
+- **Brand** (`font-brand`): Bangers, Latin only, for the `OPENOII` wordmark. It is the only bundled webfont.
+- Headings are `font-sans` with `font-semibold` or `font-bold`; there is no separate heading face.
+- Chinese text has no letter-spacing and no italics.
 
 ## 4. Elevation
 
-The Comic Workbench uses CMYK offset shadows as structural elevation. Shadows are not ambient (they don't simulate light falling on objects); they are offset-printing registration marks that communicate layer identity. Each shadow layer is a "plate" with a specific color role.
-
-### Shadow Vocabulary
-- **Brutal** (`4px 4px 0px 0px rgb(var(--color-ink) / 0.3)`): Default card elevation. Single-plate offset shadow in the ink color. Used on card-doodle and btn-doodle.
-- **Brutal Small** (`2px 2px 0px 0px rgb(var(--color-ink) / 0.3)`): Subtle elevation for small elements (chips, tags, inline badges).
-- **Brutal Large** (`6px 6px 0px 0px rgb(var(--color-ink) / 0.3)`): Hover-state elevation. The shadow grows when the card is lifted.
-- **Comic** (`4px 4px 0px 0px oklch(var(--cmyk-cyan) / 0.7), 7px 7px 0px 0px oklch(var(--cmyk-magenta) / 0.5)`): Two-plate CMYK shadow. Cyan first layer, magenta second layer, both theme-aware via `--cmyk-cyan` / `--cmyk-magenta`. Used on card-comic. Signals "this element has a distinct visual identity."
-- **Comic Magenta** (`4px 4px 0px 0px oklch(var(--cmyk-magenta) / 0.7), 7px 7px 0px 0px rgb(var(--color-ink) / 0.3)`): Magenta first layer. Used for emphasis variants, pressed states, or elements that demand attention.
-- **Comic Pop** (`5px 5px 0px 0px oklch(var(--cmyk-cyan) / 0.8), 9px 9px 0px 0px oklch(var(--cmyk-magenta) / 0.6)`): Larger CMYK shadow. Hover state for comic elements. The expanded offset signals "this plate has shifted during printing."
-
-### Tonal Layering
-- **Light theme**: Three cream surfaces (Workshop Cream/Linen/Ecru) form tonal layers without shadow. Panels and sidebars use Linen (#F0EFE6), the canvas uses Cream (#FAFAF5), and elevated inputs use Ecru (#E2E0D4).
-- **Dark theme**: Three pressroom surfaces (Pressroom Base/Surface/Elevated) form the same tonal system. Shadow opacity increases from 0.25 to 0.4 in dark mode to maintain CMYK visibility against dark backgrounds.
-
-### Named Rules
-
-**The Offset-Is-Structure Rule.** CMYK shadows are structural elevation, not decorative drop shadows. A card-comic with its Comic shadow has higher visual weight than a card-doodle with its Brutal shadow. Removing a shadow changes the element's hierarchy, not just its decoration. Never remove a shadow for aesthetics alone.
-
-**The Flat-At-Rest Rule.** Elements are flat (no translate) at rest. Hover lifts the element (-0.5px translate) and expands the shadow offset. Active presses the element (+1px translate) and collapses the shadow entirely. This physical model (lift, press, snap) is the tactile foundation.
+- **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-paper-300`, or `border-border-strong` for controls). No shadow.
+- **Floating panels, popovers, toasts, the canvas toolbar:** `shadow-panel`.
+- **Dialogs:** `shadow-dialog` on `.dialog-panel`.
+- **Comic accent** (spec §7.6): `.comic-frame` — 2px ink border plus a 3px CMYK cyan/magenta offset. Only on the final-video card. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.
+- No hover lift, no press translate.
 
 ## 5. Components
 
 ### Buttons
-- **Shape:** Rounded (8px), bold 3px border, uppercase tracking
-- **Primary (Inkwell Gold):** `btn-doodle` with `bg-primary text-primary-content`. 3px border in `ink/30`, brutal shadow, font-heading bold. Padding: md (20px 10px), lg (28px 12px).
+- **Shape:** `rounded-md` (6px), 1px border, `font-semibold`, no uppercase.
+- **Primary:** `bg-primary text-primary-content`.
 - **Secondary:** `bg-surface text-ink border-border-strong`, hover `bg-paper-200`.
-- **Ghost:** Transparent background, no border, no shadow. Hover adds `bg-paper-200` and `shadow-brutal-sm`.
-- **Error:** `bg-error text-error-content`. Same shadow model.
-- **Hover:** Translate -0.5px, shadow expands from brutal to brutal-lg (or comic to comic-pop for comic variants).
-- **Active:** Translate +1px, shadow collapses to none. The button physically presses into the surface.
-- **Disabled:** 50% opacity, cursor-not-allowed. No hover or active transforms.
-- **Loading:** Project-owned CSS spinner replaces content. All interaction blocked.
+- **Ghost:** transparent, no border; hover `bg-paper-200`.
+- **Error:** `bg-error text-error-content`.
+- **Disabled:** 50% opacity, `cursor-not-allowed`.
 
 ### Cards / Containers
-- **card-doodle:** Rounded-xl (16px), 3px border, brutal shadow. Background: Workshop Cream. Hover: -0.5px translate, shadow to brutal-lg. The default card for content sections.
-- **card-comic:** Rounded-lg (12px), 3px border, comic shadow (cyan first plate). Background: Workshop Cream. Hover: comic-pop shadow. Dark mode hover: increased border and shadow opacity. The identity card for featured content and canvas sections.
-- **Internal padding:** 24px (p-6) standard, 16px (p-4) compact.
+- **card-doodle:** `rounded-lg` (10px), 1px `border-paper-300`, `bg-paper-100`; hover border `border-strong`. No shadow.
+- **Final-video card:** `.comic-frame` (see §4).
 
 ### Inputs / Fields
-- **input-doodle:** 3px border in `ink/30`, rounded-lg (8px), Workshop Cream background. Focus: border shifts to primary (Inkwell Gold). No glow, no ring, just a decisive border-color change.
-- **Error state:** Border shifts to error color (`#C03A3A` light / `#E86868` dark). Error message in error color below.
-- **Label:** font-heading medium weight, sitting above the input.
+- **input-doodle:** 1px `border-border-strong`, `rounded-md`, `bg-paper-100`. Focus: border turns primary plus the global focus ring.
 
 ### Chips / Tags
 - **Style:** Rounded-full, thin border, paper-200 surface. Selected state uses a primary tint.
 - **State:** Unselected: paper-200 background, ink text. Selected: primary/10 background, primary text and border.
 
 ### Navigation
-- **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), Pressroom Surface / Workshop Linen background. Active project: left border highlight in Inkwell Gold (3px). Project names in font-heading, compact row layout. Delete button revealed on hover only.
-- **TopBar:** 44px height (2.75rem, `--workbench-header`), 2px thick bottom border, compact dot+icon+label stage indicators. Bold progress dots in stage accent color. Stage labels in font-heading.
+- **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), `bg-paper-100`. Active project uses a primary tint. Delete button revealed on hover only.
+- **TopBar:** 44px height (2.75rem, `--workbench-header`), 2px thick bottom border, compact dot+icon+label stage indicators. Bold progress dots in stage accent color. Stage labels semibold.
 
-### Speech Bubbles
-- **speech-bubble:** Rounded-xl, paper-300/50 background, font-comic type. Left-pointing triangle arrow (6px border-width) for AI messages.
-- **speech-bubble-user:** Rounded-xl, primary/10 background. Right-pointing triangle arrow for user messages. Dark mode: increased arrow opacity from 0.1 to 0.3.
-- **Use case:** Chat panel messages. The directional arrows follow comic convention (left = incoming, right = outgoing).
-
-### Halftone Backgrounds
-- **halftone-bg:** Radial gradient dots in `ink / 0.08`, 7px grid. Standard background texture for sections needing surface identity.
-- **halftone-bg-accent:** Dots in `primary / 0.16`, 7px grid. Accent variant for hero sections and featured areas.
-- **Dark mode:** Opacity increases (0.08→0.2, 0.16→0.3) to maintain halftone visibility against dark surfaces.
+### Chat bubbles
+- **speech-bubble** (agent): `bg-paper-200`, `rounded-lg`, no tail.
+- **speech-bubble-user**: `bg-primary/10`, `rounded-lg`, no tail.
 
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** use CMYK offset shadows to communicate visual hierarchy. A comic-shadow card has more weight than a brutal-shadow card.
-- **Do** translate elements on hover/active for tactile press feedback: lift (-0.5px), then press (+1px).
-- **Do** tint all neutrals warm (toward the yellow axis). Pure greys and blue-greys are SaaS territory.
-- **Do** use halftone dot backgrounds as surface identity markers, especially on hero sections and canvas areas.
-- **Do** keep Bangers display font to one appearance per screen. More dilutes its punch.
-- **Do** use speech-bubble directional arrows to distinguish AI vs. user messages in chat.
-- **Do** increase shadow and halftone opacity in dark mode (2-2.5x) to maintain CMYK visibility.
-- **Do** use JetBrains Mono only for status labels, timestamps, and technical identifiers.
+- **Do** keep comic accents to the places listed in spec §7.6: the wordmark, the final-video card and its completion moment, and empty states.
+- **Do** use borders and the paper tones for hierarchy; shadows are for things that float.
+- **Do** use mono only for ids, durations and technical fields.
 
 ### Don't:
 - **Don't** use pure #000 or #fff for any element. Every neutral must be tinted toward the brand hue.
@@ -323,6 +253,6 @@ The Comic Workbench uses CMYK offset shadows as structural elevation. Shadows ar
 - **Don't** use border-left or border-right greater than 1px as a colored accent stripe. Use full borders, background tints, or nothing.
 - **Don't** use gradient text (`background-clip: text` with gradient). Solid colors only.
 - **Don't** use glassmorphism (blurs, glass cards) as default surface treatment.
-- **Don't** decorate with CMYK shadows. If removing a shadow would change the hierarchy, it's structural and stays. If removing it changes nothing, it's decorative and must go.
+- **Don't** add offset hard shadows or halftone outside spec §7.6.
 - **Don't** use display fonts (Bangers) in UI labels, buttons, or data. Display is for splash, not for interaction.
 - **Don't** reinvent standard affordances (custom scrollbars, weird form controls, non-standard modals). The workbench has familiar tools.

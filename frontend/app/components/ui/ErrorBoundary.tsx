@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex min-h-screen items-center justify-center bg-paper-100 p-3">
-          <div className="card-doodle max-w-md p-4 text-center shadow-brutal-sm sm:p-5">
+          <div className="card-doodle max-w-md p-4 text-center sm:p-5">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
               <svg
                 className="h-6 w-6 text-error-fg"
@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 />
               </svg>
             </div>
-            <h2 className="mb-1 font-heading text-lg font-bold">
+            <h2 className="mb-1 text-lg font-bold">
               出错了
             </h2>
             <p className="mb-3 text-sm text-ink/75">

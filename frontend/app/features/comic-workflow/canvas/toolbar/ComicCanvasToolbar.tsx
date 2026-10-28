@@ -83,7 +83,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 	return (
 		<div
 			// <lg 不渲染：画布本身在移动端不挂载，工具条不能悬浮压住抽屉/聊天
-			className="absolute bottom-4 left-1/2 z-panel hidden -translate-x-1/2 items-center justify-center gap-0.5 rounded-lg border-2 border-ink/15 bg-paper-100 p-1 text-ink shadow-brutal-sm lg:flex"
+			className="absolute bottom-4 left-1/2 z-panel hidden -translate-x-1/2 items-center justify-center gap-0.5 rounded-lg border-2 border-ink/15 bg-paper-100 p-1 text-ink shadow-panel lg:flex"
 			role="toolbar"
 			aria-label="画布工具栏"
 		>
@@ -197,7 +197,7 @@ function ToolButton({
 		>
 				{children}
 				{showLabel ? (
-					<span className="whitespace-nowrap font-heading text-xs font-semibold">
+					<span className="whitespace-nowrap text-xs font-semibold">
 						{labelText ?? label}
 					</span>
 				) : null}

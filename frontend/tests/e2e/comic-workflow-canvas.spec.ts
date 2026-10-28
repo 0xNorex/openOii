@@ -264,7 +264,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 			card.evaluate((el) => {
 				// 画布缩放 = 卡片屏幕宽度 / 布局宽度（宽元素，取整误差小）
 				const scale = el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth;
-				const title = el.querySelector("p.font-heading");
+				const title = el.querySelector("p.font-bold");
 				return title ? parseFloat(getComputedStyle(title).fontSize) * scale : 0;
 			}),
 		)

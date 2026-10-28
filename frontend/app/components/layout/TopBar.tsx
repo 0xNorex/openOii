@@ -55,7 +55,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 				<button
 					type="button"
 					onClick={() => setOpen(!open)}
-					className="touch-target-dense flex max-w-[6rem] items-center gap-1 rounded-md px-1.5 text-sm font-heading font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-[14rem]"
+					className="touch-target-dense flex max-w-[6rem] items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-[14rem]"
 					aria-expanded={open}
 					aria-haspopup="listbox"
 				>
@@ -75,7 +75,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 
 			{open && (
 				<div
-					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border-2 border-ink/15 bg-paper-200 py-1 shadow-comic"
+					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border-2 border-ink/15 bg-paper-200 py-1 shadow-panel"
 					role="listbox"
 					aria-label="项目列表"
 				>
@@ -214,7 +214,7 @@ export function TopBar({ projectId }: TopBarProps) {
 			<div className="flex min-w-0 items-center gap-1.5">
 				<Link
 					to="/"
-					className="touch-target-dense inline-flex items-center rounded-md px-1.5 font-comic text-base tracking-wide text-primary sm:text-lg sm:font-bold sm:tracking-wider"
+					className="touch-target-dense inline-flex items-center rounded-md px-1.5 font-brand text-base tracking-wide text-primary sm:text-lg sm:font-bold sm:tracking-wider"
 					aria-label="openOii 首页"
 				>
 					openOii

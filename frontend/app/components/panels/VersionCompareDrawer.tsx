@@ -62,7 +62,7 @@ function VersionColumn({ title, version }: { title: string; version?: ArtifactVe
 	const imageUrl = getStaticUrl(version?.snapshot.image_url as string | null | undefined);
 	return (
 		<section className="min-w-0 rounded-md border-2 border-ink/15 bg-paper-200/60 p-2.5">
-			<h3 className="m-0 font-heading text-xs font-bold">{title}</h3>
+			<h3 className="m-0 text-xs font-bold">{title}</h3>
 			<div className="mt-1.5 aspect-video overflow-hidden rounded-sm border border-ink/10 bg-paper-300">
 				{imageUrl ? (
 					<img src={imageUrl} alt={title} className="h-full w-full object-cover" />
@@ -198,10 +198,10 @@ export function VersionCompareDrawer({
 		>
 			<div className="sticky top-0 z-panel flex items-center gap-2 border-b-2 border-ink/10 bg-paper-100 px-3 py-2">
 				<SvgIcon name="clock-3" size={16} />
-				<h2 id="version-compare-title" className="m-0 font-heading text-md font-bold">版本对比</h2>
+				<h2 id="version-compare-title" className="m-0 text-md font-bold">版本对比</h2>
 				<button
 					type="button"
-					className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm rounded-full touch-target-dense ml-auto h-8 min-h-8 w-8"
+					className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 rounded-full touch-target-dense ml-auto h-8 min-h-8 w-8"
 					onClick={onClose}
 					aria-label="关闭版本对比"
 					title="关闭版本对比"
@@ -276,7 +276,7 @@ export function VersionCompareDrawer({
 						</div>
 
 						<section className="rounded-md border-2 border-ink/10 bg-paper-200/40 p-2.5">
-							<h3 className="mb-1.5 font-heading text-xs font-bold">差异</h3>
+							<h3 className="mb-1.5 text-xs font-bold">差异</h3>
 							{compareQuery.isLoading && <div className="text-xs text-ink-muted">计算差异中...</div>}
 							{!compareQuery.isLoading && (compareQuery.data?.diffs.length ?? 0) === 0 && (
 								<div className="text-xs text-ink-muted">两个版本内容相同。</div>

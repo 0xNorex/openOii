@@ -85,7 +85,7 @@ export function UniverseTimelinePanel({
 				</p>
 				<div className="mt-0.5 flex items-center gap-1.5">
 					<GlobeAltIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-					<h3 className="m-0 truncate font-heading text-sm font-bold">
+					<h3 className="m-0 truncate text-sm font-bold">
 						{data.universe_name}
 					</h3>
 				</div>
@@ -139,7 +139,7 @@ export function UniverseTimelinePanel({
 									{ch.has_video ? " · 成片" : ""}
 								</span>
 							</div>
-							<p className="m-0 mt-0.5 truncate font-heading text-xs font-bold">
+							<p className="m-0 mt-0.5 truncate text-xs font-bold">
 								{ch.chapter_title || ch.title}
 							</p>
 							{ch.summary ? (
@@ -159,7 +159,7 @@ export function UniverseTimelinePanel({
 			<div className="shrink-0 border-t border-ink/10 p-2">
 				<Link
 					to={`/universes/${universeId}`}
-					className="btn-doodle inline-flex h-7 min-h-7 w-full items-center justify-center bg-transparent px-2 text-xs text-ink-muted shadow-none hover:bg-paper-200 hover:shadow-brutal-sm"
+					className="btn-doodle inline-flex h-7 min-h-7 w-full items-center justify-center bg-transparent px-2 text-xs text-ink-muted shadow-none hover:bg-paper-200"
 				>
 					打开宇宙管理
 				</Link>

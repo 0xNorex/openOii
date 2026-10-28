@@ -14,11 +14,11 @@ export function LoadingOverlay({ text, className }: LoadingOverlayProps) {
       aria-busy="true"
     >
       <span
-        className=" spinner-doodle h-6 w-6 text-primary"
+        className="spinner-doodle h-6 w-6 text-primary"
         aria-hidden="true"
       />
       {text ? (
-        <p className="mt-3 font-heading text-sm font-bold text-ink/80">
+        <p className="mt-3 text-sm font-bold text-ink/80">
           {text}
         </p>
       ) : null}

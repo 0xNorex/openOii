@@ -20,7 +20,7 @@ export function Modal({ isOpen, onClose, title, children, actions }: ModalProps)
       className="w-full max-w-lg p-4"
     >
       {title && (
-        <h3 id={titleId} className="mb-2 font-heading text-md font-bold">
+        <h3 id={titleId} className="mb-2 text-md font-bold">
           {title}
         </h3>
       )}

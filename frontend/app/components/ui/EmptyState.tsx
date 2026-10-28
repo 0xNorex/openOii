@@ -31,7 +31,7 @@ export function EmptyState({
 					{icon}
 				</div>
 			) : null}
-			<p className="m-0 font-heading text-sm font-bold text-ink-muted">
+			<p className="m-0 text-sm font-bold text-ink-muted">
 				{title}
 			</p>
 			{description ? (

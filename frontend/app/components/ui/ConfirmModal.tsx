@@ -67,7 +67,7 @@ export function ConfirmModal({
         <div className="min-w-0 flex-1">
           <h3
             id={titleId}
-            className="m-0 font-heading text-md font-bold"
+            className="m-0 text-md font-bold"
           >
             {title}
           </h3>
@@ -79,7 +79,7 @@ export function ConfirmModal({
         <button
           ref={cancelRef}
           type="button"
-          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
+          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
           onClick={onClose}
           disabled={isLoading}
         >
@@ -91,7 +91,7 @@ export function ConfirmModal({
           onClick={onConfirm}
           disabled={isLoading}
         >
-          {isLoading && <span className=" spinner-doodle h-4 w-4" />}
+          {isLoading && <span className="spinner-doodle h-4 w-4" />}
           {confirmText}
         </button>
       </div>
