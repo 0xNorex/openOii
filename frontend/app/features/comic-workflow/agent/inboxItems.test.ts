@@ -1,0 +1,58 @@
+import { describe, expect, it } from "vitest";
+import type { RecoveryControlRead, RunAwaitingConfirmEventData } from "~/types";
+import { deriveInboxItems, type DeriveInboxInput } from "./inboxItems";
+
+const base: DeriveInboxInput = {
+	awaitingConfirm: false,
+	awaitingAgent: null,
+	recoveryGate: null,
+	recoveryControl: null,
+	isGenerating: false,
+};
+
+const recoverable = {
+	state: "recoverable",
+	detail: "可恢复",
+	available_actions: ["resume", "cancel"],
+	active_run: {},
+	recovery_summary: { current_stage: "render", preserved_stages: ["plan", "plan_approval"] },
+} as unknown as RecoveryControlRead;
+
+describe("deriveInboxItems", () => {
+	it("is empty when nothing needs attention", () => {
+		expect(deriveInboxItems(base)).toEqual([]);
+	});
+
+	it("lists the approval gate with the agent name and question", () => {
+		const gate = { agent: "plan", question: "大纲可以吗？" } as RunAwaitingConfirmEventData;
+		const items = deriveInboxItems({ ...base, awaitingConfirm: true, awaitingAgent: "plan", recoveryGate: gate });
+		expect(items).toEqual([
+			expect.objectContaining({ kind: "gate", title: "规划已完成，等待确认", detail: "大纲可以吗？", gate }),
+		]);
+	});
+
+	it("does not list a recoverable run behind an open gate", () => {
+		const items = deriveInboxItems({ ...base, awaitingConfirm: true, recoveryControl: recoverable });
+		expect(items.map((i) => i.kind)).toEqual(["gate"]);
+	});
+
+	it("lists a recoverable run with its stage and kept artefacts", () => {
+		const [item] = deriveInboxItems({ ...base, recoveryControl: recoverable });
+		expect(item).toMatchObject({ kind: "recoverable", title: "运行中断于渲染阶段", detail: "已保留 2 个阶段的产物，可以继续" });
+	});
+
+	it("ignores an active (not recoverable) control", () => {
+		expect(deriveInboxItems({ ...base, recoveryControl: { ...recoverable, state: "active" } })).toEqual([]);
+	});
+
+	it("lists blocking clips and a failed run together", () => {
+		const clips = [{ shot_id: 3, order: 2, status: "failed", reason: "视频失败" }];
+		const items = deriveInboxItems({ ...base, blockingClips: clips, projectStatus: "failed" });
+		expect(items.map((i) => i.kind)).toEqual(["blocked", "failed"]);
+		expect(items[0]).toMatchObject({ title: "1 个分镜阻塞成片", clips });
+	});
+
+	it("hides the failed item while a new run is generating", () => {
+		expect(deriveInboxItems({ ...base, projectStatus: "failed", isGenerating: true })).toEqual([]);
+	});
+});
