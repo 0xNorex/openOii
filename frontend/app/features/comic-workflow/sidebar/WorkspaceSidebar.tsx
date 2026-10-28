@@ -124,7 +124,7 @@ export function WorkspaceSidebar({
 	return (
 		<aside
 			className={clsx(
-				"z-corner flex shrink-0 flex-col border-ink/10 bg-paper-100 transition-[width] duration-normal",
+				"z-panel flex shrink-0 flex-col border-ink/10 bg-paper-100 transition-[width] duration-normal",
 				// 常驻栏：桌面占据自己的栏位，不再 lg:absolute 浮在画布上
 				"relative w-full border-t-2 lg:h-full lg:border-r-2 lg:border-t-0",
 				collapsed ? "lg:w-activity-collapsed" : "lg:w-activity",

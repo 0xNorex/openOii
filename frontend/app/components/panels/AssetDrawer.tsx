@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetsApi, getStaticUrl } from "~/services/api";
 import { Button } from "~/components/ui/Button";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { ConfirmModal } from "~/components/ui/ConfirmModal";
-import { useDialogFocus } from "~/components/ui/useDialogFocus";
+import { Dialog } from "~/components/ui/Dialog";
 import { toast } from "~/utils/toast";
 import type { Asset, AssetCreatePayload } from "~/types";
 import type { IconName } from "~/components/ui/SvgIcon";
@@ -43,7 +43,6 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const formRef = useRef<HTMLDivElement>(null);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -136,28 +135,19 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 		resetForm();
 		onClose();
 	};
-	useDialogFocus(formRef, isOpen, handleClose);
-
-	if (!isOpen) return null;
 
 	return (
-		<>
-			<div
-				className="fixed inset-0 z-modal-backdrop bg-neutral/45"
-				onClick={handleClose}
-			/>
-			<div
-				ref={formRef}
-				tabIndex={-1}
-				role="dialog"
-				aria-modal="true"
-				aria-label="新建资产"
-				className="fixed right-0 top-0 z-modal flex h-full w-72 flex-col border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm"
-			>
+		<Dialog
+			open={isOpen}
+			onClose={handleClose}
+			variant="sheet-right"
+			labelledBy="create-asset-title"
+			className="flex w-72 flex-col"
+		>
 				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="plus" size={14} className="text-primary" />
-						<h3 className="m-0 font-heading text-sm font-bold">
+						<h3 id="create-asset-title" className="m-0 font-heading text-sm font-bold">
 							新建资产
 						</h3>
 					</div>
@@ -324,8 +314,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 						</Button>
 					</div>
 				</div>
-			</div>
-		</>
+		</Dialog>
 	);
 }
 
@@ -411,7 +400,6 @@ function AssetCard({
 /* ---------- Asset Drawer ---------- */
 
 export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
-	const drawerRef = useRef<HTMLDivElement>(null);
 	const queryClient = useQueryClient();
 	const [activeTab, setActiveTab] = useState<AssetType | "all">("all");
 	const [search, setSearch] = useState("");
@@ -457,26 +445,14 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 
 	const items = data?.items ?? [];
 
-	useEffect(() => {
-		drawerRef.current?.toggleAttribute("inert", !open);
-	}, [open]);
-	useDialogFocus(drawerRef, open, onClose);
-
 	return (
 		<>
-			{open && (
-				<div
-					className="fixed inset-0 z-modal-backdrop bg-neutral/40"
-					onClick={onClose}
-				/>
-			)}
-			<div
-				ref={drawerRef}
-				tabIndex={open ? -1 : undefined}
-				role={open ? "dialog" : undefined}
-				aria-modal={open || undefined}
-				aria-labelledby="asset-drawer-title"
-				className={`fixed right-0 top-0 z-modal h-full w-72 transform border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm transition-transform duration-normal ${open ? "translate-x-0" : "translate-x-full"}`}
+			<Dialog
+				open={open}
+				onClose={onClose}
+				variant="sheet-right"
+				labelledBy="asset-drawer-title"
+				className="w-72"
 			>
 				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
@@ -585,7 +561,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 						</div>
 					)}
 				</div>
-			</div>
+			</Dialog>
 
 			{/* Create Asset Form — overlays the drawer */}
 			<CreateAssetForm

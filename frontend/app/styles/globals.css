@@ -207,6 +207,14 @@
     @apply w-full rounded-b-none border-b-0;
   }
 
+  .dialog-lightbox::backdrop {
+    @apply bg-neutral/80;
+  }
+
+  .dialog-lightbox .dialog-panel {
+    @apply max-h-[90vh] max-w-[90vw] overflow-visible rounded-none border-0 bg-transparent shadow-none;
+  }
+
   .dialog-actions {
     @apply mt-3 flex justify-end gap-2;
   }
@@ -384,8 +392,3 @@
   display: none !important;
 }
 
-/* 确保 Modal 在 tldraw 之上（tldraw 内部最高 z-index 为 10） */
-.infinite-canvas-container ~ [class*="modal"],
-.infinite-canvas-container ~ [class*="fixed"] {
-  z-index: var(--z-corner) !important;
-}

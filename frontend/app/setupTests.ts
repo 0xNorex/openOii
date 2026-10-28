@@ -34,7 +34,8 @@ if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.sho
 		},
 	});
 	document.addEventListener("keydown", (event) => {
-		if (event.key !== "Escape") return;
+		// Like the browser: a handled keydown (preventDefault) is not a close request.
+		if (event.key !== "Escape" || event.defaultPrevented) return;
 		const top = openModals.filter((d) => d.isConnected).at(-1);
 		if (top && top.dispatchEvent(new Event("cancel", { cancelable: true }))) top.close();
 	});

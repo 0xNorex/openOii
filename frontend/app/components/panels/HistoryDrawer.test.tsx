@@ -135,13 +135,15 @@ describe("HistoryDrawer", () => {
 		});
 	});
 
-	it("cancels rename on Escape key", async () => {
-		renderDrawer();
+	it("cancels rename on Escape key without closing the drawer", async () => {
+		const onClose = vi.fn();
+		renderDrawer({ onClose });
 		const pencilButtons = await screen.findAllByTitle("重命名");
 		fireEvent.click(pencilButtons[0]);
 		const input = screen.getByDisplayValue("测试项目A");
 		fireEvent.keyDown(input, { key: "Escape" });
 		expect(screen.queryByDisplayValue("测试项目A")).not.toBeInTheDocument();
+		expect(onClose).not.toHaveBeenCalled();
 	});
 
 	it("deletes selected projects via confirm modal", async () => {

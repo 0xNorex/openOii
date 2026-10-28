@@ -44,11 +44,10 @@ export default {
         dropdown: "var(--z-dropdown)",
         sticky: "var(--z-sticky)",
         fixed: "var(--z-fixed)",
-        "modal-backdrop": "var(--z-modal-backdrop)",
         modal: "var(--z-modal)",
         popover: "var(--z-popover)",
         tooltip: "var(--z-tooltip)",
-        corner: "var(--z-corner)",
+        panel: "var(--z-panel)",
       },
       transitionDuration: {
         fast: "var(--duration-fast)",

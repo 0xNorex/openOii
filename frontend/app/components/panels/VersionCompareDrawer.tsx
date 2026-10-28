@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "~/components/ui/Button";
+import { Dialog } from "~/components/ui/Dialog";
 import { Select } from "~/components/ui/Select";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { projectQueryKeys } from "~/query/queryKeys";
@@ -188,14 +189,16 @@ export function VersionCompareDrawer({
 	};
 
 	return (
-		<aside
-			className={`fixed right-0 top-0 z-modal h-full w-full max-w-5xl transform overflow-y-auto border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm transition-transform duration-normal ${
-				open ? "translate-x-0" : "translate-x-full"
-			}`}
+		<Dialog
+			open={open}
+			onClose={onClose}
+			variant="sheet-right"
+			labelledBy="version-compare-title"
+			className="w-full max-w-5xl"
 		>
 			<div className="sticky top-0 z-sticky flex items-center gap-2 border-b-2 border-ink/10 bg-paper-100 px-3 py-2">
 				<SvgIcon name="clock-3" size={16} />
-				<h2 className="m-0 font-heading text-md font-bold">版本对比</h2>
+				<h2 id="version-compare-title" className="m-0 font-heading text-md font-bold">版本对比</h2>
 				<button
 					type="button"
 					className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm rounded-full touch-target-dense ml-auto h-8 min-h-8 w-8"
@@ -304,6 +307,6 @@ export function VersionCompareDrawer({
 					</>
 				)}
 			</div>
-		</aside>
+		</Dialog>
 	);
 }

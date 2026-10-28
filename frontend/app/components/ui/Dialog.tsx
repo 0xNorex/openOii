@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
 
-type DialogVariant = "center" | "sheet-right" | "sheet-bottom";
+type DialogVariant = "center" | "sheet-right" | "sheet-bottom" | "lightbox";
 
 interface DialogProps {
   open: boolean;
@@ -8,6 +8,8 @@ interface DialogProps {
   children: ReactNode;
   /** id of the element that names the dialog */
   labelledBy?: string;
+  /** accessible name when there is no visible title */
+  label?: string;
   variant?: DialogVariant;
   /** classes for the content panel (size, padding, layout) */
   className?: string;
@@ -22,6 +24,7 @@ const variantClass: Record<DialogVariant, string> = {
   center: "dialog-center",
   "sheet-right": "dialog-sheet-right",
   "sheet-bottom": "dialog-sheet-bottom",
+  lightbox: "dialog-lightbox",
 };
 
 /**
@@ -34,6 +37,7 @@ export function Dialog({
   onClose,
   children,
   labelledBy,
+  label,
   variant = "center",
   className = "",
   initialFocusRef,
@@ -45,6 +49,7 @@ export function Dialog({
     <OpenDialog
       onClose={onClose}
       labelledBy={labelledBy}
+      label={label}
       variant={variant}
       className={className}
       initialFocusRef={initialFocusRef}
@@ -60,6 +65,7 @@ function OpenDialog({
   onClose,
   children,
   labelledBy,
+  label,
   variant,
   className,
   initialFocusRef,
@@ -90,6 +96,7 @@ function OpenDialog({
     <dialog
       ref={ref}
       aria-labelledby={labelledBy}
+      aria-label={label}
       className={`dialog ${variantClass[variant]}`}
       onCancel={(event) => {
         event.preventDefault();

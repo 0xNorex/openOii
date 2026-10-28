@@ -45,6 +45,15 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\btext-(?:default|inherit)\b/, "字体尺寸必须来自 type scale"],
 ];
 
+/** 弹层只有一个原语：ui/Dialog（原生 <dialog> 顶层），其余文件不许手搓 */
+const DIALOG_OWNERS = ["app/components/ui/Dialog.tsx", "app/setupTests.ts"];
+const HAND_ROLLED_DIALOG: Array<[RegExp, string]> = [
+	[/role=["{]["']?dialog/, "role=dialog"],
+	[/aria-modal/, "aria-modal"],
+	[/dialog-overlay|z-modal-backdrop/, "自绘遮罩"],
+	[/<dialog\b/, "直接写 <dialog>"],
+];
+
 /** alpha 阶梯：只允许 5 的倍数，防止 /8 /12 /65 /85 这类随手档 */
 const ALPHA = /\b(?:border|bg|text|from|to|via|ring|outline|divide|decoration|placeholder)-[a-z0-9-]+\/(\d{1,3})\b/g;
 
@@ -54,6 +63,15 @@ describe("Design Contract: geometry 走 token 映射", () => {
 			.filter(({ text }) => pattern.test(text))
 			.map(({ file }) => file);
 		expect(hits, `${hint}\n违规文件：\n${hits.join("\n")}`).toEqual([]);
+	});
+});
+
+describe("Design Contract: 弹层统一走 ui/Dialog", () => {
+	it.each(HAND_ROLLED_DIALOG)("源码不含 %s（%s）", (pattern) => {
+		const hits = sources
+			.filter(({ file, text }) => !DIALOG_OWNERS.includes(file) && pattern.test(text))
+			.map(({ file }) => file);
+		expect(hits, `用 ~/components/ui/Dialog：\n${hits.join("\n")}`).toEqual([]);
 	});
 });
 

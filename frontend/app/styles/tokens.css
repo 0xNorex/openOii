@@ -97,12 +97,11 @@
     --z-dropdown: 10;
     --z-sticky: 20;
     --z-fixed: 30;
-    --z-modal-backdrop: 40;
     --z-modal: 50;
     --z-popover: 60;
     --z-tooltip: 70;
-    /* tldraw 宿主层：第三方画布内部 z-index 上限为 10，其上层浮层从 80 起 */
-    --z-corner: 80;
+    /* 画布上方的浮动面板（检查器、侧栏）；弹窗走浏览器 top layer，不占 z 档 */
+    --z-panel: 20;
   }
 
   [data-theme="doodle-dark"] {
