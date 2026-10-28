@@ -397,6 +397,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					activeTab={sidebarTab}
 					onTabChange={setSidebarTab}
 					projectId={projectId}
+					project={project}
 					onConfirm={handleConfirm}
 					onCancel={handleCancel}
 					creationInterview={creationInterview}
@@ -445,6 +446,18 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					/>
 				) : null}
 			</main>
+
+			{!creationInterview && isMobileWorkbench ? (
+				<PromptBar
+					selectionLabel={selectionLabel}
+					awaitingConfirm={runAwaitingConfirm}
+					awaitingAgent={runState.awaitingAgent}
+					recoveryGate={runState.recoveryGate}
+					isGenerating={hasActiveRun}
+					onSendFeedback={handleFeedback}
+					onConfirm={handleConfirm}
+				/>
+			) : null}
 
 			{versionOpen && (
 				<Suspense fallback={null}>

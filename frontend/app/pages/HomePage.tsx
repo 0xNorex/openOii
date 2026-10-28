@@ -149,7 +149,7 @@ export function HomePage() {
 														aria-pressed={active}
 													>
 														<span className="inline-flex items-center gap-1.5 font-heading text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
-														<span className="text-left text-2xs font-normal text-ink-muted">{mode.description}</span>
+														<span className={"text-left text-2xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
 													</button>
 												);
 											})}

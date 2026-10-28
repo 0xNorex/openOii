@@ -46,14 +46,21 @@ export class PipelineEmitter {
    * The callback must be synchronous; better-sqlite3 transactions cannot span
    * an await point.
    */
-  commit<T extends Record<string, unknown>>(type: string, mutation: () => T): T {
-    this.shared.assertExecutionFence();
+  commit<T extends Record<string, unknown> | null>(type: string, mutation: () => T): T {
     let payload!: T;
     this.db.transaction(() => {
+      this.shared.assertRunCommitAllowed(this.runId);
       payload = mutation();
-      this.db.appendEvent(this.runId, this.projectId, type, payload);
+      if (payload !== null) this.db.appendEvent(this.runId, this.projectId, type, payload);
     });
     return payload;
+  }
+
+  commitCancellation(mutation: () => void): void {
+    this.db.transaction(() => {
+      this.shared.assertExecutionFence();
+      mutation();
+    });
   }
 
   async sendMessage(

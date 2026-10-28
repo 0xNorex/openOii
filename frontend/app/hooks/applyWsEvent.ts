@@ -267,6 +267,14 @@ export function applyWsEvent(
 		}
 
 		case "run_cancelled": {
+			const data = event.data as { run_id?: number; run_ids?: number[]; project_id?: number };
+			if (data.project_id !== undefined && data.project_id !== projectId) break;
+			const state = readRunState(projectId);
+			const activeRunId = state.recoveryControl?.active_run.id ?? state.currentRunId;
+			if (
+				activeRunId === null ||
+				(data.run_id !== activeRunId && !data.run_ids?.includes(activeRunId))
+			) break;
 			clearLoadingStates(projectId);
 			resetRunState(projectId);
 			patchRunState(projectId, { progress: 0 });

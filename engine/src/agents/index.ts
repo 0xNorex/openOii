@@ -26,6 +26,13 @@ import {
 import type { AiOperation } from "../ai-operation.js";
 import { BackendWorker } from "../backend-worker.js";
 
+export function targetCheckpointStage(
+  kind: "character_image" | "shot_image" | "shot_video",
+  id: number,
+): string {
+  return `target:${kind}:${id}`;
+}
+
 export interface CompletionInfo {
   completed: string;
   details: string;
@@ -47,6 +54,9 @@ export interface StageContext {
   /** Entity scope for this run; absent means all entities in the project. */
   targetCharacterIds?: number[];
   targetShotIds?: number[];
+  forceCharacterRedraw?: boolean;
+  completedTargets: Set<string>;
+  checkpointTarget: (kind: "character_image" | "shot_image" | "shot_video", id: number) => void;
   /**
    * Operation identity for the stage attempt currently running. Text, image and
    * video all read identity, deadline and cancellation from this one object.
@@ -196,8 +206,11 @@ export async function runOutline(ctx: StageContext): Promise<void> {
   const current = ctx.shared.getProject(ctx.projectId);
   if (current && !current.summary && outline.logline) updatedFields.summary = outline.logline;
   updatedFields.status = "planning";
-  ctx.shared.updateProject(ctx.projectId, updatedFields);
-  ctx.emitter.projectUpdated(updatedFields);
+  ctx.emitter.commit("project_updated", () => {
+    ctx.shared.updateProject(ctx.projectId, updatedFields);
+    ctx.emitter.projectUpdated(updatedFields);
+    return null;
+  });
 
   await ctx.emitter.sendThinking(
     "outline",
@@ -308,6 +321,7 @@ export async function runPlanShots(ctx: StageContext): Promise<void> {
 }
 
 async function applyCharacterPlan(ctx: StageContext, data: Record<string, unknown>): Promise<void> {
+  ctx.emitter.commit("character_updated", () => {
   const rawCharacters = Array.isArray(data.characters) ? data.characters : [];
   const preserve = (data.preserve_ids as { characters?: number[] } | undefined)?.characters ?? [];
 
@@ -351,6 +365,8 @@ async function applyCharacterPlan(ctx: StageContext, data: Record<string, unknow
       if (updated) ctx.emitter.characterUpdated(characterReadPayload(updated));
     }
   }
+  return null;
+  });
 }
 
 function nextVersion(ctx: StageContext, entityType: "character" | "shot", entityId: number): number {
@@ -362,6 +378,7 @@ function nextVersion(ctx: StageContext, entityType: "character" | "shot", entity
 }
 
 async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): Promise<void> {
+  ctx.emitter.commit("shot_updated", () => {
   const rawShots = Array.isArray(data.shots) ? data.shots : [];
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const nameToId = new Map(characters.map((c) => [c.name, c.id]));
@@ -397,6 +414,8 @@ async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): 
     const row = ctx.shared.getShot(id);
     if (row) ctx.emitter.shotCreated(shotReadPayload(row));
   });
+  return null;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -412,7 +431,11 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
     : all;
   const forced = new Set(ctx.targetCharacterIds ?? []);
   const pending = characters.filter(
-    (character) => forced.has(character.id) || !ctx.shared.hasCharacterImage(character.id),
+    (character) =>
+      !ctx.completedTargets.has(targetCheckpointStage("character_image", character.id)) &&
+      (forced.has(character.id) ||
+        ctx.forceCharacterRedraw ||
+        !ctx.shared.hasCharacterImage(character.id)),
   );
   if (pending.length === 0) {
     await ctx.emitter.sendMessage("render", "所有角色已有形象图。");
@@ -464,18 +487,17 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
       }
       const before = ctx.shared.getCharacter(character.id);
       if (!before) continue;
-      const version = ctx.shared.createVersion(
-        ctx.projectId,
-        "character",
-        character.id,
-        before,
-        ctx.runId,
-        "generation",
-      );
-      ctx.emitter.versionCreated("character", character.id, version, "generation");
-      // State write and its event are one transaction: a crash in between must
-      // not leave the row new while clients never learn about it.
+      // Snapshot, CAS write, and both durable events share one transaction.
       ctx.emitter.commit("character_updated", () => {
+        const version = ctx.shared.createVersion(
+          ctx.projectId,
+          "character",
+          character.id,
+          before,
+          ctx.runId,
+          "generation",
+        );
+        ctx.emitter.versionCreated("character", character.id, version, "generation");
         ctx.shared.updateCharacter(
           character.id,
           {
@@ -487,6 +509,43 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
           },
           character.revision,
         );
+        ctx.checkpointTarget("character_image", character.id);
+        const affectedShots = ctx.shared
+          .getLiveShotsForProject(ctx.projectId)
+          .filter((shot) =>
+            parseJsonColumn(shot.character_ids, [] as number[]).includes(character.id),
+          );
+        for (const shot of affectedShots) {
+          const shotVersion = ctx.shared.createVersion(
+            ctx.projectId,
+            "shot",
+            shot.id,
+            shot,
+            ctx.runId,
+            "generation",
+          );
+          ctx.emitter.versionCreated("shot", shot.id, shotVersion, "generation");
+          ctx.shared.updateShot(
+            shot.id,
+            { image_url: null, video_url: null, tts_url: null, bgm_type: null },
+            shot.revision,
+          );
+          ctx.emitter.emit("shot_updated", {
+            shot: shotReadPayload({
+              ...shot,
+              image_url: null,
+              video_url: null,
+              tts_url: null,
+              bgm_type: null,
+              revision: shot.revision + 1,
+            }),
+          });
+        }
+        const project = ctx.shared.getProject(ctx.projectId);
+        if (project?.video_url && project.status !== "superseded") {
+          ctx.shared.updateProject(ctx.projectId, { status: "superseded" });
+          ctx.emitter.projectUpdated({ status: "superseded" });
+        }
         return {
           character: characterReadPayload({
             ...character,
@@ -523,7 +582,11 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
     ? allShots.filter((shot) => ctx.targetShotIds!.includes(shot.id))
     : allShots;
   const forced = new Set(ctx.targetShotIds ?? []);
-  const shots = scopedShots.filter((shot) => forced.has(shot.id) || !ctx.shared.hasShotImage(shot.id));
+  const shots = scopedShots.filter(
+    (shot) =>
+      !ctx.completedTargets.has(targetCheckpointStage("shot_image", shot.id)) &&
+      (forced.has(shot.id) || !ctx.shared.hasShotImage(shot.id)),
+  );
   if (shots.length === 0) {
     await ctx.emitter.sendMessage("render", "所有分镜已有首帧图片。");
     return;
@@ -576,12 +639,36 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
       const imageUrl = await ctx.media.generateImageUrl({ prompt, imageBytes });
       const before = ctx.shared.getShot(shot.id);
       if (!before) continue;
-      const version = ctx.shared.createVersion(ctx.projectId, "shot", shot.id, before, ctx.runId, "generation");
-      ctx.emitter.versionCreated("shot", shot.id, version, "generation");
       ctx.emitter.commit("shot_updated", () => {
-        ctx.shared.updateShot(shot.id, { image_url: imageUrl }, shot.revision);
+        const version = ctx.shared.createVersion(
+          ctx.projectId,
+          "shot",
+          shot.id,
+          before,
+          ctx.runId,
+          "generation",
+        );
+        ctx.emitter.versionCreated("shot", shot.id, version, "generation");
+        ctx.shared.updateShot(
+          shot.id,
+          { image_url: imageUrl, video_url: null, tts_url: null, bgm_type: null },
+          shot.revision,
+        );
+        ctx.checkpointTarget("shot_image", shot.id);
+        const project = ctx.shared.getProject(ctx.projectId);
+        if (project?.video_url && project.status !== "superseded") {
+          ctx.shared.updateProject(ctx.projectId, { status: "superseded" });
+          ctx.emitter.projectUpdated({ status: "superseded" });
+        }
         return {
-          shot: shotReadPayload({ ...shot, image_url: imageUrl, revision: shot.revision + 1 }),
+          shot: shotReadPayload({
+            ...shot,
+            image_url: imageUrl,
+            video_url: null,
+            tts_url: null,
+            bgm_type: null,
+            revision: shot.revision + 1,
+          }),
         };
       });
     }
@@ -622,7 +709,7 @@ export async function runCritique(
   const regenerateEntityIds: number[] = [];
   for (const entity of entities) {
     const imageUrl = entity.image_url;
-    const prompt = `You evaluate visual quality. Review image: ${imageUrl ?? "(none)"} for ${entityType} ${entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`}. Return JSON with total_score, consistency, quality, composition.`;
+    const prompt = `You evaluate visual quality. Review image: ${imageUrl ?? "(none)"} for ${entityType} ${entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`}. Return JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.`;
     // key 现在受字面量类型约束，拼错会编译失败（见 prompts.ts 注释）。
     // 这里不再写 `?? ""` —— 正是那种兜底让空 prompt 的 bug 静默上线。
     const systemPrompt =
@@ -630,11 +717,15 @@ export async function runCritique(
         ? PROMPTS["critic.CHARACTER_REVIEW_SYSTEM_PROMPT"]
         : PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"];
     const data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024);
-    const score = Number(data.total_score ?? 0);
+    const score = Number(data.score ?? data.total_score ?? 0);
+    const rawDimensions =
+      typeof data.dimensions === "object" && data.dimensions !== null
+        ? (data.dimensions as Record<string, unknown>)
+        : {};
     const dimensions: Record<string, number> = {
-      consistency: Number(data.consistency ?? 0),
-      quality: Number(data.quality ?? 0),
-      composition: Number(data.composition ?? 0),
+      consistency: Number(rawDimensions.consistency ?? data.consistency ?? 0),
+      quality: Number(rawDimensions.quality ?? data.quality ?? 0),
+      composition: Number(rawDimensions.composition ?? data.composition ?? 0),
     };
     const issues = Array.isArray(data.issues) ? (data.issues as string[]) : [];
     const suggestions = Array.isArray(data.suggestions) ? (data.suggestions as string[]) : [];
@@ -677,7 +768,11 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
     ? allShots.filter((shot) => ctx.targetShotIds!.includes(shot.id))
     : allShots;
   const forced = new Set(ctx.targetShotIds ?? []);
-  const shots = scopedShots.filter((shot) => forced.has(shot.id) || !ctx.shared.hasShotVideo(shot.id));
+  const shots = scopedShots.filter(
+    (shot) =>
+      !ctx.completedTargets.has(targetCheckpointStage("shot_video", shot.id)) &&
+      (forced.has(shot.id) || !ctx.shared.hasShotVideo(shot.id)),
+  );
   if (shots.length === 0) {
     await ctx.emitter.sendMessage("compose", "所有分镜已有视频。");
     return;
@@ -737,9 +832,26 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
         duration:
           ctx.mediaSettings.videoProvider === "doubao" && duration !== 10 ? 5 : duration,
       });
+      const before = ctx.shared.getLiveShot(shot.id);
+      if (!before) continue;
       ctx.emitter.commit("shot_updated", () => {
-        ctx.shared.updateShot(shot.id, { video_url: videoUrl, duration }, shot.revision);
-        const updated: ShotRow = { ...shot, video_url: videoUrl, duration, revision: shot.revision + 1 };
+        const version = ctx.shared.createVersion(
+          ctx.projectId,
+          "shot",
+          shot.id,
+          before,
+          ctx.runId,
+          "generation",
+        );
+        ctx.emitter.versionCreated("shot", shot.id, version, "generation");
+        ctx.shared.updateShot(shot.id, { video_url: videoUrl, duration }, before.revision);
+        ctx.checkpointTarget("shot_video", shot.id);
+        const project = ctx.shared.getProject(ctx.projectId);
+        if (project?.video_url && project.status !== "superseded") {
+          ctx.shared.updateProject(ctx.projectId, { status: "superseded" });
+          ctx.emitter.projectUpdated({ status: "superseded" });
+        }
+        const updated: ShotRow = { ...before, video_url: videoUrl, duration, revision: before.revision + 1 };
         return { shot: shotReadPayload(updated) };
       });
     }
@@ -801,6 +913,7 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
           if (ctx.signal.aborted) throw error;
           console.warn(`Audio processing skipped (shot ${shot.id})`);
         }
+        if (ctx.signal.aborted) throw new Error("run cancelled");
         const processedAudio = audio;
         if (processedAudio) {
           videoUrl = processedAudio.video_url;
@@ -813,6 +926,15 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
               revision: live.revision + 1,
             };
             ctx.emitter.commit("shot_updated", () => {
+              const version = ctx.shared.createVersion(
+                ctx.projectId,
+                "shot",
+                live.id,
+                live,
+                ctx.runId,
+                "generation",
+              );
+              ctx.emitter.versionCreated("shot", live.id, version, "generation");
               ctx.shared.updateShot(
                 live.id,
                 {
@@ -822,6 +944,11 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
                 },
                 live.revision,
               );
+              const project = ctx.shared.getProject(ctx.projectId);
+              if (project?.video_url && project.status !== "superseded") {
+                ctx.shared.updateProject(ctx.projectId, { status: "superseded" });
+                ctx.emitter.projectUpdated({ status: "superseded" });
+              }
               return { shot: shotReadPayload(updated) };
             });
           }

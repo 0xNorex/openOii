@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 TextProviderKey = Literal["anthropic", "openai", "fake"]
@@ -185,6 +185,11 @@ class CharacterRead(BaseModel):
     approved_name: str | None
     approved_description: str | None
     approved_image_url: str | None
+
+    @field_validator("reference_images", mode="before")
+    @classmethod
+    def _default_reference_images(cls, value: object) -> object:
+        return [] if value is None else value
 
     @model_validator(mode="before")
     @classmethod

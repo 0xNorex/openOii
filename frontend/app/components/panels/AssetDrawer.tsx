@@ -1,8 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetsApi, getStaticUrl } from "~/services/api";
 import { Button } from "~/components/ui/Button";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { ConfirmModal } from "~/components/ui/ConfirmModal";
+import { useDialogFocus } from "~/components/ui/useDialogFocus";
+import { toast } from "~/utils/toast";
 import type { Asset, AssetCreatePayload } from "~/types";
 import type { IconName } from "~/components/ui/SvgIcon";
 
@@ -40,8 +43,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-
-	if (!isOpen) return null;
+	const formRef = useRef<HTMLDivElement>(null);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
@@ -134,6 +136,9 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 		resetForm();
 		onClose();
 	};
+	useDialogFocus(formRef, isOpen, handleClose);
+
+	if (!isOpen) return null;
 
 	return (
 		<>
@@ -141,7 +146,14 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 				className="fixed inset-0 z-modal-backdrop bg-neutral/45"
 				onClick={handleClose}
 			/>
-			<div className="fixed right-0 top-0 z-modal flex h-full w-72 flex-col border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm">
+			<div
+				ref={formRef}
+				tabIndex={-1}
+				role="dialog"
+				aria-modal="true"
+				aria-label="新建资产"
+				className="fixed right-0 top-0 z-modal flex h-full w-72 flex-col border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm"
+			>
 				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="plus" size={14} className="text-primary" />
@@ -253,11 +265,14 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 								</button>
 							</div>
 						) : (
-							<div
-								className="flex flex-col items-center justify-center h-20 border-2 border-dashed border-ink/20 rounded-lg cursor-pointer hover:border-primary/40 transition-colors duration-fast"
+							<Button
+								variant="ghost"
+								size="sm"
+								className="!h-20 !min-h-0 w-full flex-col rounded-lg border-2 border-dashed border-ink/20 hover:border-primary/40 transition-colors duration-fast"
 								onClick={() => fileInputRef.current?.click()}
 								onDragOver={(e) => e.preventDefault()}
 								onDrop={handleDrop}
+								aria-label="上传资产图片"
 							>
 								<SvgIcon
 									name="image"
@@ -267,7 +282,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 								<span className="text-xs text-ink-muted">
 									点击上传或拖拽图片
 								</span>
-							</div>
+							</Button>
 						)}
 						<input
 							ref={fileInputRef}
@@ -325,7 +340,7 @@ function AssetCard({
 }: {
 	asset: Asset;
 	projectId?: number;
-	onDelete: (id: number) => void;
+	onDelete: (asset: Asset) => void;
 	onUse: (asset: Asset) => void;
 	isUsing: boolean;
 }) {
@@ -381,7 +396,8 @@ function AssetCard({
 						variant="ghost"
 						size="sm"
 						className="!px-1 !py-0 !min-h-0 !h-5 text-xs text-error/60 hover:text-error"
-						onClick={() => onDelete(asset.id)}
+						onClick={() => onDelete(asset)}
+						aria-label={`删除资产 ${asset.name}`}
 						title="删除资产"
 					>
 						<SvgIcon name="x" size={12} />
@@ -395,10 +411,12 @@ function AssetCard({
 /* ---------- Asset Drawer ---------- */
 
 export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
+	const drawerRef = useRef<HTMLDivElement>(null);
 	const queryClient = useQueryClient();
 	const [activeTab, setActiveTab] = useState<AssetType | "all">("all");
 	const [search, setSearch] = useState("");
 	const [showCreateForm, setShowCreateForm] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<Asset | null>(null);
 
 	const assetType = activeTab === "all" ? undefined : activeTab;
 
@@ -409,8 +427,17 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 	});
 
 	const deleteMutation = useMutation({
-		mutationFn: (id: number) => assetsApi.delete(id),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["assets"] }),
+		mutationFn: (asset: Asset) => assetsApi.delete(asset.id),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["assets"] });
+			setDeleteTarget(null);
+		},
+		onError: (error: Error) => {
+			toast.error({
+				title: "删除失败",
+				message: error.message || "未知错误",
+			});
+		},
 	});
 
 	const useMutation_ = useMutation({
@@ -430,6 +457,11 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 
 	const items = data?.items ?? [];
 
+	useEffect(() => {
+		drawerRef.current?.toggleAttribute("inert", !open);
+	}, [open]);
+	useDialogFocus(drawerRef, open, onClose);
+
 	return (
 		<>
 			{open && (
@@ -439,12 +471,17 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 				/>
 			)}
 			<div
+				ref={drawerRef}
+				tabIndex={open ? -1 : undefined}
+				role={open ? "dialog" : undefined}
+				aria-modal={open || undefined}
+				aria-labelledby="asset-drawer-title"
 				className={`fixed right-0 top-0 z-modal h-full w-72 transform border-l-2 border-ink/15 bg-paper-100 shadow-brutal-sm transition-transform duration-normal ${open ? "translate-x-0" : "translate-x-full"}`}
 			>
 				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="archive" size={14} className="text-primary" />
-						<h3 className="m-0 font-heading text-sm font-bold">
+						<h3 id="asset-drawer-title" className="m-0 font-heading text-sm font-bold">
 							资产库
 						</h3>
 						<span className="badge-doodle text-2xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
@@ -540,7 +577,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 									key={a.id}
 									asset={a}
 									projectId={projectId}
-									onDelete={(id) => deleteMutation.mutate(id)}
+									onDelete={setDeleteTarget}
 									onUse={(asset) => useMutation_.mutate(asset)}
 									isUsing={useMutation_.isPending}
 								/>
@@ -555,6 +592,19 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 				isOpen={showCreateForm}
 				onClose={() => setShowCreateForm(false)}
 				onCreated={() => setShowCreateForm(false)}
+			/>
+			<ConfirmModal
+				isOpen={deleteTarget !== null}
+				onClose={() => setDeleteTarget(null)}
+				onConfirm={() => {
+					if (deleteTarget) deleteMutation.mutate(deleteTarget);
+				}}
+				title="删除资产"
+				message={`确定要删除资产“${deleteTarget?.name ?? ""}”吗？删除后将无法恢复。`}
+				confirmText="删除"
+				cancelText="取消"
+				variant="danger"
+				isLoading={deleteMutation.isPending}
 			/>
 		</>
 	);

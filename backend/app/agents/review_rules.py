@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import Any
 
 from sqlalchemy import select
@@ -10,9 +9,10 @@ from app.agents.base import AgentContext, BaseAgent, TargetIds
 from app.agents.prompts.review import SYSTEM_PROMPT
 from app.agents.utils import extract_json
 from app.models.project import Character, Shot
-from app.services.creative_control import infer_feedback_targets
-
-logger = logging.getLogger(__name__)
+from app.services.creative_control import (
+    has_unresolved_feedback_target,
+    infer_feedback_targets,
+)
 
 ALLOWED_START_AGENTS = {"outline", "plan", "render", "compose"}
 
@@ -68,25 +68,6 @@ def _selected_entity_ids(ctx: AgentContext) -> list[int]:
     if ctx.entity_id is not None and ctx.entity_id not in multi_ids:
         multi_ids = [ctx.entity_id, *multi_ids]
     return list(dict.fromkeys(multi_ids))
-
-
-def _target_ids_from_data(data: dict[str, Any]) -> TargetIds | None:
-    raw = data.get("target_ids")
-    if not isinstance(raw, dict):
-        return None
-    character_ids = [
-        int(v)
-        for v in (raw.get("character_ids") or [])
-        if isinstance(v, int) or (isinstance(v, str) and str(v).isdigit())
-    ]
-    shot_ids = [
-        int(v)
-        for v in (raw.get("shot_ids") or [])
-        if isinstance(v, int) or (isinstance(v, str) and str(v).isdigit())
-    ]
-    if not character_ids and not shot_ids:
-        return None
-    return TargetIds(character_ids=character_ids, shot_ids=shot_ids)
 
 
 async def _project_entity_state(ctx: AgentContext) -> dict[str, Any]:
@@ -181,23 +162,19 @@ class ReviewAgent(BaseAgent):
             },
         }
 
-        await self.send_message(ctx, "正在分析反馈并决定重跑阶段...", is_loading=True)
-        try:
-            resp = await self.call_llm(
-                ctx,
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=json.dumps(payload, ensure_ascii=False),
-                max_tokens=1024,
-            )
-            data = extract_json(resp.text)
-        except Exception as exc:
-            logger.warning("ReviewAgent LLM routing failed, falling back to plan: %s", exc)
-            data = {}
+        resp = await self.call_llm(
+            ctx,
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=json.dumps(payload, ensure_ascii=False),
+            max_tokens=1024,
+        )
+        data = extract_json(resp.text)
 
         routing = data.get("routing") if isinstance(data.get("routing"), dict) else {}
-        start_agent = normalize_start_agent(
-            routing.get("start_agent") if routing else data.get("start_agent")
-        )
+        raw_start_agent = routing.get("start_agent") if routing else data.get("start_agent")
+        if not isinstance(raw_start_agent, str) or raw_start_agent.strip().lower() not in _START_AGENT_ALIASES:
+            raise ValueError("ReviewAgent returned no valid feedback stage")
+        start_agent = normalize_start_agent(raw_start_agent)
         mode = normalize_mode(
             routing.get("mode") if routing else data.get("mode"),
             default="incremental",
@@ -208,55 +185,27 @@ class ReviewAgent(BaseAgent):
         elif isinstance(data.get("reason"), str):
             reason = data["reason"].strip()
 
-        target_ids = _target_ids_from_data(data)
-        if target_ids is None:
-            target_ids = infer_feedback_targets(
-                {
-                    "routing": {"start_agent": start_agent, "mode": mode},
-                    "feedback": feedback,
-                    "analysis": data.get("analysis"),
-                    "target_ids": data.get("target_ids"),
-                },
-                entity_state,
-            )
-
-        # Canvas selection is authoritative when LLM omitted targets.
+        target_error = False
         if ctx.entity_type and multi_ids:
-            selected = _entity_target_ids(ctx.entity_type, multi_ids)
-            if target_ids is None or not target_ids.has_targets():
-                target_ids = selected
+            selected_ids = (
+                {item["id"] for item in entity_state["characters"]}
+                if ctx.entity_type == "character"
+                else {item["id"] for item in entity_state["shots"]}
+                if ctx.entity_type in {"shot", "video"}
+                else set()
+            )
+            target_error = any(entity_id not in selected_ids for entity_id in multi_ids)
+            target_ids = _entity_target_ids(ctx.entity_type, multi_ids)
             _apply_focus_prefix(ctx, ctx.entity_type, multi_ids)
-        elif target_ids and target_ids.has_targets() and not ctx.entity_type:
-            if target_ids.shot_ids and not target_ids.character_ids:
-                ctx.entity_type = "shot"
-                ctx.entity_id = target_ids.shot_ids[0]
-                ctx.entity_ids = list(target_ids.shot_ids)
-            elif target_ids.character_ids and not target_ids.shot_ids:
-                ctx.entity_type = "character"
-                ctx.entity_id = target_ids.character_ids[0]
-                ctx.entity_ids = list(target_ids.character_ids)
-
-        mode_desc = "增量更新" if mode == "incremental" else "重新生成"
-        target_info = ""
-        if target_ids and target_ids.has_targets():
-            parts = []
-            if target_ids.character_ids:
-                parts.append(f"{len(target_ids.character_ids)} 个角色")
-            if target_ids.shot_ids:
-                parts.append(f"{len(target_ids.shot_ids)} 个分镜")
-            target_info = f"（仅处理 {', '.join(parts)}）"
-
-        await self.send_message(
-            ctx,
-            f"已收到反馈。将从 {start_agent} 阶段开始{mode_desc}{target_info}。",
-            summary="已收到反馈",
-        )
-
+        else:
+            target_ids = infer_feedback_targets({"feedback": feedback}, entity_state)
+            target_error = has_unresolved_feedback_target(feedback, entity_state)
         return {
             "start_agent": start_agent,
             "mode": mode,
             "reason": reason or f"llm_route:{start_agent}:{mode}",
             "target_ids": target_ids,
+            "target_error": target_error,
         }
 
 

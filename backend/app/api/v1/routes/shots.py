@@ -18,11 +18,7 @@ from app.services.run_lifecycle import (
     create_local_run,
     project_updated_event,
 )
-from app.services.creative_control import (
-    invalidate_shot_clip_output,
-    invalidate_shot_storyboard_outputs,
-)
-from app.services.file_cleaner import delete_file
+from app.services.creative_control import invalidate_shot_clip_output
 from app.services.revision import assert_expected_revision, commit_versioned
 from app.ws.manager import ConnectionManager
 
@@ -182,9 +178,8 @@ async def regenerate_shot(
         raise HTTPException(status_code=409, detail=exc.detail) from exc
 
     if payload.type == "image":
-        await invalidate_shot_storyboard_outputs(session, project, shot)
-        await commit_versioned(session, shot, entity="shot")
-        await session.refresh(shot)
+        project.status = "superseded" if project.video_url else project.status
+        await commit_versioned(session, project, entity="project")
         await session.refresh(project)
         await ws.send_event(
             project_id, {"type": "shot_updated", "data": {"shot": _shot_read(shot)}}
@@ -208,6 +203,7 @@ async def regenerate_shot(
             resource_id=shot_id,
             stage=stage,
             target_shot_ids=(shot_id,),
+            force_regenerate=True,
         ),
     )
     return AgentRunRead.model_validate(result.run)
@@ -223,15 +219,10 @@ async def delete_shot(
 
     project_id = shot.project_id
 
-    # 删除分镜相关文件
-    delete_file(shot.image_url)
-    delete_file(shot.video_url)
-
     # 删除项目最终视频（因为分镜变化了）
     project = await session.get(Project, project_id)
     cleared_project_video = False
     if project and project.video_url:
-        delete_file(project.video_url)
         project.video_url = None
         session.add(project)
         cleared_project_video = True

@@ -6,9 +6,7 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +19,6 @@ def _extract_static_path(url: str | None) -> str | None:
         return None
     if url.startswith("/static/"):
         return url
-    parsed = urlparse(url)
-    if parsed.path.startswith("/static/"):
-        return parsed.path
     return None
 
 
@@ -55,46 +50,10 @@ def get_local_path(url: str) -> Path | None:
 
 
 def delete_file(url: str | None) -> bool:
-    """删除本地文件
-
-    Args:
-        url: 文件 URL（如 /static/videos/xxx.mp4）
-
-    Returns:
-        是否成功删除
-    """
-    if not url:
-        return False
-
-    path = get_local_path(url)
-    if not path:
-        logger.debug(f"Not a local file, skipping: {url}")
-        return False
-
-    if not path.exists():
-        logger.debug(f"File not found, skipping: {path}")
-        return False
-
-    try:
-        os.remove(path)
-        logger.info(f"Deleted file: {path}")
-        return True
-    except OSError as e:
-        logger.warning(f"Failed to delete file {path}: {e}")
-        return False
+    """Media unlink is disabled until shared-reference cleanup can prove safety."""
+    logger.debug("Media cleanup skipped until reference-safe collection is configured: %s", url)
+    return False
 
 
 def delete_files(urls: list[str | None]) -> int:
-    """批量删除本地文件
-
-    Args:
-        urls: 文件 URL 列表
-
-    Returns:
-        成功删除的文件数量
-    """
-    count = 0
-    for url in urls:
-        if delete_file(url):
-            count += 1
-    return count
+    return sum(delete_file(url) for url in urls)

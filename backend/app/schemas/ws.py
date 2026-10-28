@@ -225,7 +225,7 @@ class ProjectUpdatedEventData(BaseModel):
 
 class CritiqueResultEventData(BaseModel):
     score: float = Field(ge=0.0, le=10.0)
-    dimensions: dict[str, int] = Field(default_factory=dict)
+    dimensions: dict[str, float] = Field(default_factory=dict)
     issues: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
     entity_type: str = ""  # "character" or "shot"

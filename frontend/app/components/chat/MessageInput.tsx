@@ -30,7 +30,7 @@ export function MessageInput({
 				id="chat-message-input"
 				name="message"
 				type="text"
-				className="input-doodle h-9 min-h-9 flex-1 px-3 text-sm"
+				className="input-doodle h-9 min-h-9 min-w-0 flex-1 px-3 text-sm"
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				onKeyDown={handleKeyDown}

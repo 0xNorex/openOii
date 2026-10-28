@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { useDialogFocus } from "./useDialogFocus";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -23,6 +25,12 @@ export function ConfirmModal({
   variant = "danger",
   isLoading = false,
 }: ConfirmModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(panelRef, isOpen, () => {
+    if (!isLoading) onClose();
+  }, cancelRef);
+
   if (!isOpen) return null;
 
   const variantStyles = {
@@ -53,11 +61,13 @@ export function ConfirmModal({
       }}
     >
       <div
-			className="dialog-panel w-full max-w-md p-4"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="confirm-modal-title"
-		>
+        ref={panelRef}
+        className="dialog-panel w-full max-w-md p-4"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+      >
         <div className="flex items-start gap-3">
           <div
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${styles.iconBg}`}
@@ -67,19 +77,18 @@ export function ConfirmModal({
 
           <div className="min-w-0 flex-1">
             <h3
-				id="confirm-modal-title"
-				className="m-0 font-heading text-md font-bold"
-			>
+              id="confirm-modal-title"
+              className="m-0 font-heading text-md font-bold"
+            >
               {title}
             </h3>
-            <p className="m-0 mt-1 text-sm text-ink-muted">
-              {message}
-            </p>
+            <p className="m-0 mt-1 text-sm text-ink-muted">{message}</p>
           </div>
         </div>
 
         <div className="dialog-actions">
           <button
+            ref={cancelRef}
             type="button"
             className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
             onClick={onClose}
@@ -93,14 +102,11 @@ export function ConfirmModal({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading && (
-              <span className=" spinner-doodle h-4 w-4" />
-            )}
+            {isLoading && <span className=" spinner-doodle h-4 w-4" />}
             {confirmText}
           </button>
         </div>
       </div>
-
     </div>
   );
 }

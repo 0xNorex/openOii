@@ -13,7 +13,7 @@
 对外契约
 --------
 - 同一资源上已有活跃 run → `RunConflict`（由 route 转 409）。
-- 派发失败（引擎不可达）→ `EngineUnavailableError` 冒泡（转 503）。
+- 派发失败（引擎不可达）→ 返回 503，已持久化的 queued run 保留。
 """
 
 from __future__ import annotations
@@ -22,12 +22,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.agent_run import AgentRun
 from app.models.project import Project
-from app.services.engine_client import engine_start_run
+from app.services.engine_client import EngineUnavailableError, engine_start_run
 from app.ws.manager import ConnectionManager
 
 # resource_type 的合法取值（也是细粒度锁的粒度）
@@ -57,6 +58,7 @@ class TargetedRunSpec:
     stage: str
     target_character_ids: Sequence[int] = field(default_factory=tuple)
     target_shot_ids: Sequence[int] = field(default_factory=tuple)
+    force_regenerate: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,6 +110,17 @@ async def create_local_run(
         error=None,
         resource_type=spec.resource_type,
         resource_id=spec.resource_id,
+        context_snapshot={
+            "execution_command": {
+                "version": 1,
+                "stage": spec.stage,
+                "auto_mode": True,
+                "user_feedback": "",
+                "target_character_ids": list(spec.target_character_ids),
+                "target_shot_ids": list(spec.target_shot_ids),
+                "force_regenerate": spec.force_regenerate,
+            }
+        },
     )
     session.add(run)
     await session.commit()
@@ -119,15 +132,22 @@ async def create_local_run(
 
     # 派发失败（引擎不可达）会抛 EngineUnavailableError，由 route 转 503；
     # run 行保持 queued，调用方可重试 / 由恢复流程接管。
-    await engine_start_run(
-        settings.engine_url,
-        project_id=spec.project_id,
-        run_id=run_id,
-        stage=spec.stage,
-        auto_mode=True,
-        target_character_ids=spec.target_character_ids or None,
-        target_shot_ids=spec.target_shot_ids or None,
-    )
+    try:
+        await engine_start_run(
+            settings.engine_url,
+            project_id=spec.project_id,
+            run_id=run_id,
+            stage=spec.stage,
+            auto_mode=True,
+            target_character_ids=spec.target_character_ids or None,
+            target_shot_ids=spec.target_shot_ids or None,
+            force_regenerate=spec.force_regenerate,
+        )
+    except EngineUnavailableError as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Workflow engine is unavailable; run remains queued",
+        ) from exc
     await session.refresh(run)
     return TargetedRunResult(run=run)
 

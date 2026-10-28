@@ -419,39 +419,48 @@ def create_app() -> FastAPI:
                         run_id = msg.get("data", {}).get("run_id")
                         feedback = msg.get("data", {}).get("feedback")
                         if run_id:
-                            if isinstance(feedback, str) and feedback.strip():
-                                try:
-                                    from app.db.session import async_session_maker
-                                    from app.models.agent_run import AgentMessage, AgentRun
-                                    from app.models.message import Message
+                            run_belongs_to_project = False
+                            try:
+                                from app.db.session import async_session_maker
+                                from app.models.agent_run import AgentMessage, AgentRun
+                                from app.models.message import Message
 
-                                    content = feedback.strip()
-                                    async with async_session_maker() as session:
-                                        agent_run = await session.get(AgentRun, run_id)
-                                        if agent_run and agent_run.project_id == project_id:
-                                            session.add(
-                                                AgentMessage(
-                                                    run_id=run_id,
-                                                    agent="user",
-                                                    role="user",
-                                                    content=content,
-                                                )
-                                            )
-                                            session.add(
-                                                Message(
-                                                    project_id=project_id,
-                                                    run_id=run_id,
-                                                    agent="user",
-                                                    role="user",
-                                                    content=content,
-                                                )
-                                            )
-                                            await session.commit()
-                                except Exception as exc:  # noqa: BLE001
-                                    logger.error(
-                                        "Failed to save feedback for run %s: %s", run_id, exc
+                                async with async_session_maker() as session:
+                                    agent_run = await session.get(AgentRun, run_id)
+                                    run_belongs_to_project = (
+                                        agent_run is not None and agent_run.project_id == project_id
                                     )
-                            await trigger_confirm_signal(run_id)
+                                    if (
+                                        run_belongs_to_project
+                                        and isinstance(feedback, str)
+                                        and feedback.strip()
+                                    ):
+                                        content = feedback.strip()
+                                        session.add(
+                                            AgentMessage(
+                                                run_id=run_id,
+                                                agent="user",
+                                                role="user",
+                                                content=content,
+                                            )
+                                        )
+                                        session.add(
+                                            Message(
+                                                project_id=project_id,
+                                                run_id=run_id,
+                                                agent="user",
+                                                role="user",
+                                                content=content,
+                                            )
+                                        )
+                                        await session.commit()
+                            except Exception as exc:  # noqa: BLE001
+                                run_belongs_to_project = False
+                                logger.error(
+                                    "Failed to save feedback for run %s: %s", run_id, exc
+                                )
+                            if run_belongs_to_project:
+                                await trigger_confirm_signal(run_id, project_id=project_id)
                 except WebSocketDisconnect:
                     break
                 except RuntimeError as exc:

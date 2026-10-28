@@ -14,7 +14,8 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
-from app.models.agent_run import AgentRun
+from app.generated.workflow_contract import WORKFLOW_VERSION
+from app.models.agent_run import AgentMessage, AgentRun
 from app.models.project import Character, Shot
 from app.orchestration import PHASE2_STAGE_ORDER, PRODUCTION_STAGE_SEQUENCE
 from app.services.run_signals import GRAPH_STAGE_FOR_AGENT
@@ -25,20 +26,55 @@ from app.schemas.project import (
     RecoverySummaryRead,
 )
 
+
+def _valid_execution_command(value: Any) -> bool:
+    def valid_ids(ids: Any) -> bool:
+        return (
+            isinstance(ids, list)
+            and all(isinstance(item, int) and not isinstance(item, bool) and item > 0 for item in ids)
+            and len(set(ids)) == len(ids)
+        )
+
+    if not isinstance(value, dict):
+        return False
+    stage = value.get("stage")
+    characters = value.get("target_character_ids")
+    shots = value.get("target_shot_ids")
+    return (
+        type(value.get("version")) is int
+        and value.get("version") == 1
+        and isinstance(stage, str)
+        and (stage == "full" or stage in PRODUCTION_STAGE_SEQUENCE)
+        and isinstance(value.get("auto_mode"), bool)
+        and isinstance(value.get("user_feedback"), str)
+        and valid_ids(characters)
+        and valid_ids(shots)
+        and not (characters and shots)
+        and (not characters or stage == "render_characters")
+        and (not shots or stage in {"render_shots", "compose_videos"})
+        and (
+            "force_regenerate" not in value
+            or isinstance(value.get("force_regenerate"), bool)
+        )
+        and (
+            not characters and not shots
+            or isinstance(value.get("force_regenerate"), bool)
+        )
+    )
+
+
 def _safe_stage_name(value: Any) -> str | None:
-    if isinstance(value, str) and value in PHASE2_STAGE_ORDER:
+    if isinstance(value, str) and value in PRODUCTION_STAGE_SEQUENCE:
         return value
     return None
 
 
-async def _engine_checkpoint_stages(session: AsyncSession, run_id: int | None) -> list[str]:
-    """Completed production stages recorded by the pi engine.
-
-    Returns [] when the engine table is absent (e.g. an older DB) so callers
-    degrade to the agent-derived stage instead of failing.
-    """
+async def _engine_checkpoint_stages(
+    session: AsyncSession, run_id: int | None
+) -> list[str] | None:
+    """Checkpoint stages, or None when the checkpoint query fails."""
     if run_id is None:
-        return []
+        return None
     try:
         result = await session.execute(
             text("SELECT stage FROM engine_checkpoints WHERE run_id = :run_id"),
@@ -46,8 +82,9 @@ async def _engine_checkpoint_stages(session: AsyncSession, run_id: int | None) -
         )
         rows = {row[0] for row in result.all()}
     except Exception:  # noqa: BLE001 - table missing on un-migrated SQLite
-        return []
-    return [stage for stage in PRODUCTION_STAGE_SEQUENCE if stage in rows]
+        return None
+    known_stages = [stage for stage in PRODUCTION_STAGE_SEQUENCE if stage in rows]
+    return known_stages + sorted(rows - set(PRODUCTION_STAGE_SEQUENCE))
 
 
 def _infer_current_stage(run: AgentRun, completed: Sequence[str]) -> str:
@@ -98,8 +135,47 @@ async def build_recovery_summary(
     _ = database_url  # kept for call-site compatibility; engine state is DB-resident
     run_id = run.id
     run_pk = run_id if run_id is not None else 0
-    completed_stages = await _engine_checkpoint_stages(session, run_id)
+    checkpoint_stages = await _engine_checkpoint_stages(session, run_id)
+    context_valid = isinstance(run.context_snapshot, dict)
+    snapshot = run.context_snapshot if context_valid else {}
+    command = snapshot.get("execution_command")
+    recoverable_command = _valid_execution_command(command)
+    if (
+        context_valid
+        and "execution_command" not in snapshot
+        and run.current_agent == "orchestrator"
+        and run.resource_type is None
+        and run.patch_plan is None
+    ):
+        try:
+            events = await session.execute(
+                text("SELECT 1 FROM engine_run_events WHERE run_id = :run_id LIMIT 1"),
+                {"run_id": run_id},
+            )
+            checkpoint = await session.execute(
+                text("SELECT 1 FROM engine_checkpoints WHERE run_id = :run_id LIMIT 1"),
+                {"run_id": run_id},
+            )
+            user_message = await session.execute(
+                select(AgentMessage.id)
+                .where(AgentMessage.run_id == run_id, AgentMessage.role == "user")
+                .limit(1)
+            )
+            recoverable_command = (
+                events.first() is None
+                and checkpoint.first() is None
+                and user_message.first() is None
+            )
+        except Exception:  # noqa: BLE001 - missing engine tables cannot prove provenance
+            recoverable_command = False
+    completed_stages = [
+        stage for stage in checkpoint_stages or [] if stage in PRODUCTION_STAGE_SEQUENCE
+    ]
     current_stage = _infer_current_stage(run, completed_stages)
+    if checkpoint_stages == [] and isinstance(run.context_snapshot, dict):
+        execution_command = run.context_snapshot.get("execution_command")
+        if isinstance(execution_command, dict):
+            current_stage = _safe_stage_name(execution_command.get("stage")) or current_stage
     artifact_counts = await _stage_artifact_counts(session, run.project_id)
 
     stage_history = [
@@ -124,7 +200,11 @@ async def build_recovery_summary(
         next_stage=current_stage,
         preserved_stages=preserved_stages,
         stage_history=stage_history,
-        resumable=run.status in {"queued", "running", "failed", "cancelled"},
+        resumable=(
+            run.status in {"queued", "running", "failed", "cancelled"}
+            and recoverable_command
+            and run.workflow_version == WORKFLOW_VERSION
+        ),
     )
 
 
@@ -141,7 +221,12 @@ async def build_recovery_control_surface(
     )
     return RecoveryControlRead(
         state=state,
-        detail=detail,
+        detail=(
+            detail
+            if summary.resumable
+            else "Run command, workflow version, or original scope is incompatible; resume is unavailable"
+        ),
+        available_actions=["resume", "cancel"] if summary.resumable else ["cancel"],
         active_run=AgentRunRead.model_validate(run),
         recovery_summary=summary,
     )

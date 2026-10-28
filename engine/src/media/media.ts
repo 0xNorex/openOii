@@ -7,12 +7,22 @@
  * idempotency key when the provider accepts arbitrary HTTP headers.
  */
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  mkdtempSync,
   realpathSync,
+  linkSync,
+  unlinkSync,
+  rmSync,
+  createWriteStream,
   readFileSync,
   writeFileSync,
 } from "node:fs";
@@ -280,7 +290,8 @@ function safeSlug(prompt: string, fallback: string): string {
 
 function placeholderSvg(prompt: string): string {
   const label = prompt.slice(0, 60).replace(/[<>&]/g, "");
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="100%" height="100%" fill="#1e1b4b"/><text x="50%" y="45%" fill="#fbbf24" font-size="36" text-anchor="middle" font-family="sans-serif">Fake Image</text><text x="50%" y="58%" fill="#ffffff" font-size="20" text-anchor="middle" font-family="sans-serif">${label}</text></svg>`;
+  const digest = createHash("sha1").update(prompt).digest("hex").slice(0, 8);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540"><rect width="100%" height="100%" fill="#1e1b4b"/><text x="50%" y="45%" fill="#fbbf24" font-size="36" text-anchor="middle" font-family="sans-serif">Fake Image</text><text x="50%" y="58%" fill="#ffffff" font-size="20" text-anchor="middle" font-family="sans-serif">${label}</text><text x="50%" y="68%" fill="#94a3b8" font-size="14" text-anchor="middle" font-family="sans-serif">Prompt ${digest}</text></svg>`;
 }
 
 const FAKE_VIDEO_COLORS = [
@@ -291,11 +302,6 @@ const FAKE_VIDEO_COLORS = [
   "0x3b0764",
   "0x0f172a",
 ];
-
-function videoSlug(prompt: string, prefix = "fake_video_v2"): string {
-  const digest = createHash("sha1").update(prompt).digest("hex").slice(0, 10);
-  return `${prefix}_${digest}.mp4`;
-}
 
 function promptLabel(prompt: string): string {
   const compact = prompt.replace(/\s+/g, " ").trim();
@@ -308,6 +314,7 @@ function promptLabel(prompt: string): string {
 export class MediaService {
   private idempotencyKey: string | null = null;
   private abortSignal: AbortSignal | null = null;
+  private registerMedia: ((relativePath: string) => void) | null = null;
   /**
    * Current operation identity, when the caller supplied one.
    *
@@ -337,6 +344,56 @@ export class MediaService {
    */
   setAbortSignal(signal: AbortSignal | null): void {
     this.abortSignal = signal;
+  }
+
+  setMediaRegistrar(register: (relativePath: string) => void): void {
+    this.registerMedia = register;
+  }
+
+  private managedMediaDirectory(): string {
+    const root = realpathSync(this.settings.staticDir);
+    const dir = join(root, "managed-v1");
+    try {
+      mkdirSync(dir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    if (lstatSync(dir).isSymbolicLink() || realpathSync(dir) !== dir) {
+      throw new Error("managed media directory must be a real directory inside static storage");
+    }
+    return dir;
+  }
+
+  private publishManagedFile(source: string, extension: string): string {
+    if (!this.registerMedia) throw new Error("managed media registration requires an execution fence");
+    const dir = this.managedMediaDirectory();
+    const filename = `${randomUUID()}${extension}`;
+    const relativePath = `managed-v1/${filename}`;
+    const destination = join(dir, filename);
+    linkSync(source, destination);
+    try {
+      this.registerMedia(relativePath);
+      return `/static/${relativePath}`;
+    } catch (error) {
+      unlinkSync(destination);
+      throw error;
+    }
+  }
+
+  private writeManagedFile(contents: string, extension: string): string {
+    if (!this.registerMedia) throw new Error("managed media registration requires an execution fence");
+    const dir = this.managedMediaDirectory();
+    const filename = `${randomUUID()}${extension}`;
+    const relativePath = `managed-v1/${filename}`;
+    const destination = join(dir, filename);
+    writeFileSync(destination, contents, { encoding: "utf8", flag: "wx" });
+    try {
+      this.registerMedia(relativePath);
+      return `/static/${relativePath}`;
+    } catch (error) {
+      unlinkSync(destination);
+      throw error;
+    }
   }
 
   /** Reject if the run was cancelled, before starting more provider work. */
@@ -461,12 +518,7 @@ export class MediaService {
     if (this.settings.fakeImageFixtureUrl) return this.settings.fakeImageFixtureUrl;
 
     if (this.settings.imageProvider === "fake") {
-      const dir = join(this.settings.staticDir, "images");
-      mkdirSync(dir, { recursive: true });
-      const filename = `${safeSlug(prompt, "fake_image")}.svg`;
-      const path = join(dir, filename);
-      if (!existsSync(path)) writeFileSync(path, placeholderSvg(prompt), "utf8");
-      return `/static/images/${filename}`;
+      return this.writeManagedFile(placeholderSvg(prompt), ".svg");
     }
 
     if (!this.settings.imageApiKey) throw new Error("IMAGE_API_KEY is required");
@@ -528,12 +580,7 @@ export class MediaService {
         if (!existsSync(source)) {
           throw new Error(`Fake video fixture file not found: ${source}`);
         }
-        const dir = join(this.settings.staticDir, "videos");
-        mkdirSync(dir, { recursive: true });
-        const filename = videoSlug(prompt, "fake_clip");
-        const destination = join(dir, filename);
-        if (!existsSync(destination)) copyFileSync(source, destination);
-        return `/static/videos/${filename}`;
+        return this.publishManagedFile(source, ".mp4");
       }
       return this.ensureDefaultFakeClip(prompt, args.duration);
     }
@@ -643,11 +690,9 @@ export class MediaService {
   }
 
   private async ensureDefaultFakeClip(prompt: string, durationArg?: number): Promise<string> {
-    const dir = join(this.settings.staticDir, "videos");
-    mkdirSync(dir, { recursive: true });
-    const filename = videoSlug(prompt);
-    const destination = join(dir, filename);
-    if (existsSync(destination)) return `/static/videos/${filename}`;
+    if (!this.registerMedia) throw new Error("managed media registration requires an execution fence");
+    const tempDir = mkdtempSync(join(this.managedMediaDirectory(), ".fake-video-"));
+    const destination = join(tempDir, "output.mp4");
 
     const digest = parseInt(createHash("sha1").update(prompt).digest("hex").slice(0, 8), 16);
     const color = FAKE_VIDEO_COLORS[digest % FAKE_VIDEO_COLORS.length] ?? "0x111827";
@@ -681,87 +726,142 @@ export class MediaService {
       destination,
     ];
     try {
-      await execFileAsync("ffmpeg", command, { signal: this.abortSignal ?? undefined });
-    } catch (error) {
-      if (this.abortSignal?.aborted) throw error;
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Fake video provider needs ffmpeg: ${message.slice(0, 300)}`);
+      try {
+        await execFileAsync("ffmpeg", command, { signal: this.abortSignal ?? undefined });
+      } catch (error) {
+        if (this.abortSignal?.aborted) throw error;
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Fake video provider needs ffmpeg: ${message.slice(0, 300)}`);
+      }
+      if (this.abortSignal?.aborted) throw new Error("run cancelled");
+      return this.publishManagedFile(destination, ".mp4");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
     }
-    return `/static/videos/${filename}`;
   }
 
-  async mergeVideos(videoUrls: string[], outputFilename?: string): Promise<string> {
+  async mergeVideos(videoUrls: string[]): Promise<string> {
     if (videoUrls.length === 0) throw new Error("No video URLs provided");
-    const name =
-      outputFilename ??
-      `merged_${createHash("sha1").update(videoUrls.join()).digest("hex").slice(0, 8)}`;
     const outputDir = join(this.settings.staticDir, "videos");
     mkdirSync(outputDir, { recursive: true });
-    const outputPath = join(outputDir, `${name}.mp4`);
-
-    const localPaths = videoUrls.map((url) => this.localPathFor(url));
-    for (const path of localPaths) {
-      if (!existsSync(path)) throw new Error(`video file missing for merge: ${path}`);
-    }
-
-    if (localPaths.length === 1) {
-      copyFileSync(localPaths[0] as string, outputPath);
-      return `/static/videos/${name}.mp4`;
-    }
-
-    const concatFile = join(outputDir, `concat_${name}.txt`);
-    writeFileSync(
-      concatFile,
-      localPaths.map((path) => `file '${path.replaceAll("'", "'\\''")}'`).join("\n") + "\n",
-      "utf8",
-    );
+    const tempDir = mkdtempSync(join(outputDir, ".merge-"));
+    const tempOutput = join(tempDir, "output.mp4");
+    const downloadDeadline = Date.now() + MAX_DOWNLOAD_MS;
+    let downloadedBytes = 0;
     try {
-      await execFileAsync("ffmpeg", [
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concatFile,
-        "-c",
-        "copy",
-        outputPath,
-      ], { signal: this.abortSignal ?? undefined });
-    } catch (error) {
-      if (this.abortSignal?.aborted) throw error;
-      await execFileAsync("ffmpeg", [
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        concatFile,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
-        outputPath,
-      ], { signal: this.abortSignal ?? undefined });
+      const localPaths: string[] = [];
+      for (let i = 0; i < videoUrls.length; i++) {
+        const url = videoUrls[i]!;
+        const localPath = this.localPathFor(url);
+        if (localPath) {
+          if (!existsSync(localPath)) throw new Error("Local video file is missing");
+          localPaths.push(localPath);
+        } else {
+          const dest = join(tempDir, `video_${i}.mp4`);
+          downloadedBytes += await downloadPublicVideo(url, dest, downloadDeadline, downloadedBytes, this.abortSignal ?? undefined);
+          localPaths.push(dest);
+        }
+      }
+      if (this.abortSignal?.aborted) throw new Error("run cancelled");
+      if (localPaths.length === 1) {
+        copyFileSync(localPaths[0]!, tempOutput);
+      } else {
+        const concatFile = join(tempDir, "concat.txt");
+        writeFileSync(concatFile, localPaths.map((path) => `file '${path.replaceAll("'", "'\\''")}'`).join("\n") + "\n", "utf8");
+        try {
+          await execFileAsync("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", concatFile, "-c", "copy", tempOutput], { signal: this.abortSignal ?? undefined });
+        } catch (error) {
+          if (this.abortSignal?.aborted) throw error;
+          await execFileAsync("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", concatFile, "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", tempOutput], { signal: this.abortSignal ?? undefined });
+        }
+      }
+      if (this.abortSignal?.aborted) throw new Error("run cancelled");
+      return this.publishManagedFile(tempOutput, ".mp4");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
     }
-    return `/static/videos/${name}.mp4`;
   }
 
-  localPathFor(url: string): string {
-    if (url.startsWith("/static/")) {
-      return join(this.settings.staticDir, url.slice("/static/".length));
+  localPathFor(url: string): string | null {
+    if (!url.startsWith("/static/")) return null;
+    const root = realpathSync(this.settings.staticDir);
+    const path = resolve(root, url.slice("/static/".length));
+    if (path !== root && !path.startsWith(`${root}${sep}`)) throw new Error("Invalid local video path");
+    const actual = realpathSync(path);
+    if (actual !== root && !actual.startsWith(`${root}${sep}`)) throw new Error("Invalid local video path");
+    return actual;
+  }
+}
+
+const MAX_VIDEO_BYTES = 1024 * 1024 * 1024;
+const MAX_VIDEO_TOTAL_BYTES = 2 * 1024 * 1024 * 1024;
+const MAX_REDIRECTS = 5;
+const MAX_DOWNLOAD_MS = 120_000;
+
+function publicAddress(address: string): boolean {
+  if (isIP(address) === 4) {
+    const [a, b, c] = address.split(".").map(Number);
+    return !(a === 0 || a === 10 || a === 127 || a! >= 224 || (a === 100 && b! >= 64 && b! <= 127) || (a === 169 && b === 254) || (a === 172 && b! >= 16 && b! <= 31) || (a === 192 && (b === 0 || b === 168)) || (a === 198 && (b === 18 || b === 19 || b === 51)) || (a === 203 && b === 0 && c === 113));
+  }
+  if (isIP(address) !== 6 || address.includes(".")) return false;
+  const parts = address.toLowerCase().split("::");
+  const left = parts[0] ? parts[0].split(":") : [];
+  const right = parts[1] ? parts[1].split(":") : [];
+  const words = parts.length === 1 ? left : [...left, ...Array(8 - left.length - right.length).fill("0"), ...right];
+  const value = words.reduce((result, word) => (result << 16n) | BigInt(`0x${word || "0"}`), 0n);
+  const inRange = (network: bigint, bits: number) => value >> BigInt(128 - bits) === network >> BigInt(128 - bits);
+  return inRange(0x2000n << 112n, 3) && !inRange(0x2001n << 112n, 23) && !inRange(0x2001_0db8n << 96n, 32) && !inRange(0x2002n << 112n, 16) && !inRange(0x3fffn << 112n, 20);
+}
+
+async function downloadPublicVideo(url: string, destination: string, deadline: number, previouslyDownloaded: number, signal?: AbortSignal): Promise<number> {
+  let current = new URL(url);
+  for (let redirects = 0; ; redirects++) {
+    if ((current.protocol !== "http:" && current.protocol !== "https:") || current.username || current.password) throw new Error("Video URL must be public HTTP or HTTPS");
+    let dnsTimeout: ReturnType<typeof setTimeout> | undefined;
+    const addresses = await Promise.race([
+      lookup(current.hostname, { all: true, verbatim: true }),
+      new Promise<never>((_, reject) => {
+        dnsTimeout = setTimeout(() => reject(new Error("Video DNS lookup timed out")), Math.max(1, Math.min(10_000, deadline - Date.now())));
+      }),
+    ]).finally(() => clearTimeout(dnsTimeout));
+    if (!addresses.length || addresses.some(({ address }) => !publicAddress(address))) throw new Error("Video URL must resolve only to public IP addresses");
+    const pinned = addresses[0]!;
+    const response = await new Promise<{ location?: string; bytes: number }>((resolveResponse, reject) => {
+      if (signal?.aborted) return reject(new Error("run cancelled"));
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return reject(new Error("Video download timed out"));
+      const requestFn = current.protocol === "https:" ? httpsRequest : httpRequest;
+      const req = requestFn(current, { signal, timeout: remaining, lookup: (_hostname, _options, callback) => callback(null, pinned.address, pinned.family) }, (res) => {
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          resolveResponse({ location: res.headers.location, bytes: 0 });
+          return;
+        }
+        if (res.statusCode !== 200) { res.resume(); reject(new Error(`Video server returned HTTP ${res.statusCode ?? 0}`)); return; }
+        const declared = Number(res.headers["content-length"] ?? 0);
+        if (declared > MAX_VIDEO_BYTES) { res.resume(); reject(new Error("Video exceeds download size limit")); return; }
+        let bytes = 0;
+        const out = createWriteStream(destination, { flags: "wx" });
+        res.on("data", (chunk: Buffer) => {
+          bytes += chunk.length;
+          if (bytes > MAX_VIDEO_BYTES || previouslyDownloaded + bytes > MAX_VIDEO_TOTAL_BYTES) res.destroy(new Error("Video exceeds download size limit"));
+          else if (Date.now() > deadline) res.destroy(new Error("Video download timed out"));
+        });
+        res.pipe(out);
+        out.once("finish", () => resolveResponse({ bytes }));
+        out.once("error", reject);
+        res.once("error", reject);
+      });
+      req.once("timeout", () => req.destroy(new Error("Video download timed out")));
+      req.once("error", reject);
+      req.end();
+    });
+    if (response.location) {
+      if (redirects >= MAX_REDIRECTS) throw new Error("Too many video redirects");
+      current = new URL(response.location, current);
+      continue;
     }
-    if (url.startsWith("file://")) return url.slice("file://".length);
-    return url;
+    return response.bytes;
   }
 }
 

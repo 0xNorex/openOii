@@ -8,6 +8,7 @@
  * run's durable lease token first, so an expired/orphan executor can finish an
  * external provider request but cannot commit stale data afterwards.
  */
+import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 export interface ProjectRow {
@@ -328,6 +329,23 @@ export class SharedDb {
     }
   }
 
+  registerMediaObject(relativePath: string): void {
+    if (!this.fence) throw new Error("media registration requires an execution fence");
+    const result = this.db.prepare(
+      `INSERT INTO media_object (id, namespace, relative_path)
+       SELECT ?, 'managed-v1', ?
+       WHERE EXISTS (
+         SELECT 1 FROM agentrun
+         WHERE id = ? AND lease_token = ? AND lease_expires_at > datetime('now')
+           AND cancel_requested_at IS NULL AND status NOT IN ('cancelling','cancelled')
+       )`,
+    ).run(randomUUID(), relativePath, this.fence.runId, this.fence.token);
+    if (result.changes !== 1) {
+      this.assertExecutionFence();
+      throw new Error("media registration rejected because the run is cancelled");
+    }
+  }
+
   // ---- project ----
 
   getProject(projectId: number): ProjectRow | undefined {
@@ -437,9 +455,9 @@ export class SharedDb {
          SET execution_attempt = COALESCE(execution_attempt, 0) + 1,
              lease_owner = ?, lease_token = ?,
              lease_expires_at = datetime('now', ?),
-             cancel_requested_at = NULL,
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
          WHERE id = ?
+           AND cancel_requested_at IS NULL AND status NOT IN ('cancelling', 'cancelled')
            AND (lease_token IS NULL OR lease_expires_at IS NULL OR lease_expires_at <= datetime('now'))`,
       )
       .run(owner, token, `+${ttlSeconds} seconds`, runId);
@@ -481,11 +499,29 @@ export class SharedDb {
     return row?.owned === 1;
   }
 
+  assertRunCommitAllowed(runId: number): void {
+    const row = this.db
+      .prepare(
+        `SELECT status, cancel_requested_at FROM agentrun
+         WHERE id = ? AND lease_token = ?
+           AND lease_expires_at IS NOT NULL AND lease_expires_at > datetime('now')`,
+      )
+      .get(runId, this.fence?.token) as
+      | { status: string; cancel_requested_at: string | null }
+      | undefined;
+    if (!row) throw new Error(`execution lease lost for run ${runId}`);
+    if (row.cancel_requested_at || row.status === "cancelling" || row.status === "cancelled") {
+      throw new Error("run cancelled");
+    }
+  }
+
   runCancelRequested(runId: number): boolean {
     const row = this.db
-      .prepare("SELECT cancel_requested_at FROM agentrun WHERE id = ?")
-      .get(runId) as { cancel_requested_at: string | null } | undefined;
-    return Boolean(row?.cancel_requested_at);
+      .prepare("SELECT status, cancel_requested_at FROM agentrun WHERE id = ?")
+      .get(runId) as { status: string; cancel_requested_at: string | null } | undefined;
+    return Boolean(
+      row?.cancel_requested_at || row?.status === "cancelling" || row?.status === "cancelled",
+    );
   }
 
   requestRunCancel(runId: number): void {
@@ -495,9 +531,25 @@ export class SharedDb {
          SET cancel_requested_at = COALESCE(cancel_requested_at, strftime('%Y-%m-%dT%H:%M:%fZ','now')),
              status = CASE WHEN status IN ('queued','running','waiting_for_approval') THEN 'cancelling' ELSE status END,
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-         WHERE id = ?`,
+         WHERE id = ? AND status IN ('queued','running','waiting_for_approval','cancelling')`,
       )
       .run(runId);
+  }
+
+  completeRun(runId: number, fields: Record<string, unknown>): void {
+    const entries = Object.entries(fields);
+    const sets = entries.map(([key]) => `${key} = ?`).join(", ");
+    const info = this.db
+      .prepare(
+        `UPDATE agentrun SET ${sets}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+         WHERE id = ? AND lease_token = ? AND lease_expires_at > datetime('now')
+           AND cancel_requested_at IS NULL AND status NOT IN ('cancelling','cancelled')`,
+      )
+      .run(...entries.map(([, value]) => (value === undefined ? null : value)), runId, this.fence?.token);
+    if (info.changes !== 1) {
+      this.assertExecutionFence();
+      throw new Error("run cancelled");
+    }
   }
 
   consumeConfirmSignal(runId: number): boolean {
@@ -597,7 +649,7 @@ export class SharedDb {
     this.assertExecutionFence();
     const info = this.db
       .prepare(
-        "INSERT INTO character (project_id, name, description, visual_notes, approval_version) VALUES (?, ?, ?, ?, 0)",
+        "INSERT INTO character (project_id, name, description, visual_notes, reference_images, approval_version) VALUES (?, ?, ?, ?, '[]', 0)",
       )
       .run(projectId, name, description, visualNotes);
     return Number(info.lastInsertRowid);
@@ -640,6 +692,12 @@ export class SharedDb {
 
   getLiveShot(shotId: number): ShotRow | undefined {
     return this.db.prepare("SELECT * FROM shot WHERE id = ?").get(shotId) as ShotRow | undefined;
+  }
+
+  getLiveShotsForProject(projectId: number): ShotRow[] {
+    return this.db
+      .prepare('SELECT * FROM shot WHERE project_id = ? ORDER BY "order"')
+      .all(projectId) as unknown as ShotRow[];
   }
 
   hasShotImage(shotId: number): boolean {

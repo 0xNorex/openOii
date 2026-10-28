@@ -231,6 +231,7 @@ async def engine_start_run(
     user_feedback: str = "",
     target_character_ids: Sequence[int] | None = None,
     target_shot_ids: Sequence[int] | None = None,
+    force_regenerate: bool = False,
 ) -> dict[str, Any]:
     """Dispatch a run to the engine.
 
@@ -243,6 +244,7 @@ async def engine_start_run(
         "stage": stage,
         "auto_mode": auto_mode,
         "user_feedback": user_feedback,
+        "force_regenerate": force_regenerate,
     }
     if target_character_ids:
         payload["target_character_ids"] = list(target_character_ids)

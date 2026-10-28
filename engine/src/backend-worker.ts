@@ -101,7 +101,7 @@ export class BackendWorker {
     const line = await new Promise<string>((resolveLine, reject) => {
       this.pending = { resolve: resolveLine, reject };
       child.stdin.write(`${JSON.stringify(request)}\n`, (error?: Error | null) => {
-        if (error) this.fail(error);
+        if (error) this.fail(child, error);
       });
     });
     const value: unknown = JSON.parse(line);
@@ -125,17 +125,21 @@ export class BackendWorker {
     this.child = child;
     this.errors = "";
     child.stderr.setEncoding("utf8");
+    let errors = "";
     child.stderr.on("data", (chunk: string) => {
-      this.errors = `${this.errors}${chunk}`.slice(-4000);
+      errors = `${errors}${chunk}`.slice(-4000);
+      if (this.child === child) this.errors = errors;
     });
     this.lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
     this.lines.on("line", (line) => {
+      if (this.child !== child) return;
       const pending = this.pending;
       if (!pending) return;
       this.pending = null;
       pending.resolve(line);
     });
     this.abort = () => {
+      this.fail(child, new Error("backend worker cancelled"));
       if (process.platform === "win32" || !child.pid) {
         child.kill("SIGTERM");
         return;
@@ -148,12 +152,13 @@ export class BackendWorker {
     };
     this.signal.addEventListener("abort", this.abort, { once: true });
     if (this.signal.aborted) this.abort();
-    child.once("error", (error) => this.fail(error));
-    child.once("close", (code) => this.fail(new Error(`backend worker exited ${code}: ${this.errors}`)));
+    child.once("error", (error) => this.fail(child, error));
+    child.once("close", (code) => this.fail(child, new Error(`backend worker exited ${code}: ${errors}`)));
     return child;
   }
 
-  private fail(error: Error): void {
+  private fail(child: ChildProcessWithoutNullStreams, error: Error): void {
+    if (this.child !== child) return;
     const pending = this.pending;
     this.pending = null;
     pending?.reject(error);

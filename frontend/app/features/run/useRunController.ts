@@ -3,7 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { appendMessage, clearMessageFeed } from "~/query/messageFeed";
-import { patchRunState, resetRunState } from "~/query/runState";
+import { appQueryClient } from "~/query/client";
+import { projectQueryKeys } from "~/query/queryKeys";
+import { patchRunState, readRunState, resetRunState } from "~/query/runState";
 import { useProjectWebSocket } from "~/hooks/useWebSocket";
 import { useEditorStore } from "~/stores/editorStore";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
@@ -65,6 +67,7 @@ export function useRunController(args: {
 	const { send } = useProjectWebSocket(projectId);
 	const [lastRunStatus, setLastRunStatus] = useState<LastRunTerminalStatus>(null);
 	const requestTokenRef = useRef(0);
+	const cancelPendingRef = useRef(false);
 	const autoStartTriggered = useRef(false);
 	const hasActiveRun = isGenerating || Boolean(currentRunId);
 
@@ -236,23 +239,48 @@ export function useRunController(args: {
 	});
 
 	const cancelMutation = useMutation({
-		mutationFn: () => {
-			const runId = currentRunId ?? recoveryControl?.active_run.id ?? null;
-			if (runId === null) throw new Error("没有可取消的运行");
-			return runsApi.cancel(runId);
+		mutationFn: ({ runId }: { runId: number }) => runsApi.cancel(runId),
+		onSuccess: (result, { runId }) => {
+			const state = readRunState(projectId);
+			const ownsCurrentRun = state.currentRunId !== null
+				? state.currentRunId === runId
+				: !state.isGenerating && state.recoveryControl?.active_run.id === runId;
+			if (result?.status === "cancelled" && result.cancelled > 0) {
+				if (ownsCurrentRun) {
+					setLastRunStatus("cancelled");
+					resetRunState(projectId);
+					appendMessage(projectId, {
+						agent: "system",
+						role: "system",
+						content: "生成已停止",
+						icon: StopIcon,
+						timestamp: new Date().toISOString(),
+					});
+				}
+				return;
+			}
+			if (result?.status === "no_active_run") {
+				if (ownsCurrentRun) resetRunState(projectId);
+				appQueryClient.invalidateQueries({ queryKey: projectQueryKeys.runState(projectId) });
+				toast.info({ title: "运行状态已同步", message: "该运行已结束，正在刷新当前状态" });
+				return;
+			}
+			toast.info({
+				title: "停止尚未完成",
+				message: "已提交停止请求，生成仍在停止中",
+			});
 		},
-		onSuccess: (result) => {
-			if (result?.status === "cancelled") setLastRunStatus("cancelled");
+		onError: (error: Error | ApiError, { runId }) => {
+			if (readRunState(projectId).currentRunId === runId) resetRunState(projectId);
+			appQueryClient.invalidateQueries({ queryKey: projectQueryKeys.runState(projectId) });
+			toast.warning({
+				title: "停止结果未知",
+				message: "请求可能已送达，正在同步运行状态；请刷新后确认结果",
+				details: error.message,
+			});
 		},
 		onSettled: () => {
-			resetRunState(projectId);
-			appendMessage(projectId, {
-				agent: "system",
-				role: "system",
-				content: "生成已停止",
-				icon: StopIcon,
-				timestamp: new Date().toISOString(),
-			});
+			cancelPendingRef.current = false;
 		},
 	});
 
@@ -377,9 +405,10 @@ export function useRunController(args: {
 
 	const handleCancel = () => {
 		const activeRunId = currentRunId ?? recoveryControl?.active_run.id ?? null;
-		if (!activeRunId && !isGenerating && recoveryControl?.state !== "active") return;
+		if (activeRunId === null || cancelPendingRef.current) return;
+		cancelPendingRef.current = true;
 		requestTokenRef.current += 1;
-		cancelMutation.mutate();
+		cancelMutation.mutate({ runId: activeRunId });
 	};
 
 	const handleResume = () => {

@@ -32,17 +32,22 @@ def resume_agent_for_stage(stage: str | None) -> str:
     return RESUME_AGENT_FOR_STAGE.get(stage, "plan")
 
 
-async def _update_run_columns(run_id: int, **values: object) -> None:
+async def _update_run_columns(
+    run_id: int, *, project_id: int | None = None, **values: object
+) -> None:
     from app.db.session import async_session_maker
 
+    stmt = update(AgentRun).where(AgentRun.id == run_id)
+    if project_id is not None:
+        stmt = stmt.where(AgentRun.project_id == project_id)
     async with async_session_maker() as session:
-        await session.execute(update(AgentRun).where(AgentRun.id == run_id).values(**values))
+        await session.execute(stmt.values(**values))
         await session.commit()
 
 
-async def trigger_confirm_signal(run_id: int) -> bool:
+async def trigger_confirm_signal(run_id: int, project_id: int | None = None) -> bool:
     """设置 run 的审批信号位（替代原 Redis confirm key）。"""
-    await _update_run_columns(run_id, confirm_requested=True)
+    await _update_run_columns(run_id, project_id=project_id, confirm_requested=True)
     return True
 
 

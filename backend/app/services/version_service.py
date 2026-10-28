@@ -8,7 +8,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from app.exceptions import BusinessError, NotFoundError
 from app.models.artifact_version import ArtifactVersion
-from app.models.project import Character, Shot
+from app.models.project import Character, Project, Shot
 
 EntityType = Literal["character", "shot"]
 
@@ -73,6 +73,10 @@ ROLLBACK_FIELDS: dict[EntityType, tuple[str, ...]] = {
         "prompt",
         "image_prompt",
         "image_url",
+        "video_url",
+        "duration",
+        "tts_url",
+        "bgm_type",
         "camera",
         "motion_note",
         "scene",
@@ -201,6 +205,26 @@ class VersionService:
             if entity is None:
                 raise NotFoundError("Character", entity_id)
             self._apply_snapshot(entity, target.snapshot, ROLLBACK_FIELDS["character"])
+            shots = await session.execute(select(Shot).where(Shot.project_id == entity.project_id))
+            for shot in shots.scalars():
+                if entity_id not in shot.character_ids:
+                    continue
+                await self.create_version(
+                    session,
+                    "shot",
+                    int(shot.id),
+                    shot_snapshot(shot),
+                    trigger="rollback",
+                )
+                shot.image_url = None
+                shot.video_url = None
+                shot.tts_url = None
+                shot.bgm_type = None
+                session.add(shot)
+            project = await session.get(Project, entity.project_id)
+            if project is not None:
+                project.status = "superseded"
+                session.add(project)
             session.add(entity)
             await session.flush()
             return await self.create_version(
@@ -215,6 +239,10 @@ class VersionService:
         if entity is None:
             raise NotFoundError("Shot", entity_id)
         self._apply_snapshot(entity, target.snapshot, ROLLBACK_FIELDS["shot"])
+        project = await session.get(Project, entity.project_id)
+        if project is not None:
+            project.status = "superseded"
+            session.add(project)
         session.add(entity)
         await session.flush()
         return await self.create_version(

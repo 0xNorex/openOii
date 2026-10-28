@@ -32,7 +32,6 @@ from app.services.creative_control import (
     apply_character_rerun_edits,
     invalidate_character_downstream_outputs,
 )
-from app.services.file_cleaner import delete_file
 from app.services.revision import assert_expected_revision, commit_versioned
 from app.ws.manager import ConnectionManager
 
@@ -146,6 +145,7 @@ async def regenerate_character(
             resource_id=character_id,
             stage="render_characters",
             target_character_ids=(character_id,),
+            force_regenerate=True,
         ),
     )
     return AgentRunRead.model_validate(result.run)
@@ -160,9 +160,6 @@ async def delete_character(
     character = await get_or_404(session, Character, character_id)
 
     project_id = character.project_id
-
-    # 删除角色图片文件
-    delete_file(character.image_url)
 
     # 删除数据库记录
     await session.delete(character)

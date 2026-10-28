@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSettingsStore } from "~/stores/settingsStore";
 import { configApi } from "~/services/api";
 import type { ConfigItem, ConfigValue } from "~/types";
 import { ConfigInput } from "./ConfigInput";
+import { useDialogFocus } from "~/components/ui/useDialogFocus";
 import { groupConfigs } from "~/utils/configGroups";
 import {
 	XMarkIcon,
@@ -67,6 +68,14 @@ export function SettingsModal() {
 			setInitialFormState(initialState);
 		}
 	}, [config]);
+
+	const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+	const modalRef = useRef<HTMLDivElement>(null);
+	const alertRef = useRef<HTMLDivElement>(null);
+	useDialogFocus(modalRef, isModalOpen, closeModal);
+	useDialogFocus(alertRef, isModalOpen && alertState.show, () => {
+		setAlertState((current) => ({ ...current, show: false }));
+	});
 
 	// 切换标签页
 	const handleTabChange = (tab: string) => {
@@ -250,6 +259,30 @@ export function SettingsModal() {
 	}
 
 	const sections = config ? groupConfigs(config) : [];
+
+	const focusTab = (tab: string) => {
+		setActiveTab(tab);
+		tabRefs.current[tab]?.focus();
+	};
+
+	const handleTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		const currentIndex = sections.findIndex((section) => section.key === activeTab);
+		if (currentIndex < 0 || sections.length === 0) return;
+
+		const keyHandlers: Record<string, () => void> = {
+			ArrowRight: () => focusTab(sections[(currentIndex + 1) % sections.length].key),
+			ArrowDown: () => focusTab(sections[(currentIndex + 1) % sections.length].key),
+			ArrowLeft: () => focusTab(sections[(currentIndex - 1 + sections.length) % sections.length].key),
+			ArrowUp: () => focusTab(sections[(currentIndex - 1 + sections.length) % sections.length].key),
+			Home: () => focusTab(sections[0].key),
+			End: () => focusTab(sections[sections.length - 1].key),
+		};
+
+		const handler = keyHandlers[event.key];
+		if (!handler) return;
+		event.preventDefault();
+		handler();
+	};
 
 	// 标签页配置
 	const tabConfig: Record<
@@ -734,6 +767,8 @@ export function SettingsModal() {
 	return (
 		<div className="dialog-overlay">
 			<div
+				ref={modalRef}
+				tabIndex={-1}
 				className="dialog-panel flex max-h-[92dvh] w-[min(96vw,76rem)] flex-col p-0"
 				role="dialog"
 				aria-modal="true"
@@ -784,16 +819,22 @@ export function SettingsModal() {
 					>
 						<div className="flex min-h-0 flex-1 flex-col lg:flex-row">
 							<nav className="shrink-0 border-b-2 border-ink/15 bg-paper-200/45 p-2 lg:w-56 lg:border-b-0 lg:border-r-2" aria-label="设置分类">
-							<div role="tablist" className="flex gap-1.5 overflow-x-auto lg:flex-col">
+							<div role="tablist" aria-label="设置分类" onKeyDown={handleTabKeyDown} className="flex gap-1.5 overflow-x-auto lg:flex-col">
 								{sections.map((section) => {
 									const cfg = tabConfig[section.key];
 									const isActive = activeTab === section.key;
 									return (
 										<button
 											key={section.key}
+											ref={(node) => {
+												tabRefs.current[section.key] = node;
+											}}
+											id={`settings-tab-${section.key}`}
 											type="button"
 											role="tab"
 											aria-selected={isActive}
+											aria-controls="settings-panel"
+											tabIndex={isActive ? 0 : -1}
 											onClick={() => handleTabChange(section.key)}
 											className={`
                         flex min-h-9 shrink-0 items-center justify-between gap-2 border-2 px-2.5
@@ -822,7 +863,13 @@ export function SettingsModal() {
 							</div>
 							</nav>
 
-						<div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
+						<div
+							id="settings-panel"
+							role="tabpanel"
+							aria-labelledby={`settings-tab-${activeTab}`}
+							tabIndex={0}
+							className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6"
+						>
 							{activeTab === "text"
 								? renderTextSection()
 								: activeTab === "image"
@@ -881,7 +928,7 @@ export function SettingsModal() {
 
 			{alertState.show && (
 				<div className="dialog-overlay z-popover">
-					<div className="dialog-panel max-w-md p-4" role="dialog" aria-modal="true" aria-labelledby="settings-alert-title">
+					<div ref={alertRef} tabIndex={-1} className="dialog-panel max-w-md p-4" role="dialog" aria-modal="true" aria-labelledby="settings-alert-title">
 						<div className="flex items-start gap-2.5">
 							<div
 								className={`shrink-0 ${

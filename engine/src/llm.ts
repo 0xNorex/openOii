@@ -269,7 +269,7 @@ export class TextLlmService {
     // Fail fast on a cancelled or expired operation before spending a request.
     if (req.operation) assertOperationInFlight(req.operation);
     if (resolved.key === "fake") {
-      return { text: fakeRespond(prompt), provider: "fake", model: resolved.model };
+      return { text: fakeRespond(req.system, prompt), provider: "fake", model: resolved.model };
     }
     if (!resolved.baseUrl) {
       throw new Error(`provider ${resolved.key} needs a base URL in the run context snapshot`);

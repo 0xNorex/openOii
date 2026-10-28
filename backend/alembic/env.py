@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, inspect, pool, text
+from sqlalchemy import engine_from_config, event, inspect, pool, text
 from sqlalchemy.engine import make_url
 from sqlmodel import SQLModel
 
@@ -70,6 +70,15 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
+    if connectable.dialect.name == "sqlite":
+        @event.listens_for(connectable, "connect")
+        def _sqlite_busy_timeout(dbapi_connection, _record):  # noqa: ANN001
+            dbapi_connection.execute("PRAGMA busy_timeout=60000")
+
+        @event.listens_for(connectable, "begin")
+        def _sqlite_begin_immediate(connection):  # noqa: ANN001
+            connection.exec_driver_sql("BEGIN IMMEDIATE")
+
     with connectable.connect() as connection:
         # Ensure alembic_version.version_num column is wide enough for long revision IDs.
         # Alembic creates this table with VARCHAR(32) by default, but our revision
@@ -84,12 +93,16 @@ def run_migrations_online() -> None:
                     "(version_num VARCHAR(128) NOT NULL)"
                 )
             )
-            connection.commit()
+        # Inspector queries autobegin on SQLAlchemy 2.x. End that transaction
+        # before Alembic opens its migration transaction, otherwise close rolls
+        # back the revision update when alembic_version already exists.
+        connection.commit()
 
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            transactional_ddl=connection.dialect.name == "sqlite",
         )
 
         with context.begin_transaction():

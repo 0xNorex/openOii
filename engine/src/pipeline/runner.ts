@@ -40,6 +40,7 @@ import {
   runPlanShots,
   runRenderCharacters,
   runRenderShots,
+  targetCheckpointStage,
   type StageContext,
 } from "../agents/index.js";
 import { PipelineEmitter } from "./emitter.js";
@@ -60,6 +61,7 @@ export interface PipelineRequest {
    */
   targetCharacterIds?: number[];
   targetShotIds?: number[];
+  forceRegenerate?: boolean;
 }
 
 export interface PipelineOutcome {
@@ -80,6 +82,20 @@ const STAGE_ACTIVITY_LABEL: Partial<Record<StageId, string>> = {
   compose_videos: "生成分镜视频",
   compose_merge: "合成完整视频",
 };
+
+function assertTargetIdsExist(shared: SharedDb, request: PipelineRequest): void {
+  const characters = new Set(shared.charactersForProject(request.projectId).map((row) => row.id));
+  const shots = new Set(shared.shotsForProject(request.projectId).map((row) => row.id));
+  const missing = [
+    ...(request.targetCharacterIds ?? []).filter((id) => !characters.has(id)),
+    ...(request.targetShotIds ?? []).filter((id) => !shots.has(id)),
+  ];
+  if (missing.length) {
+    throw new Error(
+      `target IDs no longer exist in project ${request.projectId}: ${missing.join(", ")}`,
+    );
+  }
+}
 
 function durationLabel(durationMs: number): string {
   return durationMs < 1000
@@ -316,12 +332,58 @@ export class PipelineRunner {
   private async resumeInner(request: PipelineRequest): Promise<PipelineOutcome> {
     // A cancel recorded while no executor was running must abort this one too.
     if (this.shared.runCancelRequested(request.runId)) this.requestCancel();
+    if (request.targetCharacterIds?.length || request.targetShotIds?.length) {
+      return this.runTargeted(request, true);
+    }
     const completed = new Set(this.db.checkpointStages(request.runId));
     if (completed.size === 0) return this.run(request);
     const lastCompleted = STAGE_ORDER.filter((stage) => completed.has(stage)).at(-1);
     if (!lastCompleted) return this.run(request);
     const resumeStage = NEXT_STAGE[lastCompleted];
-    if (!resumeStage) return { status: "completed" };
+    if (!resumeStage) {
+      const project = this.shared.getProject(request.projectId);
+      if (!project?.video_url && !videoSkippedFor(this.db, request.runId)) {
+        return this.runFromStage(request, "compose_merge", completed);
+      }
+      let cancelled = false;
+      this.db.transaction(() => {
+        this.shared.assertExecutionFence();
+        if (this.shared.runCancelRequested(request.runId)) {
+          cancelled = true;
+          this.shared.updateRun(request.runId, {
+            status: "cancelled",
+            awaiting_payload: null,
+          });
+          this.db.appendEvent(request.runId, request.projectId, "run_cancelled", {
+            run_id: request.runId,
+            project_id: request.projectId,
+            cancelled_count: 1,
+            run_ids: [request.runId],
+          });
+          return;
+        }
+        this.shared.assertRunCommitAllowed(request.runId);
+        this.shared.updateProject(request.projectId, { status: "ready" });
+        this.db.appendEvent(request.runId, request.projectId, "project_updated", {
+          project: { id: request.projectId, status: "ready" },
+        });
+        this.shared.completeRun(request.runId, {
+          status: "succeeded",
+          progress: 1,
+          awaiting_payload: null,
+          error: null,
+        });
+        this.db.appendEvent(request.runId, request.projectId, "run_completed", {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: lastCompleted,
+          current_agent: agentForStage(lastCompleted),
+          message: null,
+          video_generation_pending: null,
+        });
+      });
+      return { status: cancelled ? "cancelled" : "completed" };
+    }
     return this.runFromStage(request, resumeStage, completed);
   }
 
@@ -354,14 +416,15 @@ export class PipelineRunner {
     request: PipelineRequest,
     emitter: PipelineEmitter,
   ): Promise<PipelineOutcome> {
-    this.shared.assertExecutionFence();
-    this.shared.setAwaitingPayload(request.runId, null);
-    this.shared.updateRun(request.runId, { status: "cancelled" });
-    emitter.emit("run_cancelled", {
-      run_id: request.runId,
-      project_id: request.projectId,
-      cancelled_count: 1,
-      run_ids: [request.runId],
+    emitter.commitCancellation(() => {
+      this.shared.setAwaitingPayload(request.runId, null);
+      this.shared.updateRun(request.runId, { status: "cancelled" });
+      this.db.appendEvent(request.runId, request.projectId, "run_cancelled", {
+        run_id: request.runId,
+        project_id: request.projectId,
+        cancelled_count: 1,
+        run_ids: [request.runId],
+      });
     });
     return { status: "cancelled" };
   }
@@ -378,6 +441,7 @@ export class PipelineRunner {
     const mediaSettings = resolveMediaSettings(this.db, this.mediaSnapshot());
     const media = new MediaService(mediaSettings);
     media.setAbortSignal(this.abortController.signal);
+    media.setMediaRegistrar((relativePath) => this.shared.registerMediaObject(relativePath));
     const emitter = new PipelineEmitter(this.db, this.shared, request.projectId, request.runId, {
       thinkingChainEnabled: this.boolPolicy(
         "thinking_chain_enabled",
@@ -393,22 +457,29 @@ export class PipelineRunner {
 
     const fullRun = startStage === "plan_outline";
     const startAgent = agentForStage(startStage);
-    this.shared.updateRun(request.runId, {
-      status: "running",
-      current_agent: startAgent,
-      progress: progressForStage(startStage),
-      error: null,
-    });
-    emitter.emit("run_started", {
-      run_id: request.runId,
-      project_id: request.projectId,
-      current_stage: startStage,
-      stage: startStage,
-      next_stage: NEXT_STAGE[startStage],
-      progress: progressForStage(startStage),
-      current_agent: startAgent,
-      preserved_stages: fullRun ? [] : STAGE_ORDER.filter((s) => preservedStages.has(s)),
-    });
+    try {
+      emitter.commit("run_started", () => {
+        this.shared.updateRun(request.runId, {
+          status: "running",
+          current_agent: startAgent,
+          progress: progressForStage(startStage),
+          error: null,
+        });
+        return {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: startStage,
+          stage: startStage,
+          next_stage: NEXT_STAGE[startStage],
+          progress: progressForStage(startStage),
+          current_agent: startAgent,
+          preserved_stages: fullRun ? [] : STAGE_ORDER.filter((s) => preservedStages.has(s)),
+        };
+      });
+    } catch (error) {
+      if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
+      throw error;
+    }
     if (fullRun) {
       emitter.emit("data_cleared", {
         cleared_types: ["characters", "shots", "messages"],
@@ -429,6 +500,17 @@ export class PipelineRunner {
       signal: this.abortController.signal,
       targetCharacterIds: request.targetCharacterIds,
       targetShotIds: request.targetShotIds,
+      forceCharacterRedraw: request.startStage === undefined,
+      completedTargets: new Set(
+        this.db.checkpointStages(request.runId).filter((stage) => stage.startsWith("target:")),
+      ),
+      checkpointTarget: (kind, id) => {
+        const checkpoint = targetCheckpointStage(kind, id);
+        this.db.saveCheckpoint(request.runId, checkpoint, {
+          completed_at: new Date().toISOString(),
+        });
+        ctx.completedTargets.add(checkpoint);
+      },
       ...resolveStageStyleContext(
         this.db,
         this.shared.getProject(request.projectId) ?? null,
@@ -491,6 +573,15 @@ export class PipelineRunner {
             }
             const rerenderStage: StageId =
               entityType === "character" ? "render_characters" : "render_shots";
+            const checkpointKind =
+              entityType === "character" ? "character_image" : "shot_image";
+            const targetCheckpoints = outcome.regenerateEntityIds.map((id) =>
+              targetCheckpointStage(checkpointKind, id),
+            );
+            this.db.deleteCheckpoints(request.runId, targetCheckpoints);
+            for (const checkpoint of targetCheckpoints) {
+              ctx.completedTargets.delete(checkpoint);
+            }
             this.invalidateCheckpointsFrom(request.runId, rerenderStage);
             stage = rerenderStage;
             continue;
@@ -546,19 +637,21 @@ export class PipelineRunner {
       if (!finalProject?.video_url && !videoSkippedFor(this.db, request.runId)) {
         throw new Error("Compose finished without a usable final video: final project video_url is empty");
       }
-      this.shared.updateProject(request.projectId, { status: "ready" });
-      this.shared.updateRun(request.runId, {
-        status: "succeeded",
-        progress: 1,
-        awaiting_payload: null,
-      });
-      emitter.emit("run_completed", {
-        run_id: request.runId,
-        project_id: request.projectId,
-        current_stage: "compose_approval",
-        current_agent: "compose",
-        message: null,
-        video_generation_pending: null,
+      emitter.commit("run_completed", () => {
+        this.shared.updateProject(request.projectId, { status: "ready" });
+        this.shared.completeRun(request.runId, {
+          status: "succeeded",
+          progress: 1,
+          awaiting_payload: null,
+        });
+        return {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: "compose_approval",
+          current_agent: "compose",
+          message: null,
+          video_generation_pending: null,
+        };
       });
       return { status: "completed" };
     } catch (err) {
@@ -566,19 +659,28 @@ export class PipelineRunner {
       if (message.startsWith("execution lease lost for run")) return { status: "failed", error: message };
       if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
 
-      this.shared.assertExecutionFence();
-      this.shared.updateProject(request.projectId, { status: "failed" });
-      this.shared.updateRun(request.runId, { status: "failed", error: message });
-      emitter.emit("project_updated", { project: { id: request.projectId, status: "failed" } });
       const failure = classifyRunFailure(err);
-      emitter.emit("run_failed", {
-        run_id: request.runId,
-        project_id: request.projectId,
-        error: message,
-        ...failure,
-        agent: null,
-        current_stage: stage,
-      });
+      try {
+        this.db.transaction(() => {
+          this.shared.assertRunCommitAllowed(request.runId);
+          this.shared.updateProject(request.projectId, { status: "failed" });
+          this.shared.updateRun(request.runId, { status: "failed", error: message });
+          this.db.appendEvent(request.runId, request.projectId, "project_updated", {
+            project: { id: request.projectId, status: "failed" },
+          });
+          this.db.appendEvent(request.runId, request.projectId, "run_failed", {
+            run_id: request.runId,
+            project_id: request.projectId,
+            error: message,
+            ...failure,
+            agent: null,
+            current_stage: stage,
+          });
+        });
+      } catch (commitError) {
+        if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
+        throw commitError;
+      }
       return { status: "failed", error: message };
     }
   }
@@ -627,11 +729,19 @@ export class PipelineRunner {
    * Skip-if-satisfied: a target whose output already exists is dropped, so the
    * caller can pass "everything" without forcing a full redraw.
    */
-  private async runTargeted(request: PipelineRequest): Promise<PipelineOutcome> {
+  private async runTargeted(
+    request: PipelineRequest,
+    recovering = false,
+  ): Promise<PipelineOutcome> {
     this.shared.assertExecutionFence();
     const project = this.shared.getProject(request.projectId);
     if (!project) return { status: "failed", error: `project ${request.projectId} not found` };
 
+    try {
+      assertTargetIdsExist(this.shared, request);
+    } catch (error) {
+      return this.failTargeted(request, error);
+    }
     const characterIds = request.targetCharacterIds ?? [];
     const shotIds = request.targetShotIds ?? [];
     // Intent comes from startStage; default to image work for the given scope.
@@ -642,21 +752,29 @@ export class PipelineRunner {
 
     let effectiveCharacterIds: number[] = [];
     let effectiveShotIds: number[] = [];
+    const completed = new Set(
+      this.db.checkpointStages(request.runId).filter((stage) => stage.startsWith("target:")),
+    );
     if (characterIds.length > 0) {
-      effectiveCharacterIds =
-        intent === "render_characters"
-          ? characters
-              .filter((c) => characterIds.includes(c.id) && !c.image_url)
-              .map((c) => c.id)
-          : characterIds;
+      effectiveCharacterIds = characterIds.filter(
+        (id) => !completed.has(targetCheckpointStage("character_image", id)),
+      );
+      if (!recovering && !request.forceRegenerate && intent === "render_characters") {
+        effectiveCharacterIds = effectiveCharacterIds.filter(
+          (id) => characters.some((c) => c.id === id && !c.image_url),
+        );
+      }
     }
     if (shotIds.length > 0) {
-      effectiveShotIds = shots
-        .filter((s) =>
-          shotIds.includes(s.id) &&
-          (intent === "compose_videos" ? !s.video_url : !s.image_url),
-        )
-        .map((s) => s.id);
+      const checkpointKind = intent === "compose_videos" ? "shot_video" : "shot_image";
+      effectiveShotIds = shotIds.filter(
+        (id) => !completed.has(targetCheckpointStage(checkpointKind, id)),
+      );
+      if (!recovering && !request.forceRegenerate) {
+        effectiveShotIds = effectiveShotIds.filter((id) =>
+          shots.some((s) => s.id === id && (intent === "compose_videos" ? !s.video_url : !s.image_url)),
+        );
+      }
     }
 
     const scoped: PipelineRequest = {
@@ -665,10 +783,60 @@ export class PipelineRunner {
       targetShotIds: shotIds.length > 0 ? effectiveShotIds : undefined,
     };
 
-    if (characterIds.length > 0 && effectiveCharacterIds.length === 0) {
-      return { status: "completed" };
-    }
-    if (shotIds.length > 0 && effectiveShotIds.length === 0) {
+    if (
+      (characterIds.length > 0 && effectiveCharacterIds.length === 0) ||
+      (shotIds.length > 0 && effectiveShotIds.length === 0)
+    ) {
+      let cancelled = false;
+      let targetError: Error | undefined;
+      this.db.transaction(() => {
+        this.shared.assertExecutionFence();
+        if (this.shouldCancel(request.runId)) {
+          cancelled = true;
+          this.shared.updateRun(request.runId, { status: "cancelled", awaiting_payload: null });
+          this.db.appendEvent(request.runId, request.projectId, "run_cancelled", {
+            run_id: request.runId,
+            project_id: request.projectId,
+            cancelled_count: 1,
+            run_ids: [request.runId],
+          });
+          return;
+        }
+        this.shared.assertRunCommitAllowed(request.runId);
+        try {
+          assertTargetIdsExist(this.shared, request);
+        } catch (error) {
+          targetError = error instanceof Error ? error : new Error(String(error));
+          this.shared.updateRun(request.runId, { status: "failed", error: targetError.message });
+          this.db.appendEvent(request.runId, request.projectId, "run_failed", {
+            run_id: request.runId,
+            project_id: request.projectId,
+            error: targetError.message,
+            error_code: "TARGET_NOT_FOUND",
+            retryable: false,
+          });
+          return;
+        }
+        this.shared.completeRun(request.runId, {
+          status: "succeeded",
+          progress: 1,
+          awaiting_payload: null,
+          error: null,
+        });
+        this.db.appendEvent(request.runId, request.projectId, "run_completed", {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: null,
+          current_agent: null,
+          message: null,
+          video_generation_pending: null,
+        });
+      });
+      if (cancelled) {
+        this.requestCancel();
+        return { status: "cancelled" };
+      }
+      if (targetError) return { status: "failed", error: targetError.message };
       return { status: "completed" };
     }
 
@@ -682,6 +850,22 @@ export class PipelineRunner {
     return this.runStages(request, stages, scoped);
   }
 
+  private failTargeted(request: PipelineRequest, error: unknown): PipelineOutcome {
+    const message = error instanceof Error ? error.message : String(error);
+    this.db.transaction(() => {
+      this.shared.assertRunCommitAllowed(request.runId);
+      this.shared.updateRun(request.runId, { status: "failed", error: message });
+      this.db.appendEvent(request.runId, request.projectId, "run_failed", {
+        run_id: request.runId,
+        project_id: request.projectId,
+        error: message,
+        error_code: "TARGET_NOT_FOUND",
+        retryable: false,
+      });
+    });
+    return { status: "failed", error: message };
+  }
+
   /** Run an explicit stage list under the normal fence/attempt discipline. */
   private async runStages(
     request: PipelineRequest,
@@ -691,6 +875,7 @@ export class PipelineRunner {
     const mediaSettings = resolveMediaSettings(this.db, this.mediaSnapshot());
     const media = new MediaService(mediaSettings);
     media.setAbortSignal(this.abortController.signal);
+    media.setMediaRegistrar((relativePath) => this.shared.registerMediaObject(relativePath));
     const emitter = new PipelineEmitter(this.db, this.shared, request.projectId, request.runId, {
       thinkingChainEnabled: this.boolPolicy(
         "thinking_chain_enabled",
@@ -716,6 +901,16 @@ export class PipelineRunner {
       signal: this.abortController.signal,
       targetCharacterIds: scoped.targetCharacterIds,
       targetShotIds: scoped.targetShotIds,
+      completedTargets: new Set(
+        this.db.checkpointStages(request.runId).filter((checkpoint) => checkpoint.startsWith("target:")),
+      ),
+      checkpointTarget: (kind, id) => {
+        const checkpoint = targetCheckpointStage(kind, id);
+        this.db.saveCheckpoint(request.runId, checkpoint, {
+          completed_at: new Date().toISOString(),
+        });
+        ctx.completedTargets.add(checkpoint);
+      },
       ...resolveStageStyleContext(this.db, this.shared.getProject(request.projectId) ?? null),
       critiqueRounds: { characters: 0, shots: 0 },
       critiqueEnabled: false,
@@ -726,22 +921,29 @@ export class PipelineRunner {
     };
 
     const startAgent = agentForStage(first);
-    this.shared.updateRun(request.runId, {
-      status: "running",
-      current_agent: startAgent,
-      progress: progressForStage(first),
-      error: null,
-    });
-    emitter.emit("run_started", {
-      run_id: request.runId,
-      project_id: request.projectId,
-      current_stage: first,
-      stage: first,
-      next_stage: null,
-      progress: progressForStage(first),
-      current_agent: startAgent,
-      preserved_stages: [],
-    });
+    try {
+      emitter.commit("run_started", () => {
+        this.shared.updateRun(request.runId, {
+          status: "running",
+          current_agent: startAgent,
+          progress: progressForStage(first),
+          error: null,
+        });
+        return {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: first,
+          stage: first,
+          next_stage: null,
+          progress: progressForStage(first),
+          current_agent: startAgent,
+          preserved_stages: [],
+        };
+      });
+    } catch (error) {
+      if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
+      throw error;
+    }
 
     try {
       for (const stage of stages) {
@@ -780,18 +982,21 @@ export class PipelineRunner {
       }
       this.shared.assertExecutionFence();
       if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
-      this.shared.updateRun(request.runId, {
-        status: "succeeded",
-        progress: 1,
-        awaiting_payload: null,
-      });
-      emitter.emit("run_completed", {
-        run_id: request.runId,
-        project_id: request.projectId,
-        current_stage: stages[stages.length - 1],
-        current_agent: startAgent,
-        message: null,
-        video_generation_pending: null,
+      emitter.commit("run_completed", () => {
+        assertTargetIdsExist(this.shared, request);
+        this.shared.completeRun(request.runId, {
+          status: "succeeded",
+          progress: 1,
+          awaiting_payload: null,
+        });
+        return {
+          run_id: request.runId,
+          project_id: request.projectId,
+          current_stage: stages[stages.length - 1],
+          current_agent: startAgent,
+          message: null,
+          video_generation_pending: null,
+        };
       });
       return { status: "completed" };
     } catch (err) {
@@ -800,16 +1005,29 @@ export class PipelineRunner {
         return { status: "failed", error: message };
       }
       if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
-      this.shared.assertExecutionFence();
-      this.shared.updateRun(request.runId, { status: "failed", error: message });
       const failure = classifyRunFailure(err);
-      emitter.emit("run_failed", {
-        run_id: request.runId,
-        project_id: request.projectId,
-        error: message,
-        ...failure,
-        agent: startAgent,
-      });
+      try {
+        this.db.transaction(() => {
+          this.shared.assertRunCommitAllowed(request.runId);
+          if (!scoped.targetCharacterIds?.length && !scoped.targetShotIds?.length) {
+            this.shared.updateProject(request.projectId, { status: "failed" });
+            this.db.appendEvent(request.runId, request.projectId, "project_updated", {
+              project: { id: request.projectId, status: "failed" },
+            });
+          }
+          this.shared.updateRun(request.runId, { status: "failed", error: message });
+          this.db.appendEvent(request.runId, request.projectId, "run_failed", {
+            run_id: request.runId,
+            project_id: request.projectId,
+            error: message,
+            ...failure,
+            agent: startAgent,
+          });
+        });
+      } catch (commitError) {
+        if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
+        throw commitError;
+      }
       return { status: "failed", error: message };
     }
   }

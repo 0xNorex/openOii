@@ -13,27 +13,6 @@ from app.models.consistency_report import ConsistencyReport
 from app.models.message import Message
 from app.models.project import Character, Project, Shot, ShotCharacterBinding
 from app.models.universe import SharedCharacter, UniverseProjectLink
-from app.services.file_cleaner import delete_file, delete_files
-
-
-async def delete_project_files(session: AsyncSession, project: Project, project_id: int) -> None:
-    """删除项目关联的所有文件（视频、角色图片、分镜图片/视频）"""
-    delete_file(project.video_url)
-
-    character_project_id_col = cast(InstrumentedAttribute[int], cast(object, Character.project_id))
-    chars_res = await session.execute(
-        select(Character).where(character_project_id_col == project_id)
-    )
-    chars = chars_res.scalars().all()
-    delete_files([c.image_url for c in chars])
-
-    shot_project_id_col = cast(InstrumentedAttribute[int], cast(object, Shot.project_id))
-    shots_res = await session.execute(select(Shot).where(shot_project_id_col == project_id))
-    shots = shots_res.scalars().all()
-    delete_files([s.image_url for s in shots])
-    delete_files([s.video_url for s in shots])
-
-
 async def delete_project_data(session: AsyncSession, project_id: int) -> None:
     """删除项目关联的所有数据库记录"""
     # 删除 assets（source_project_id 引用 project.id）
@@ -125,7 +104,6 @@ async def delete_project_by_id(session: AsyncSession, project_id: int) -> None:
         .values(status="cancelled")
     )
 
-    await delete_project_files(session, project, project_id)
     await delete_project_data(session, project_id)
 
     await session.delete(project)

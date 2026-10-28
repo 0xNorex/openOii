@@ -9,26 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.base import TargetIds
 from app.models.agent_run import AgentRun
 from app.models.project import Character, Project, Shot
-from app.services.file_cleaner import delete_file
 
 _SHOT_ORDER_RE = re.compile(
-    r"(?:镜头|分镜|格|shot)\s*#?\s*(\d+)",
+    r"(?:第\s*(\d+)\s*(?:个)?\s*(?:镜头|分镜|格)|(?:镜头|分镜|格|shot)\s*#?\s*(\d+))",
     re.IGNORECASE,
 )
-
-
-def _sanitize_ids(values: Any) -> list[int]:
-    if not isinstance(values, list):
-        return []
-    cleaned: list[int] = []
-    for value in values:
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, int):
-            cleaned.append(value)
-        elif isinstance(value, float) and value.is_integer():
-            cleaned.append(int(value))
-    return list(dict.fromkeys(cleaned))
 
 
 def _blocking_clip_reason(status: str) -> str:
@@ -97,22 +82,7 @@ async def collect_project_blocking_clips(
 
 
 def infer_feedback_targets(data: dict[str, Any], state: dict[str, Any]) -> TargetIds | None:
-    """Infer character/shot targets from explicit ids, analysis, or free-text feedback."""
-    raw_target_ids = data.get("target_ids") if isinstance(data, dict) else None
-    if isinstance(raw_target_ids, dict):
-        character_ids = _sanitize_ids(raw_target_ids.get("character_ids"))
-        shot_ids = _sanitize_ids(raw_target_ids.get("shot_ids"))
-        if character_ids or shot_ids:
-            return TargetIds(character_ids=character_ids, shot_ids=shot_ids)
-
-    analysis = data.get("analysis") if isinstance(data, dict) else None
-    target_items: list[str] = []
-    if isinstance(analysis, dict):
-        raw_items = analysis.get("target_items")
-        if isinstance(raw_items, list):
-            target_items = [
-                item.strip() for item in raw_items if isinstance(item, str) and item.strip()
-            ]
+    """Infer targets only from feedback text that maps to this project's entities."""
 
     feedback_text = ""
     if isinstance(data, dict):
@@ -122,11 +92,7 @@ def infer_feedback_targets(data: dict[str, Any], state: dict[str, Any]) -> Targe
                 feedback_text = raw.strip()
                 break
 
-    scan_texts = list(target_items)
-    if feedback_text:
-        scan_texts.append(feedback_text)
-
-    if not scan_texts:
+    if not feedback_text:
         return None
 
     parsed_character_ids: list[int] = []
@@ -143,36 +109,65 @@ def infer_feedback_targets(data: dict[str, Any], state: dict[str, Any]) -> Targe
         character_id = character.get("id")
         if isinstance(name, str) and name.strip() and isinstance(character_id, int):
             named_chars.append((name.strip(), character_id))
-    named_chars.sort(key=lambda pair: len(pair[0]), reverse=True)
-
-    order_to_shot: dict[int, int] = {}
+    order_to_shot: dict[int, list[int]] = {}
     for shot in shots if isinstance(shots, list) else []:
         if not isinstance(shot, dict):
             continue
         shot_id = shot.get("id")
         order = shot.get("order")
         if isinstance(shot_id, int) and isinstance(order, int):
-            order_to_shot[order] = shot_id
+            order_to_shot.setdefault(order, []).append(shot_id)
 
-    for item in scan_texts:
-        for name, character_id in named_chars:
-            if name in item:
-                parsed_character_ids.append(character_id)
+    for item in (feedback_text,):
+        matching_names = {name for name, _ in named_chars if name in item}
+        longest_names = {
+            name for name in matching_names
+            if not any(len(other) > len(name) and name in other for other in matching_names)
+        }
+        for name in longest_names:
+            matches = [character_id for candidate, character_id in named_chars if candidate == name]
+            if len(matches) == 1:
+                parsed_character_ids.append(matches[0])
         for match in _SHOT_ORDER_RE.finditer(item):
-            order = int(match.group(1))
-            shot_id = order_to_shot.get(order)
-            if shot_id is not None:
-                parsed_shot_ids.append(shot_id)
-        # Legacy phrases without regex group still covered by 镜头N / 分镜N above
-        for order, shot_id in order_to_shot.items():
-            if f"镜头{order}" in item or f"分镜{order}" in item or f"格{order}" in item:
-                parsed_shot_ids.append(shot_id)
+            order = int(match.group(1) or match.group(2))
+            shot_ids_for_order = order_to_shot.get(order, [])
+            if len(shot_ids_for_order) == 1:
+                parsed_shot_ids.extend(shot_ids_for_order)
 
     character_ids = list(dict.fromkeys(parsed_character_ids))
     shot_ids = list(dict.fromkeys(parsed_shot_ids))
     if character_ids or shot_ids:
         return TargetIds(character_ids=character_ids, shot_ids=shot_ids)
     return None
+
+
+def has_unresolved_feedback_target(feedback: str, state: dict[str, Any]) -> bool:
+    """Return true when explicit text points at a missing or ambiguous project entity."""
+    characters = state.get("characters") if isinstance(state, dict) else []
+    names = [
+        item.get("name").strip()
+        for item in characters if isinstance(item, dict)
+        and isinstance(item.get("name"), str) and item["name"].strip()
+    ] if isinstance(characters, list) else []
+    matching_names = {name for name in names if name in feedback}
+    longest_names = {
+        name for name in matching_names
+        if not any(len(other) > len(name) and name in other for other in matching_names)
+    }
+    if any(names.count(name) > 1 for name in longest_names):
+        return True
+
+    shots = state.get("shots") if isinstance(state, dict) else []
+    order_counts: dict[int, int] = {}
+    if isinstance(shots, list):
+        for shot in shots:
+            if isinstance(shot, dict) and isinstance(shot.get("order"), int):
+                order = shot["order"]
+                order_counts[order] = order_counts.get(order, 0) + 1
+    for match in _SHOT_ORDER_RE.finditer(feedback):
+        if order_counts.get(int(match.group(1) or match.group(2)), 0) != 1:
+            return True
+    return False
 
 
 async def apply_character_rerun_edits(
@@ -185,7 +180,6 @@ async def apply_character_rerun_edits(
     if description is not None:
         character.description = description
     if image_url is not None:
-        delete_file(character.image_url)
         character.image_url = image_url
     session.add(character)
     await session.flush()
@@ -197,17 +191,6 @@ async def invalidate_character_downstream_outputs(
     project: Project,
     character_id: int,
 ) -> None:
-    res = await session.execute(select(Shot).where(Shot.project_id == project.id))
-    shots = list(res.scalars().all())
-    for shot in shots:
-        if character_id not in list(shot.character_ids):
-            continue
-        delete_file(shot.image_url)
-        delete_file(shot.video_url)
-        shot.image_url = None
-        shot.video_url = None
-        session.add(shot)
-
     if project.video_url:
         project.status = "superseded"
     session.add(project)
@@ -219,13 +202,8 @@ async def invalidate_shot_storyboard_outputs(
     project: Project,
     shot: Shot,
 ) -> None:
-    delete_file(shot.image_url)
-    delete_file(shot.video_url)
-    shot.image_url = None
-    shot.video_url = None
     if project.video_url:
         project.status = "superseded"
-    session.add(shot)
     session.add(project)
     await session.flush()
 

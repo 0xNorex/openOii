@@ -12,7 +12,9 @@ FFmpeg 混流将音频叠加到视频中。
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -22,6 +24,25 @@ from app.models.project import Character
 from app.services.tts_voices import get_voice_for_character
 
 logger = logging.getLogger(__name__)
+
+
+async def _communicate_with_timeout(process: asyncio.subprocess.Process, timeout: float) -> tuple[bytes, bytes]:
+    communication = asyncio.create_task(process.communicate())
+    try:
+        return await asyncio.wait_for(asyncio.shield(communication), timeout=timeout)
+    except BaseException:
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(asyncio.shield(communication), timeout=5)
+            except asyncio.TimeoutError:
+                process.kill()
+                try:
+                    await asyncio.wait_for(asyncio.shield(communication), timeout=5)
+                except asyncio.TimeoutError:
+                    communication.cancel()
+        raise
+
 
 # 输出目录
 AUDIO_OUTPUT_DIR = Path(__file__).parent.parent / "static" / "audio"
@@ -316,52 +337,45 @@ class AudioService:
 
         from app.services.file_cleaner import get_local_path
 
-        # 解析本地文件路径
-        video_local = get_local_path(video_path)
-        if video_local is None:
-            temp_dir = tempfile.TemporaryDirectory()
-            video_local = Path(temp_dir.name) / "source.mp4"
-            try:
-                from app.services.video_merger import get_video_merger_service
-
-                await get_video_merger_service().download_video(video_path, video_local)
-            except Exception:
-                temp_dir.cleanup()
-                logger.warning("Cannot mix audio: failed to localize video (%s)", video_path, exc_info=True)
-                return video_path
-        else:
-            temp_dir = None
-
-        # 构建输出文件
-        output_filename = f"audio_{uuid.uuid4().hex[:8]}.mp4"
-        output_path = AUDIO_OUTPUT_DIR.parent / "videos" / output_filename
-        (AUDIO_OUTPUT_DIR.parent / "videos").mkdir(parents=True, exist_ok=True)
-
-        # 解析音频本地路径
-        tts_local = get_local_path(tts_path) if tts_path else None
-        bgm_local = get_local_path(bgm_path) if bgm_path else None
-
-        # 验证文件存在
-        if tts_local and not tts_local.exists():
-            logger.warning("TTS file not found: %s, skipping TTS", tts_local)
-            tts_local = None
-        if bgm_local and not bgm_local.exists():
-            logger.warning("BGM file not found: %s, skipping BGM", bgm_local)
-            bgm_local = None
-
-        if not tts_local and not bgm_local:
-            if temp_dir is not None:
-                temp_dir.cleanup()
-            return video_path
-
-        actual_bgm_vol = bgm_volume if bgm_volume is not None else self.settings.bgm_volume
-        actual_tts_vol = tts_volume if tts_volume is not None else self.settings.tts_volume
-
+        temp_dir = None
         try:
-            await self._ffmpeg_mix(
-                video_local, tts_local, bgm_local,
-                output_path, actual_tts_vol, actual_bgm_vol,
-            )
+            video_local = get_local_path(video_path)
+            if video_local is None:
+                temp_dir = tempfile.TemporaryDirectory()
+                video_local = Path(temp_dir.name) / "source.mp4"
+                try:
+                    from app.services.video_merger import get_video_merger_service
+
+                    await get_video_merger_service().download_video(video_path, video_local)
+                except Exception:
+                    logger.warning("Cannot mix audio: failed to localize video", exc_info=True)
+                    return video_path
+
+            tts_local = get_local_path(tts_path) if tts_path else None
+            bgm_local = get_local_path(bgm_path) if bgm_path else None
+            if tts_local and not tts_local.exists():
+                logger.warning("TTS file not found: %s, skipping TTS", tts_local)
+                tts_local = None
+            if bgm_local and not bgm_local.exists():
+                logger.warning("BGM file not found: %s, skipping BGM", bgm_local)
+                bgm_local = None
+            if not tts_local and not bgm_local:
+                return video_path
+
+            videos_dir = AUDIO_OUTPUT_DIR.parent / "videos"
+            videos_dir.mkdir(parents=True, exist_ok=True)
+            output_filename = f"audio_{uuid.uuid4().hex}.mp4"
+            output_path = videos_dir / output_filename
+            actual_bgm_vol = bgm_volume if bgm_volume is not None else self.settings.bgm_volume
+            actual_tts_vol = tts_volume if tts_volume is not None else self.settings.tts_volume
+
+            with tempfile.TemporaryDirectory(prefix=".audio-", dir=videos_dir) as work_dir:
+                temporary_output = Path(work_dir) / "mixed.mp4"
+                await self._ffmpeg_mix(
+                    video_local, tts_local, bgm_local,
+                    temporary_output, actual_tts_vol, actual_bgm_vol,
+                )
+                os.link(temporary_output, output_path)
             return f"/static/videos/{output_filename}"
         except Exception:
             logger.warning("FFmpeg audio mixing failed, keeping original video", exc_info=True)
@@ -407,7 +421,7 @@ class AudioService:
             audio_input_count += 1
 
         if bgm_path:
-            inputs.extend(["-i", str(bgm_path)])
+            inputs.extend(["-stream_loop", "-1", "-i", str(bgm_path)])
             bgm_idx = audio_input_count
             audio_input_count += 1
 
@@ -415,42 +429,57 @@ class AudioService:
         # 1. 视频流直接复制
         # 2. 音频混合
 
-        # 视频原始音频（如果存在），使用 amix 需要统一格式
-        # 使用 pan=stereo|c0=c0|c1=c1 来确保单声道转立体声
+        # Probe the localized file only; remote downloads have completed before this point.
+        probe = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error", "-show_entries",
+            "stream=codec_type,duration,duration_ts,time_base",
+            "-of", "json", str(video_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        probe_stdout, probe_stderr = await _communicate_with_timeout(probe, 30)
+        if probe.returncode != 0:
+            raise RuntimeError(f"ffprobe audio detection failed: {probe_stderr.decode(errors='replace')[:500]}")
+        probe_data = json.loads(probe_stdout)
+        streams = probe_data.get("streams", [])
+        video_stream = next(stream for stream in streams if stream.get("codec_type") == "video")
+        duration = video_stream.get("duration")
+        if duration in (None, "N/A") and video_stream.get("duration_ts") is not None:
+            duration = float(video_stream["duration_ts"]) * float(video_stream["time_base"])
+        duration = float(duration)
+        has_original_audio = any(stream.get("codec_type") == "audio" for stream in streams)
 
         mix_inputs: list[str] = []
+        mix_labels: list[str] = []
 
-        # 视频原始音频
-        mix_inputs.append("[0:a]aresample=44100,pan=stereo|c0=c0|c1=c1[vorig]")
+        if has_original_audio:
+            mix_inputs.append(f"[0:a:0]aresample=44100,aformat=channel_layouts=stereo,apad,atrim=duration={duration}[vorig]")
+            mix_labels.append("[vorig]")
 
         if tts_path:
             # TTS 音频：调整音量，截取到视频时长
             mix_inputs.append(
-                f"[{tts_idx}:a]aresample=44100,pan=stereo|c0=c0|c1=c1,"
-                f"volume={tts_volume},atrim=0:duration=9999[tts]"
+                f"[{tts_idx}:a]aresample=44100,aformat=channel_layouts=stereo,"
+                f"volume={tts_volume},apad,atrim=duration={duration}[tts]"
             )
+            mix_labels.append("[tts]")
 
         if bgm_path:
             # BGM：循环播放 + 调整音量 + 截取到视频时长
             mix_inputs.append(
-                f"[{bgm_idx}:a]aresample=44100,pan=stereo|c0=c0|c1=c1,"
-                f"volume={bgm_volume},atrim=0:duration=9999[bgm]"
+                f"[{bgm_idx}:a]aresample=44100,aformat=channel_layouts=stereo,"
+                f"volume={bgm_volume},atrim=duration={duration}[bgm]"
             )
-
-        # amix 混合所有音频流
-        n_inputs = len(mix_inputs)
-        filter_chain = ";".join(mix_inputs)
-        mix_labels = ["[vorig]"]
-        if tts_path:
-            mix_labels.append("[tts]")
-        if bgm_path:
             mix_labels.append("[bgm]")
 
-        filter_chain += f";{''.join(mix_labels)}amix=inputs={n_inputs}:duration=longest:dropout_transition=0[aout]"
+        # amix 混合所有实际存在的音频流，不因混音降低原音音量
+        n_inputs = len(mix_labels)
+        filter_chain = ";".join(mix_inputs)
+        filter_chain += f";{''.join(mix_labels)}amix=inputs={n_inputs}:duration=longest:dropout_transition=0:normalize=0,alimiter=limit=0.95,atrim=duration={duration}[aout]"
 
         cmd = [
             "ffmpeg",
-            "-y",
+            "-n",
             *inputs,
             "-filter_complex", filter_chain,
             "-map", "0:v:0",     # 只取主视频流，避免封面/附图流触发 -shortest 截断
@@ -458,7 +487,6 @@ class AudioService:
             "-c:v", "copy",      # 视频流直接复制
             "-c:a", "aac",
             "-b:a", "128k",
-            "-shortest",
             "-movflags", "+faststart",
             str(output_path),
         ]
@@ -470,7 +498,7 @@ class AudioService:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await process.communicate()
+        _, stderr = await _communicate_with_timeout(process, 600)
 
         if process.returncode != 0:
             error_msg = stderr.decode(errors="replace")

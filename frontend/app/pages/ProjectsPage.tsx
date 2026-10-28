@@ -304,7 +304,7 @@ function ProjectRow({
 				<div className="mt-1 flex flex-wrap gap-1.5 text-2xs font-semibold text-ink-muted">
 					<span>{project.style || "未设风格"}</span>
 					<span className="tabular-nums">
-						{project.target_shot_count ?? "自动"} 镜头
+						计划 {project.target_shot_count ?? "自动"} 镜头
 					</span>
 					{project.creation_mode ? (
 						<span>{project.creation_mode === "quick" ? "YOLO 模式" : project.creation_mode === "review" ? "交互模式" : project.creation_mode}</span>
