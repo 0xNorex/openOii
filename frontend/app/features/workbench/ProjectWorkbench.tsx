@@ -20,7 +20,7 @@ import { AgentPanel, type AgentPanelTab } from "~/features/comic-workflow/agent/
 import type { InboxActions } from "~/features/comic-workflow/agent/InboxPanel";
 import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
-import { PromptBar } from "~/features/workbench/PromptBar";
+import { PromptBar, type PromptChip } from "~/features/workbench/PromptBar";
 import {
 	deriveStudioStatus,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
@@ -32,7 +32,7 @@ import { exportApi, getStaticUrl } from "~/services/api";
 import { useRunState } from "~/hooks/useRunState";
 import { useEditorStore } from "~/stores/editorStore";
 import { readRunState as readRunStateSnapshot } from "~/query/runState";
-import type { VersionEntityType } from "~/types";
+import { AGENT_NAME_MAP, type VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 
@@ -175,19 +175,41 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			}).nodes.find((node) => node.kind === "brief") ?? null
 		);
 	}, [project, characters, shots, runIsGenerating]);
-	const selectionLabel = selectedNodeIds.length > 1
-		? selectedNodeIds.every((id) => id.startsWith("shot:"))
-			? `${selectedNodeIds.length} 个分镜格`
-			: selectedNodeIds.every((id) => id.startsWith("character:"))
-				? `${selectedNodeIds.length} 个角色`
-				: `已选择 ${selectedNodeIds.length} 项`
-		: selectedWorkflowNode
-			? selectedWorkflowNode.kind === "shot"
-				? `分镜格 ${selectedWorkflowNode.gridCell} · ${selectedWorkflowNode.title}`
-				: selectedWorkflowNode.kind === "character"
-					? `角色 · ${selectedWorkflowNode.title}`
-					: `项目 · ${selectedWorkflowNode.title}`
-			: null;
+	// PromptBar 上下文：每个选中对象一个 chip；处于审批门时多一个审批门 chip
+	const selectionChips = useMemo<PromptChip[]>(() => {
+		if (!project || selectedNodeIds.length === 0) return [];
+		const nodes = buildComicWorkflow({
+			project,
+			characters,
+			shots,
+			blockingClips: project.blocking_clips,
+			isGenerating: runIsGenerating,
+		}).nodes;
+		return selectedNodeIds.flatMap((id) => {
+			const node = nodes.find((n) => n.id === id);
+			if (!node) return [];
+			const label =
+				node.kind === "shot"
+					? `分镜 S${String(node.shot.order).padStart(2, "0")}`
+					: node.kind === "character"
+						? `角色 ${node.title}`
+						: node.kind === "output"
+							? "成片"
+							: "项目";
+			return [{ id, label }];
+		});
+	}, [project, characters, shots, selectedNodeIds, runIsGenerating]);
+	const gateLabel = runAwaitingConfirm
+		? (AGENT_NAME_MAP[runState.awaitingAgent ?? ""] ?? "当前阶段")
+		: null;
+	const removeSelection = useCallback(
+		(id: string) => {
+			canvasEvents.emit("set-workflow-selection", {
+				nodeIds: selectedNodeIds.filter((nodeId) => nodeId !== id),
+			});
+		},
+		[selectedNodeIds],
+	);
 
 	// 选中目标变化时打开检查器；手动收起后同一选中不再强行弹开
 	const selectionKey = selectedNodeIds.length > 0 ? selectedNodeIds.join(",") : (selectedNodeId ?? "");
@@ -479,7 +501,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					<AgentPanel
 						inline
 						projectId={projectId}
-						onConfirm={handleConfirm}
 						onCancel={handleCancel}
 						isGenerating={hasActiveRun}
 						collapsed={false}
@@ -510,7 +531,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 							</Suspense>
 							<AgentPanel
 								projectId={projectId}
-								onConfirm={handleConfirm}
 								onCancel={handleCancel}
 								isGenerating={hasActiveRun}
 								collapsed={agentCollapsed}
@@ -530,15 +550,17 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								open={inspectorOpen}
 								onOpenChange={setInspectorOpen}
 							/>
+							<PromptBar
+								floating
+								selection={selectionChips}
+								onRemoveSelection={removeSelection}
+								gateLabel={gateLabel}
+								awaitingConfirm={runAwaitingConfirm}
+								isGenerating={hasActiveRun}
+								onSendFeedback={handleFeedback}
+								onConfirm={handleConfirm}
+							/>
 						</div>
-						{/* PromptBar 常驻画布下方：选中 → 提示 → 定点重跑 的核心入口 */}
-						<PromptBar
-							selectionLabel={selectionLabel}
-							awaitingConfirm={runAwaitingConfirm}
-							isGenerating={hasActiveRun}
-							onSendFeedback={handleFeedback}
-							onConfirm={handleConfirm}
-						/>
 					</div>
 				) : null}
 
@@ -546,7 +568,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 
 			{isMobileWorkbench ? (
 				<PromptBar
-					selectionLabel={selectionLabel}
+					selection={selectionChips}
+					gateLabel={gateLabel}
 					awaitingConfirm={runAwaitingConfirm}
 					isGenerating={hasActiveRun}
 					onSendFeedback={handleFeedback}

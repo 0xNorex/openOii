@@ -296,15 +296,13 @@ vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
     collapsed,
     onCollapsedChange,
     isGenerating,
-    onConfirm,
     onCancel,
     inboxActions,
   }: {
-    inboxActions?: { onResume: () => void };
+    inboxActions?: { onResume: () => void; onConfirm: (feedback?: string) => void };
     collapsed?: boolean;
     onCollapsedChange?: (collapsed: boolean) => void;
     isGenerating?: boolean;
-    onConfirm?: (content?: string) => void;
     onCancel?: () => void;
   }) => (
     <div data-testid="agent-panel" data-collapsed={collapsed ? 'true' : 'false'}>
@@ -314,7 +312,7 @@ vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
       <button type="button" onClick={() => onCollapsedChange?.(!collapsed)}>
         切换活动面板
       </button>
-      <button type="button" onClick={() => onConfirm?.('请微调这一版')}>
+      <button type="button" onClick={() => inboxActions?.onConfirm('请微调这一版')}>
         确认并继续
       </button>
       <button type="button" onClick={onCancel}>

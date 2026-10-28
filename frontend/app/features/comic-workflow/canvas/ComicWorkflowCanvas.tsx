@@ -26,6 +26,7 @@ import {
 	hasStaleWorkflowProjection,
 	isProjectedWorkflowShape,
 	nodeIdFromShape,
+	shapeIdForNode,
 	syncTldrawProjection,
 	type WorkflowInteractionMode,
 } from "./syncTldrawProjection";
@@ -131,8 +132,14 @@ export function ComicWorkflowCanvas({
 			canvasEvents.on("preview-image", setPreviewImage),
 			canvasEvents.on("preview-video", setPreviewVideo),
 			canvasEvents.on("select-workflow-node", ({ nodeId }) => {
+				editorRef.current?.setSelectedShapes([shapeIdForNode(nodeId)]);
 				onSelectedNodeIdChange?.(nodeId);
 				onSelectedNodeIdsChange?.(nodeId ? [nodeId] : []);
+			}),
+			canvasEvents.on("set-workflow-selection", ({ nodeIds }) => {
+				editorRef.current?.setSelectedShapes(nodeIds.map(shapeIdForNode));
+				onSelectedNodeIdChange?.(nodeIds[0] ?? null);
+				onSelectedNodeIdsChange?.(nodeIds);
 			}),
 		];
 		return () => {

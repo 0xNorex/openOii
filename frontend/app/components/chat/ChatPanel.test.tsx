@@ -55,12 +55,12 @@ function renderChatPanel(isGenerating = false) {
 		<>
 			<ChatPanel
 				projectId={1}
-				onConfirm={onConfirm}
 				onCancel={onCancel}
 				isGenerating={isGenerating}
 			/>
 			<PromptBar
-				selectionLabel={null}
+				selection={[]}
+				gateLabel="规划"
 				awaitingConfirm={runState.awaitingConfirm}
 				isGenerating={isGenerating}
 				onSendFeedback={onSendFeedback}

@@ -52,7 +52,7 @@ export function InspectorPanel({
 
 	return (
 		<aside
-			className="absolute bottom-16 right-3 top-3 z-panel flex w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
+			className="absolute bottom-24 right-3 top-3 z-panel flex w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
 			aria-label="检查器"
 			data-shell="inspector-panel"
 			onKeyDown={(event) => {

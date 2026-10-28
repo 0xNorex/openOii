@@ -18,19 +18,20 @@ export function MessageInput({
 	sendLabel = "发送",
 }: MessageInputProps) {
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter" && !e.shiftKey) {
+		if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
 			e.preventDefault();
 			onSend();
 		}
 	};
 
 	return (
-		<div className="flex gap-1.5">
-			<input
+		<div className="flex items-end gap-1.5">
+			{/* Enter 发送，Shift+Enter 换行；高度随内容增长 */}
+			<textarea
 				id="chat-message-input"
 				name="message"
-				type="text"
-				className="input-doodle h-9 min-h-9 min-w-0 flex-1 px-3 text-sm"
+				rows={1}
+				className="input-doodle max-h-32 min-h-9 min-w-0 flex-1 resize-none px-3 py-1.5 text-sm [field-sizing:content]"
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				onKeyDown={handleKeyDown}

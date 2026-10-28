@@ -22,7 +22,6 @@ const actions = {
 
 const base = {
 	projectId: 1,
-	onConfirm: vi.fn(),
 	onCancel: vi.fn(),
 	isGenerating: false,
 	tab: "activity" as const,

@@ -10,7 +10,6 @@ export type AgentPanelTab = "activity" | "inbox";
 
 interface AgentPanelProps {
 	projectId: number;
-	onConfirm: (feedback?: string) => void;
 	onCancel: () => void;
 	isGenerating: boolean;
 	collapsed: boolean;
@@ -29,7 +28,6 @@ interface AgentPanelProps {
  */
 export function AgentPanel({
 	projectId,
-	onConfirm,
 	onCancel,
 	isGenerating,
 	collapsed,
@@ -65,7 +63,7 @@ export function AgentPanel({
 				"flex flex-col overflow-hidden bg-surface",
 				inline
 					? "h-[28rem] border-t border-ink/10"
-					: "absolute bottom-16 left-3 top-3 z-panel w-[360px] max-w-[calc(100%-1.5rem)] rounded-lg border border-ink/15 shadow-panel",
+					: "absolute bottom-24 left-3 top-3 z-panel w-[360px] max-w-[calc(100%-1.5rem)] rounded-lg border border-ink/15 shadow-panel",
 			)}
 			aria-label="工作流活动"
 			data-shell="agent-panel"
@@ -120,7 +118,6 @@ export function AgentPanel({
 				) : (
 					<ChatPanel
 						projectId={projectId}
-						onConfirm={onConfirm}
 						onCancel={onCancel}
 						isGenerating={isGenerating}
 					/>

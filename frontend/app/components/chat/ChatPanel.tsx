@@ -14,7 +14,6 @@ import {
   RocketLaunchIcon,
   StopIcon,
   BoltIcon,
-  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { getWorkflowStageInfo } from "~/utils/workflowStage";
 import type { AgentMessage } from "~/types";
@@ -24,7 +23,6 @@ const EMPTY_MESSAGES: AgentMessage[] = [];
 
 interface ChatPanelProps {
 	projectId: number;
-	onConfirm: (feedback?: string) => void;
 	onCancel: () => void;
 	isGenerating: boolean;
 }
@@ -40,7 +38,6 @@ const agentNameMap = AGENT_NAME_MAP;
 
 export function ChatPanel({
 	projectId,
-	onConfirm,
 	onCancel,
 	isGenerating,
 }: ChatPanelProps) {
@@ -58,7 +55,6 @@ export function ChatPanel({
     staleTime: Infinity,
   }).data ?? EMPTY_MESSAGES;
 
-  const setRunMode = useEditorStore((s) => s.setRunMode);
   const entries = useMemo(
     () => deriveActivityTimeline(messages, { running: isGenerating && !awaitingConfirm }),
     [messages, isGenerating, awaitingConfirm],
@@ -73,13 +69,6 @@ export function ChatPanel({
   const runMode = useEditorStore((s) => s.runMode);
   const isYolo = runMode === "yolo";
 
-  const handleRunModeToggle = () => {
-    const nextMode = isYolo ? "manual" : "yolo";
-    setRunMode(nextMode);
-    if (nextMode === "yolo" && awaitingConfirm) {
-      onConfirm(undefined);
-    }
-  };
 
 	return (
 		<div className="flex h-full flex-col bg-paper-100" data-shell="activity-feed">
@@ -91,26 +80,6 @@ export function ChatPanel({
           </span>
         </div>
 
-		<Button
-			onClick={handleRunModeToggle}
-			variant={isYolo ? "primary" : "ghost"}
-		size="sm"
-			className="h-8 min-h-8 border-2 px-2 text-xs font-bold"
-			aria-label={isYolo ? "切换逐步确认" : "切换自动确认"}
-			title={isYolo ? "自动确认：阶段自动通过" : "逐步确认：每个阶段由你确认"}
-		>
-          {isYolo ? (
-            <>
-              <BoltIcon className="h-3.5 w-3.5" aria-hidden="true" />
-				  自动
-            </>
-          ) : (
-            <>
-              <AdjustmentsHorizontalIcon className="h-3.5 w-3.5" aria-hidden="true" />
-				  逐步
-            </>
-          )}
-		</Button>
       </div>
 
       {isGenerating && !awaitingConfirm && (
