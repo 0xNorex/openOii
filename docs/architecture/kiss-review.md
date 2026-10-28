@@ -15,8 +15,8 @@
 | 审查线索 | 涉及文件 | 已知代码事实与未验证问题 |
 |---|---|---|
 | 访谈状态在中断或重入时的恢复 | `frontend/app/pages/HomePage.tsx:52-55`、`frontend/app/components/chat/CreationInterviewPanel.tsx:75-84`、`backend/app/api/v1/routes/text.py:23-30` | 新建流程先创建 project，回答提交时按 `project.id` 保存；生成访谈问题的请求不带 `project_id`，但这不足以证明项目关联丢失。未验证中断、切换或重入后访谈状态能否完整恢复。 |
-| 取消请求何时完成 | `backend/app/api/v1/routes/runs.py:404-445`、`engine/src/pipeline/runner.ts` | 后端持久化取消意图，`cancelling` 是等待执行器确认的中间状态，不代表已停止。当前材料没有真实 provider 下从发起取消到终态的端到端验证；长时间阻塞及执行器退出场景未验。 |
-| 实体 ID 审批的授权边界 | `backend/app/api/v1/routes/shots.py:137-155`、`backend/app/api/v1/routes/characters.py:73-90`、`backend/app/api/deps.py:23-31` | 路由按实体 ID 取对象，并向实体所属 project 发事件；现有依赖体现管理员 token 校验。未证明存在跨项目越权；需结合部署是否要求区分用户/项目权限再判断风险。 |
+| 取消请求何时完成 | `backend/app/api/v1/routes/runs.py`（`cancel_run`、`_reconcile_active_candidate`）、`backend/app/db/session.py`、`engine/src/pipeline/runner.ts` | 后端持久化取消意图，`cancelling` 是等待执行器确认的中间状态。fake provider 下已端到端验证：Engine 在线时取消后数十毫秒内进入 `cancelled`；无 live lease 时由后端同步终态化；Engine 在 `cancelling` 期间退出时，run 保持 `cancelling` 直到 lease 过期（最长 120 秒），随后由 reconciliation 置为 `cancelled`（此前会被误置为 `failed`）。真实 provider 下的长时间阻塞未验。 |
+| 实体 ID 审批的授权边界 | `backend/app/api/v1/routes/shots.py`、`backend/app/api/v1/routes/characters.py`、`backend/app/api/deps.py:23-31` | 审批/重生成路由只接收实体 ID，project 由实体推导，不存在“路径 project + 他项目实体”的组合；`update_shot` 的 `character_ids` 已校验属于同一 project，reorder、版本比较按 project 过滤。未发现跨项目越权路径；用户/项目级权限不在当前范围。 |
 | 定向恢复是否进入预期执行分支 | `backend/app/api/v1/routes/runs.py:529-545`、`engine/src/index.ts:230-285`、`engine/src/pipeline/runner.ts:330-336, 731-773` | 隔离 HTTP 路径曾验证定向恢复，fake image provider 控制中断、并手动清空隔离租约后恢复成功；真实 provider 与自然租约到期未验。当前代码对旧 run 缺失命令仅兼容可证明尚未执行的普通 full run，并以 `auto_mode=false` 恢复；其余无法证明原始范围的旧 run 拒绝恢复。完整命令仍须通过格式与目标校验；这不是对所有旧 run 或所有定向恢复的验证。 |
 | 新产物失败时旧产物是否仍可用 | `backend/app/services/creative_control.py`、`backend/app/api/v1/routes/shots.py`、`backend/app/api/v1/routes/characters.py`、`backend/app/api/v1/routes/projects.py` | 隔离副本已实跑：分镜重生成失败时旧图片、视频、音频引用及文件保留；成功重生成写入新视频引用，版本回滚恢复旧引用。覆盖范围见“本轮实施与未解决风险”。 |
 | 多条终态写入路径的一致性 | `backend/app/api/v1/routes/runs.py`、`backend/app/services/run_recovery.py`、`engine/src/pipeline/runner.ts`、`engine/src/shared-db.ts`、`engine/src/index.ts` | 成功、失败、取消及恢复 reconciliation 涉及多条状态写入路径。run/project 状态、事件和 lease 清理的组合结果尚未逐路径验证。 |
@@ -48,7 +48,7 @@
 
 ### 媒体下载与回收边界
 
-- 远程视频只接受无凭据的 HTTP/HTTPS URL，DNS 结果必须全部是公网 IP；每次重定向都会重新解析和校验。单个视频最多 `1 GiB`、整个合并最多 `2 GiB`、最多 `100` 个视频，按顺序下载（`backend/app/services/remote_video.py`、`backend/app/services/video_merger.py`）。`socket.getaddrinfo()` 是同步调用且无超时，因此 DNS 查询可阻塞超过 `120` 秒下载期限；这是代码路径事实，未做真实 DNS 卡死复现。
+- 远程视频只接受无凭据的 HTTP/HTTPS URL，DNS 结果必须全部是公网 IP；每次重定向都会重新解析和校验。单个视频最多 `1 GiB`、整个合并最多 `2 GiB`、最多 `100` 个视频，按顺序下载（`backend/app/services/remote_video.py`、`backend/app/services/video_merger.py`）。DNS 查询（同步 `socket.getaddrinfo()`）在后台线程中执行并受剩余下载期限约束（单次最多 30 秒），超时即失败；卡住的线程为 daemon，不阻塞进程退出。
 - `/static` 直接由 FastAPI `StaticFiles` 提供；已登记媒体的 URL 可公开读取，登记本身不提供访问控制，也不能撤回已复制或缓存的 URL。真实视频商/provider 下载与生成未验证；本轮视频证据来自本地 fixture/fake provider。
 
 ### 主要旧媒体路径安全风险
@@ -62,7 +62,7 @@
 ## 范围与未验证项
 
 - 代码事实按本次编辑时查看的仓库源码核对；本文所列运行证据来自各自记录时间的隔离环境。相关路径使用过 fake provider、fake 媒体或本地 fixture，只能说明当时对应隔离环境的结果，不能宣传为覆盖当前所有代码版本或真实媒体商/provider。
-- 本次未运行测试。未验证真实图片/视频商、真实 provider 下的恢复/取消、自然租约到期、DNS 实际卡死、并发准入竞态及 Node 22 恢复路径。
+- 本次未运行测试。未验证真实图片/视频商、真实 provider 下的恢复/取消、并发准入竞态及 Node 22 恢复路径。
 - 外部实践及许可描述以以上链接和研究记录为依据；本文未独立复核当前版本或许可法律适用性。
 
 ## 仓库内参考
