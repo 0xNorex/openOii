@@ -62,3 +62,5 @@ next render.
   yuuvis composition rule.
 - Related: ADR 0003 (interaction soft freeze) — selection binding, generate/confirm/
   cancel and viewport lock keep their meaning.
+
+> Partially superseded by [ADR 0010](0010-studio-redesign.md) (2026-10-28).

@@ -114,7 +114,9 @@ components:
 
 **Authority:** `frontend/app/styles/tokens.css` is the source of truth. This document is human-readable; update it in the **same PR** when tokens change (ADR 0002).
 
-**Aesthetic (D2):** Dense Comic Workbench — keep CMYK offset shadows, halftone, Bangers/Fredoka/Nunito. Tighten chrome and cards to cockpit density. Not cold SaaS grey; not dual themes.
+**Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents (Bangers wordmark, CMYK offset frame, halftone) only on the wordmark, the final-video card and moment, and empty states. Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
+
+> **Transition note:** the front-matter values and §1–§6 below still describe the tokens shipped today. They are rewritten in the same PR that changes `tokens.css` (Phase 1 of `docs/specs/frontend-studio-redesign-plan.md`, ADR 0002). Where they conflict with ADR 0010, ADR 0010 wins.
 
 **Shell geometry (tokens):**
 
@@ -124,7 +126,7 @@ components:
 | `--workbench-activity` / `-collapsed` | 左栏 Agent Activity width (18rem / 2.75rem rail) |
 | `--workbench-inspector` / `-collapsed` | 右栏检查器 width (20rem / 2.75rem rail) |
 
-**Workbench 四区骨架（不可协商）：**
+**Workbench 四区骨架（现状；ADR 0010 Phase 2 起改为“全幅画布 + 浮层面板”的 Studio 布局，见 spec §5）：**
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -196,7 +198,7 @@ This system explicitly rejects three aesthetics: the grey SaaS panel (Notion/Jir
 - Halftone dot textures as surface identity markers
 - Speech-bubble chat pattern grounded in comic convention
 - Tactile button press (translate on active, shadow collapse) with physical feedback
-- Dual-theme: warm cream workshop (light) / pressroom darkroom (dark)
+- Dual-theme: light / dark, both kept (ADR 0010)
 - **Dense desk density** — more cells and messages on screen without losing craft identity
 
 ## 2. Colors
