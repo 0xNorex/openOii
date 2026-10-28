@@ -1,10 +1,11 @@
-import { useRef, useEffect } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useEditorStore } from "~/stores/editorStore";
 import { readMessageFeed } from "~/query/messageFeed";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { useRunState } from "~/hooks/useRunState";
-import { MessageList } from "./MessageList";
+import { ActivityTimeline } from "~/features/comic-workflow/agent/ActivityTimeline";
+import { deriveActivityTimeline } from "~/features/comic-workflow/agent/activityTimeline";
 import { Button } from "~/components/ui/Button";
 import { AGENT_NAME_MAP, type WorkflowStage } from "~/types";
 import {
@@ -58,20 +59,10 @@ export function ChatPanel({
   }).data ?? EMPTY_MESSAGES;
 
   const setRunMode = useEditorStore((s) => s.setRunMode);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      if (typeof scrollContainerRef.current.scrollTo === "function") {
-        scrollContainerRef.current.scrollTo({
-          top: scrollContainerRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      } else {
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-      }
-    }
-  }, [messages]);
+  const entries = useMemo(
+    () => deriveActivityTimeline(messages, { running: isGenerating && !awaitingConfirm }),
+    [messages, isGenerating, awaitingConfirm],
+  );
 
   const fallbackStage = currentStage || "plan";
   const info = getWorkflowStageInfo(fallbackStage) ?? {
@@ -79,7 +70,6 @@ export function ChatPanel({
     description: "正在生成剧本、角色与镜头规划",
   };
   const StageIcon = getStageIcon(fallbackStage);
-  const hasMessages = messages.length > 0;
   const runMode = useEditorStore((s) => s.runMode);
   const isYolo = runMode === "yolo";
 
@@ -146,23 +136,18 @@ export function ChatPanel({
         </div>
       )}
 
-      <div
-        ref={scrollContainerRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1.5"
-      >
-        {!hasMessages && !isGenerating ? (
-          <div className="flex h-full flex-col items-center justify-center px-3 text-center">
-            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
-              <StageIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            </div>
-            <p className="m-0 text-xs text-ink-muted">
-              暂无活动记录
-            </p>
+      {entries.length === 0 && !isGenerating ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 text-center">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+            <StageIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           </div>
-        ) : (
-          <MessageList messages={messages} />
-        )}
-      </div>
+          <p className="m-0 text-xs text-ink-muted">
+            暂无活动记录
+          </p>
+        </div>
+      ) : (
+        <ActivityTimeline entries={entries} />
+      )}
 
     </div>
   );

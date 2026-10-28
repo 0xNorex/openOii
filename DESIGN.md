@@ -162,7 +162,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 
 A comic artist's workbench: professional, energetic, and immediately recognizable as a craft space, not a corporate tool. The surface is warm cream paper under ink. CMYK offset shadows and halftone dot textures are structural references to the printing process that gives comics their visual identity. Every design choice answers "does this feel like the workshop where comics get made?"
 
-The system speaks two fluencies simultaneously: comic-book visual language (Bangers display type, CMYK shadows, halftone backgrounds, speech-bubble chat) and tool-clarity interaction (predictable grid layouts, consistent component vocabulary, 200ms state transitions). Comic energy without comic chaos. The workbench has inks, ruling pens, and registration marks, but the artist reaches for the right tool without thinking.
+The system speaks two fluencies simultaneously: comic-book visual language (Bangers display type, CMYK shadows, halftone backgrounds) and tool-clarity interaction (predictable grid layouts, consistent component vocabulary, 200ms state transitions). Comic energy without comic chaos. The workbench has inks, ruling pens, and registration marks, but the artist reaches for the right tool without thinking.
 
 This system explicitly rejects three aesthetics: the grey SaaS panel (Notion/Jira coldness), the generic AI generator (white card grids + purple gradients), and the childlike doodle (over-rounded corners, candy colors, infantile typography). If it looks like a Jira ticket, the warmth is missing. If it looks like a Midjourney landing page, the personality is missing. If it looks like a kindergarten sticker chart, the craft is missing.
 
@@ -235,9 +235,9 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), `bg-paper-100`. Active project uses a primary tint. Delete button revealed on hover only.
 - **TopBar:** 44px height (2.75rem, `--workbench-header`), 2px thick bottom border, compact dot+icon+label stage indicators. Bold progress dots in stage accent color. Stage labels semibold.
 
-### Chat bubbles
-- **speech-bubble** (agent): `bg-paper-200`, `rounded-lg`, no tail.
-- **speech-bubble-user**: `bg-primary/10`, `rounded-lg`, no tail.
+### Activity timeline
+- No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
+- Follows the newest entry; scrolling up stops following and shows "跳到最新".
 
 ## 6. Do's and Don'ts
 

@@ -25,8 +25,14 @@ function seedRunState(patch: Parameters<typeof patchRunState>[1]): void {
 	patchRunState(1, patch);
 }
 
-vi.mock("./MessageList", () => ({
-	MessageList: () => <div data-testid="message-list" />,
+vi.mock("~/features/comic-workflow/agent/ActivityTimeline", () => ({
+	ActivityTimeline: ({ entries }: { entries: { id: string; title: string; status: string }[] }) => (
+		<ol data-testid="activity-timeline">
+			{entries.map((e) => (
+				<li key={e.id} data-status={e.status}>{e.title}</li>
+			))}
+		</ol>
+	),
 }));
 
 const toastInfo = vi.fn();
@@ -86,6 +92,18 @@ describe("ChatPanel", () => {
 		expect(
 			screen.queryByRole("button", { name: "开始生成漫剧" }),
 		).not.toBeInTheDocument();
+	});
+
+	it("feeds the message feed into the activity timeline and marks the live step", async () => {
+		setChatFeed([
+			{ id: "s1", agent: "plan", role: "step", content: "生成故事大纲" },
+			{ id: "t1", agent: "plan", role: "tool_call", content: "文本生成" },
+		]);
+
+		renderChatPanel(true);
+
+		const step = await screen.findByText("生成故事大纲");
+		expect(step).toHaveAttribute("data-status", "running");
 	});
 
 	it("shows processing state and stop button while generating", () => {
