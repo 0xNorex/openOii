@@ -25,6 +25,8 @@ import { PlainButton } from "../../components/ui/PlainButton";
 
 interface TopBarProps {
 	projectId?: number;
+	/** Centre slot (workbench status pill and run actions). */
+	center?: ReactNode;
 }
 
 function ProjectDropdown({ currentId }: { currentId?: number }) {
@@ -192,7 +194,7 @@ function NavLink({
 	);
 }
 
-export function TopBar({ projectId }: TopBarProps) {
+export function TopBar({ projectId, center }: TopBarProps) {
 	const { theme, toggleTheme } = useThemeStore();
 	const isDark = theme === "dark";
 	const { openModal: openSettingsModal } = useSettingsStore();
@@ -257,7 +259,7 @@ export function TopBar({ projectId }: TopBarProps) {
 				</nav>
 			</div>
 
-			<div className="min-w-0 flex-1" />
+			<div className="flex min-w-0 flex-1 justify-center">{center}</div>
 
 			<div className="flex shrink-0 items-center gap-0.5">
 				<Button

@@ -274,16 +274,20 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	if (!before) return;
 
 	await page.getByRole("button", { name: "排序九宫格" }).click();
-	await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(before.x + before.width / 2 + 80, before.y + before.height / 2 + 24, {
-		steps: 10,
-	});
-	await page.mouse.up();
-
-	const moved = await card.boundingBox();
-	expect(moved).not.toBeNull();
-	expect(Math.abs((moved?.x ?? before.x) - before.x)).toBeGreaterThan(20);
+	await expect(page.getByRole("button", { name: "完成分镜排序" })).toBeVisible();
+	// 排序模式切换后 tldraw 解锁分镜是异步的：拖不动就再拖一次
+	await expect(async () => {
+		const start = await card.boundingBox();
+		if (!start) throw new Error("card not visible");
+		await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+		await page.mouse.down();
+		await page.mouse.move(start.x + start.width / 2 + 80, start.y + start.height / 2 + 24, {
+			steps: 10,
+		});
+		await page.mouse.up();
+		const moved = await card.boundingBox();
+		expect(Math.abs((moved?.x ?? before.x) - before.x)).toBeGreaterThan(20);
+	}).toPass({ timeout: 5000 });
 
 	await page.getByRole("button", { name: "完成分镜排序" }).click();
 	await page.getByRole("button", { name: "整理画布" }).click();

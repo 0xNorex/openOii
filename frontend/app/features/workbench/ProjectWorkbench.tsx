@@ -10,8 +10,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import { TopBar } from "~/components/layout/TopBar";
-import { StagePipeline } from "~/components/layout/StagePipeline";
-import { StageView } from "~/components/layout/StageView";
+import { StudioControls } from "~/components/layout/StudioControls";
 import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
@@ -37,6 +36,11 @@ import type { VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 
+const WorkflowCanvas = lazy(() =>
+	import("~/features/comic-workflow/canvas/ComicWorkflowCanvas").then((m) => ({
+		default: m.ComicWorkflowCanvas,
+	})),
+);
 const VersionCompareDrawer = lazy(() =>
 	import("~/components/panels/VersionCompareDrawer").then((m) => ({
 		default: m.VersionCompareDrawer,
@@ -210,6 +214,17 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		],
 	);
 
+	// 标签页标题前缀显示状态，切到别的标签也能看到进度
+	const projectTitle = project?.title;
+	useEffect(() => {
+		if (projectTitle === undefined) return;
+		const previous = document.title;
+		document.title = `${studioStatus.label} · ${projectTitle || "漫剧工作台"} - openOii`;
+		return () => {
+			document.title = previous;
+		};
+	}, [studioStatus.label, projectTitle]);
+
 
 	const handleOpenVersions = () => {
 		setVersionTarget(null);
@@ -326,24 +341,29 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			>
 				跳到工作台
 			</a>
-			<TopBar projectId={projectId} />
-			<StagePipeline
-				isGenerating={hasActiveRun}
-				studioStatus={studioStatus}
-				awaitingConfirm={runAwaitingConfirm}
-				hasRecovery={hasRecovery}
-				onGenerate={handleGenerate}
-				onResume={handleResume}
-				onCancel={handleCancel}
-				onToggleChat={() => {
-					setSidebarTab("chat");
-					setWorkspaceCollapsed(false);
-				}}
-				generateDisabled={generatePending || hasActiveRun}
-				onOpenVersions={handleOpenVersions}
-				onExport={handleExportWebtoon}
-				exportBusy={exporting}
+			<TopBar
+				projectId={projectId}
+				center={
+	<StudioControls
+						isGenerating={hasActiveRun}
+						studioStatus={studioStatus}
+						awaitingConfirm={runAwaitingConfirm}
+						hasRecovery={hasRecovery}
+						onGenerate={handleGenerate}
+						onResume={handleResume}
+						onCancel={handleCancel}
+						onOpenInbox={() => {
+							setSidebarTab("chat");
+							setWorkspaceCollapsed(false);
+						}}
+						generateDisabled={generatePending || hasActiveRun}
+						onOpenVersions={handleOpenVersions}
+						onExport={handleExportWebtoon}
+						exportBusy={exporting}
+					/>
+				}
 			/>
+
 
 			{/* Keep setup focused; the empty workflow canvas appears after a run starts. */}
 			<main
@@ -384,11 +404,20 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				{!isMobileWorkbench ? (
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<div className="relative isolate min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
-							<StageView
-								projectId={projectId}
-								onSelectedNodeIdChange={handleSelectedNodeIdChange}
-								onSelectedNodeIdsChange={handleSelectedNodeIdsChange}
-							/>
+							<Suspense
+								fallback={
+									<div className="flex h-full w-full items-center justify-center bg-paper-100 text-sm text-ink-muted">
+										正在加载画布...
+									</div>
+								}
+							>
+								<WorkflowCanvas
+									key={projectId}
+									projectId={projectId}
+									onSelectedNodeIdChange={handleSelectedNodeIdChange}
+									onSelectedNodeIdsChange={handleSelectedNodeIdsChange}
+								/>
+							</Suspense>
 						</div>
 						{/* PromptBar 常驻画布下方：选中 → 提示 → 定点重跑 的核心入口 */}
 						<PromptBar

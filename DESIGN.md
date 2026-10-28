@@ -95,7 +95,7 @@ components:
 
 | Token | Role |
 |-------|------|
-| `--workbench-header` / `--workbench-toolbar` | TopBar + stage row (each 2.75rem) |
+| `--workbench-header` | TopBar (2.75rem); on the workbench its centre holds the status pill and run actions |
 | `--workbench-activity` / `-collapsed` | 左栏 Agent Activity width (18rem / 2.75rem rail) |
 | `--workbench-inspector` / `-collapsed` | 右栏检查器 width (20rem / 2.75rem rail) |
 
@@ -103,11 +103,11 @@ components:
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│ TopBar                                                  │
+│ TopBar  ·  状态胶囊 + 生成/停止                          │
 ├────────────┬──────────────────────────┬────────────────┤
-│ Activity   │ StagePipeline            │ Inspector      │
-│ (常驻左栏) ├──────────────────────────┤ (选中即开)      │
-│ 活动/资产/  │ Canvas  弹性 1fr         │ 概览/内容/操作  │
+│ Activity   │ Canvas  弹性 1fr         │ Inspector      │
+│ (常驻左栏) │                          │ (选中即开)      │
+│ 活动/资产/  │                          │ 概览/内容/操作  │
 │ 宇宙        ├──────────────────────────┤                │
 │            │ PromptBar 常驻            │                │
 └────────────┴──────────────────────────┴────────────────┘
@@ -151,7 +151,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 2. **Interaction soft freeze** — selection binding, Agent Column chat, cell regenerate, generate/confirm/cancel keep meaning (ADR 0003).
 3. **One display face per screen** — Bangers at most once.
 4. **Dense chrome** — header/toolbar use `--touch-target-dense` for chips; primary actions keep `--touch-target-min` (44px).
-5. **Shell classes** — TopBar → `.chrome-row` + `data-shell="topbar"`; StagePipeline → `.chrome-toolbar` + `data-shell="stage-pipeline"`; pages → `.page-shell` / `.page-body`.
+5. **Shell classes** — TopBar → `.chrome-row` + `data-shell="topbar"`; StudioControls (status pill, run actions) → TopBar `center` slot, `data-shell="studio-controls"`; pages → `.page-shell` / `.page-body`.
 6. **常驻非浮动面上限 3** — 第 4 个功能面一律走浮层/抽屉（yuuvis viewport architecture）。各面最小宽之和放不下时必须换布局模式，**不许按百分比切完再让面板重叠**。
 
 **Program:** Full UI domains land in batches (`docs/frontend-redesign-program.md`).

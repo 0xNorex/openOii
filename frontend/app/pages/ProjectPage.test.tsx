@@ -331,41 +331,41 @@ vi.mock('~/features/comic-workflow/sidebar/WorkspaceSidebar', () => ({
 }));
 
 vi.mock('~/components/layout/TopBar', () => ({
-  TopBar: () => <div data-testid="top-bar" />,
+  TopBar: ({ center }: { center?: React.ReactNode }) => <div data-testid="top-bar">{center}</div>,
 }));
 
-vi.mock('~/components/layout/StagePipeline', () => ({
-  StagePipeline: ({
+vi.mock('~/components/layout/StudioControls', () => ({
+  StudioControls: ({
     onGenerate,
     onCancel,
     onResume,
-    onToggleChat,
+    onOpenInbox,
     awaitingConfirm,
     studioStatus,
   }: {
     onGenerate?: () => void;
     onCancel?: () => void;
     onResume?: () => void;
-    onToggleChat?: () => void;
+    onOpenInbox?: () => void;
     awaitingConfirm?: boolean;
     studioStatus?: { state: string };
   }) => (
     <div
-      data-testid="stage-pipeline"
+      data-testid="studio-controls"
       data-workbench-status={studioStatus?.state}
     >
       <button type="button" onClick={onGenerate}>开始生成</button>
       <button type="button" onClick={onCancel}>取消</button>
       <button type="button" onClick={onResume}>恢复运行</button>
       {awaitingConfirm ? (
-        <button type="button" onClick={onToggleChat}>去确认</button>
+        <button type="button" onClick={onOpenInbox}>去确认</button>
       ) : null}
     </div>
   ),
 }));
 
-vi.mock('~/components/layout/StageView', () => ({
-  StageView: () => <div data-testid="stage-view" />,
+vi.mock('~/features/comic-workflow/canvas/ComicWorkflowCanvas', () => ({
+  ComicWorkflowCanvas: () => <div data-testid="stage-view" />,
 }));
 
 vi.mock('~/features/comic-workflow/mobile/MobileWorkbenchPreview', () => ({
@@ -442,14 +442,14 @@ describe('ProjectPage live hydration', () => {
     expect(screen.queryByText('Provider 选择')).not.toBeInTheDocument();
   });
 
-  it('passes the derived workbench status to the stage pipeline', async () => {
+  it('passes the derived workbench status to the top-bar controls', async () => {
     renderWithProviders(<ProjectPage />);
     // Simulate a WS projection landing after mount (the run-state cache is the
     // live projection the page reads reactively).
     seedRunState({ isGenerating: true, currentRunId: 77, awaitingConfirm: true });
 
     await waitFor(() => {
-      expect(screen.getByTestId('stage-pipeline')).toHaveAttribute(
+      expect(screen.getByTestId('studio-controls')).toHaveAttribute(
         'data-workbench-status',
         'awaitingConfirm',
       );
@@ -471,7 +471,7 @@ describe('ProjectPage live hydration', () => {
     renderWithProviders(<ProjectPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('stage-pipeline')).toBeInTheDocument();
+      expect(screen.getByTestId('studio-controls')).toBeInTheDocument();
     });
   });
 
@@ -665,7 +665,7 @@ describe('ProjectPage live hydration', () => {
     const { rerenderWithProviders } = renderWithProviders(<ProjectPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('stage-pipeline')).toBeInTheDocument();
+      expect(screen.getByTestId('studio-controls')).toBeInTheDocument();
     });
     const titleBefore = currentProjectData.title;
 
@@ -863,7 +863,7 @@ describe('ProjectPage live hydration', () => {
 
     // 项目字段直接来自 query cache，不再写回 store，因此不会冲掉实时进度
     await waitFor(() => {
-      expect(screen.getByTestId('stage-pipeline')).toBeInTheDocument();
+      expect(screen.getByTestId('studio-controls')).toBeInTheDocument();
     });
     expect(readRunState(9).isGenerating).toBe(true);
     expect(readRunState(9).progress).toBe(0.35);

@@ -93,7 +93,6 @@
      * 四区固定骨架：Activity｜Canvas｜Inspector 三栏 + 底部 PromptBar。
      * Activity 与 Inspector 都是常驻栏（不再浮在画布上），Canvas 是唯一弹性面。 */
     --workbench-header: 2.75rem; /* TopBar */
-    --workbench-toolbar: 2.75rem; /* StagePipeline */
     --workbench-activity: 18rem; /* 左：Agent Activity */
     --workbench-activity-collapsed: 2.75rem;
     --workbench-inspector: 20rem; /* 右：选中项检查器 */
@@ -173,23 +172,14 @@
     overscroll-behavior-y: contain;
   }
 
-  /* Dense chrome rows (TopBar / StagePipeline) */
-  .chrome-row,
-  .chrome-toolbar {
+  /* Dense chrome row (TopBar) */
+  .chrome-row {
     position: relative; /* z-panel / z-popover 只对定位元素生效 */
     display: flex;
     flex-shrink: 0;
     align-items: center;
-  }
-
-  .chrome-row {
     height: var(--workbench-header);
     max-height: var(--workbench-header);
-  }
-
-  .chrome-toolbar {
-    height: var(--workbench-toolbar);
-    max-height: var(--workbench-toolbar);
   }
 
   .tabular-nums {

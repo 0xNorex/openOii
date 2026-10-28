@@ -416,7 +416,12 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		.toBeGreaterThan(0);
 
 	await openChatPanel(page);
+	// 先等 POST /runs 落地：它的 onSuccess 会重置运行态，晚到会盖掉下面推送的待确认
+	const runStarted = page.waitForResponse(
+		(response) => response.url().endsWith("/api/v1/projects/7/runs") && response.request().method() === "POST",
+	);
 	await page.getByRole("button", { name: /开始生成|重新生成|重试失败阶段/ }).click();
+	await runStarted;
 
 	await page.evaluate(() => {
 		window.__mockWs.dispatch({

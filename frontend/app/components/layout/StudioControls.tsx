@@ -1,24 +1,22 @@
 import {
-	CheckIcon,
-	ExclamationTriangleIcon,
 	ArrowPathIcon,
 	StopIcon,
 	SparklesIcon,
-	ChatBubbleLeftRightIcon,
 	ClockIcon,
 	ArrowDownTrayIcon,
 	EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { STAGE_PIPELINE, getPipelineStageIndex } from "~/utils/pipeline";
+import { IconButton } from "~/components/ui/IconButton";
 import { Button } from "~/components/ui/Button";
 import {
 	type StudioStatus,
 	studioStatusDotClass,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { useEffect, useRef, useState } from "react";
-import { PlainButton } from "../../components/ui/PlainButton";
+import { PlainButton } from "~/components/ui/PlainButton";
 
-interface StagePipelineProps {
+interface StudioControlsProps {
 	isGenerating: boolean;
 	studioStatus: StudioStatus;
 	awaitingConfirm: boolean;
@@ -26,7 +24,8 @@ interface StagePipelineProps {
 	onGenerate?: () => void;
 	onResume: () => void;
 	onCancel: () => void;
-	onToggleChat?: () => void;
+	/** Status pill click: open the pending / chat panel. */
+	onOpenInbox?: () => void;
 	generateDisabled?: boolean;
 	/** Open version history / compare drawer. */
 	onOpenVersions?: () => void;
@@ -36,7 +35,7 @@ interface StagePipelineProps {
 }
 
 const chromeBtn =
-	"touch-target-dense !h-8 !min-h-8 gap-1 !px-2 text-xs transition-colors duration-fast";
+	"gap-1 !px-2 text-xs";
 
 // 执行动作后收起 focus 展开的菜单。
 function runMenuAction(action: () => void) {
@@ -46,7 +45,11 @@ function runMenuAction(action: () => void) {
 	action();
 }
 
-export function StagePipeline({
+/**
+ * Top-bar centre for the workbench: one status pill (opens the inbox) and the
+ * run actions. The old stage row is gone; the pill names the stage instead.
+ */
+export function StudioControls({
 	isGenerating,
 	studioStatus,
 	awaitingConfirm,
@@ -54,12 +57,12 @@ export function StagePipeline({
 	onGenerate,
 	onResume,
 	onCancel,
-	onToggleChat,
+	onOpenInbox,
 	generateDisabled,
 	onOpenVersions,
 	onExport,
 	exportBusy = false,
-}: StagePipelineProps) {
+}: StudioControlsProps) {
 	const [toolsOpen, setToolsOpen] = useState(false);
 	const toolsRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
@@ -70,8 +73,9 @@ export function StagePipeline({
 		document.addEventListener("pointerdown", closeOnOutsideClick);
 		return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
 	}, [toolsOpen]);
-	// 阶段高亮与进度只在运行活跃时出现（stage / progress 由 deriveStudioStatus 置空）
-	const currentIndex = studioStatus.stage ? getPipelineStageIndex(studioStatus.stage) : -1;
+	// 阶段与进度只在运行活跃时出现（stage / progress 由 deriveStudioStatus 置空）
+	const stageIndex = studioStatus.stage ? getPipelineStageIndex(studioStatus.stage) : -1;
+	const stageLabel = stageIndex >= 0 ? STAGE_PIPELINE[stageIndex].label : null;
 	const progressPercent =
 		studioStatus.progress === null ? null : Math.round(studioStatus.progress * 100);
 	const generateLabel =
@@ -82,98 +86,43 @@ export function StagePipeline({
 				? "重试失败阶段"
 				: "重新生成";
 	const hasTools = Boolean(onOpenVersions || onExport);
+	const pillText = [studioStatus.label, stageLabel, progressPercent === null ? null : `${progressPercent}%`]
+		.filter(Boolean)
+		.join(" · ");
 
 	return (
-		<div
-			className="chrome-toolbar z-popover gap-2 border-b border-ink/10 bg-paper-200/80 px-2 sm:gap-3 sm:px-3"
-			data-shell="stage-pipeline"
-		>
-			<span className="sr-only" aria-live="polite">
-				工作台状态：{studioStatus.label}
-			</span>
+		<>
+		<span className="sr-only" aria-live="polite">
+			工作台状态：{pillText}
+		</span>
+		{/* <sm 顶栏放不下：移动端的状态与重试在 MobileWorkbenchPreview 里 */}
+		<div className="hidden min-w-0 items-center gap-1.5 sm:flex" data-shell="studio-controls">
 
-			<div
-				className="flex min-w-0 items-center gap-2"
+			<PlainButton
+				className={`touch-target-dense inline-flex min-w-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold tabular-nums transition-colors duration-fast ${
+					awaitingConfirm
+						? "border-primary bg-primary text-primary-content"
+						: "border-ink/15 bg-surface text-ink hover:border-primary"
+				}`}
+				onClick={onOpenInbox}
 				title={studioStatus.description}
+				aria-label={`状态：${pillText}，打开待处理`}
 			>
 				<span
 					className={`h-2 w-2 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
 					aria-hidden="true"
 				/>
-				{/* 状态文案在所有视口可见：<sm 只剩色点时色盲无法区分状态 */}
-				<span className="inline-block max-w-[4.5rem] truncate font-mono text-xs font-semibold tabular-nums text-ink-muted sm:max-w-[5.5rem]">
-					{studioStatus.label}
-				</span>
-				{progressPercent === null ? null : (
-					<>
-						<div
-							className="h-1 w-14 overflow-hidden rounded-full bg-ink/10 sm:w-20"
-							role="progressbar"
-							aria-label="生成进度"
-							aria-valuemin={0}
-							aria-valuemax={100}
-							aria-valuenow={progressPercent}
-						>
-							<div
-								className="h-full rounded-full bg-primary transition-[width] duration-normal"
-								style={{ width: `${progressPercent}%` }}
-							/>
-						</div>
-						<span className="w-8 font-mono text-xs tabular-nums text-ink-muted">
-							{progressPercent}%
-						</span>
-					</>
-				)}
-			</div>
-
-			<nav
-				className="flex min-w-0 flex-1 items-center justify-center gap-0.5 overflow-x-auto"
-				aria-label="生成阶段"
-			>
-				{STAGE_PIPELINE.map((stage, index) => {
-					const past = currentIndex >= 0 && index < currentIndex;
-					const current = currentIndex === index;
-
-					return (
-						<div key={stage.key} className="flex shrink-0 items-center">
-							<span
-								className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-bold uppercase tracking-wide ${
-									current
-										? "bg-primary text-primary-content"
-										: past
-											? "text-ink-muted"
-											: "text-ink-muted"
-								}`}
-								aria-current={current ? "step" : undefined}
-							>
-								{past ? (
-									<CheckIcon className="h-3 w-3" aria-hidden="true" />
-								) : null}
-								{stage.label}
-								{current && studioStatus.state === "recoverable" ? (
-									<ExclamationTriangleIcon
-										className="h-3 w-3 text-warning-content"
-										aria-hidden="true"
-									/>
-								) : null}
-							</span>
-							{index < STAGE_PIPELINE.length - 1 ? (
-								<span
-									className={`mx-0.5 h-px w-3 ${past ? "bg-success/60" : "bg-ink/15"}`}
-									aria-hidden="true"
-								/>
-							) : null}
-						</div>
-					);
-				})}
-			</nav>
+				<span className="truncate">{pillText}</span>
+				{studioStatus.pendingCount > 0 ? (
+					<span className="rounded-full bg-paper-100 px-1.5 text-ink">{studioStatus.pendingCount}</span>
+				) : null}
+			</PlainButton>
 
 			<div className="flex shrink-0 items-center gap-1">
 				{hasTools ? (
 					// 版本/一致性/导出收进溢出菜单：所有视口可达（<sm 原先整组消失，导出无入口）
-					<div ref={toolsRef} className="relative mr-0.5 border-r border-ink/10 pr-1" onKeyDown={(event) => event.key === "Escape" && setToolsOpen(false)}>
-						<Button variant="ghost" size="sm"
-							className={chromeBtn}
+					<div ref={toolsRef} className="relative" onKeyDown={(event) => event.key === "Escape" && setToolsOpen(false)}>
+						<IconButton
 							aria-label="工作台工具"
 							aria-haspopup="menu"
 							aria-expanded={toolsOpen}
@@ -181,13 +130,12 @@ export function StagePipeline({
 							onClick={() => setToolsOpen((open) => !open)}
 						>
 							<EllipsisHorizontalIcon className="h-4 w-4" aria-hidden="true" />
-							<span className="hidden lg:inline">工具</span>
-						</Button>
+						</IconButton>
 						{toolsOpen ? <ul
 							tabIndex={0}
 							role="menu"
 							aria-label="工作台工具菜单"
-							className="absolute right-0 top-full z-popover mt-1 w-44 list-none border-2 border-ink/10 bg-paper-100 p-1 shadow-panel"
+							className="absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-ink/15 bg-surface p-1 shadow-panel"
 						>
 							{onOpenVersions ? (
 								<li role="none">
@@ -231,15 +179,9 @@ export function StagePipeline({
 							<ArrowPathIcon className="h-3.5 w-3.5" aria-hidden="true" />
 							恢复
 						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							className={chromeBtn}
-							onClick={onCancel}
-							aria-label="停止当前任务"
-						>
+						<IconButton onClick={onCancel} aria-label="停止当前任务">
 							<StopIcon className="h-3.5 w-3.5" aria-hidden="true" />
-						</Button>
+						</IconButton>
 					</>
 				) : null}
 				{isGenerating ? (
@@ -251,21 +193,6 @@ export function StagePipeline({
 					>
 						<StopIcon className="h-3.5 w-3.5" aria-hidden="true" />
 						停止
-					</Button>
-				) : null}
-				{awaitingConfirm && onToggleChat ? (
-					<Button
-						variant="primary"
-						size="sm"
-						className={chromeBtn}
-						onClick={onToggleChat}
-						aria-label="打开对话面板"
-					>
-						<ChatBubbleLeftRightIcon
-							className="h-3.5 w-3.5"
-							aria-hidden="true"
-						/>
-						确认
 					</Button>
 				) : null}
 				{!isGenerating && !hasRecovery && !awaitingConfirm && onGenerate ? (
@@ -282,5 +209,6 @@ export function StagePipeline({
 				) : null}
 			</div>
 		</div>
+		</>
 	);
 }
