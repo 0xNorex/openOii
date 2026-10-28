@@ -239,6 +239,10 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
 - Follows the newest entry; scrolling up stops following and shows "跳到最新".
 
+### Approval inbox
+- Every decision lives in the agent panel's 待处理 tab: approval gate (确认继续 / 提修改意见), interrupted run (继续 / 取消), blocking shots, last failure (从失败阶段重试). The top bar, prompt bar and cards don't repeat these buttons.
+- A new item opens the panel on 待处理; clearing the inbox returns to 活动. In 自动确认 mode gates don't interrupt.
+
 ## 6. Do's and Don'ts
 
 ### Do:

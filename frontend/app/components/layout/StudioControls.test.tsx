@@ -17,7 +17,6 @@ function renderControls(props: Partial<Parameters<typeof StudioControls>[0]> = {
 			awaitingConfirm={false}
 			hasRecovery={false}
 			onGenerate={vi.fn()}
-			onResume={vi.fn()}
 			onCancel={vi.fn()}
 			{...props}
 		/>,
@@ -54,22 +53,20 @@ describe("StudioControls", () => {
 		const { rerender } = renderControls();
 		expect(screen.getByRole("button", { name: "开始生成" })).toBeEnabled();
 		rerender(
-			<StudioControls isGenerating={false} studioStatus={getStudioStatusMeta("ready")} awaitingConfirm={false} hasRecovery={false} onGenerate={vi.fn()} onResume={vi.fn()} onCancel={vi.fn()} />,
+			<StudioControls isGenerating={false} studioStatus={getStudioStatusMeta("ready")} awaitingConfirm={false} hasRecovery={false} onGenerate={vi.fn()} onCancel={vi.fn()} />,
 		);
 		expect(screen.getByRole("button", { name: "重新生成" })).toBeInTheDocument();
 		rerender(
-			<StudioControls isGenerating={false} studioStatus={getStudioStatusMeta("failed")} awaitingConfirm={false} hasRecovery={false} onGenerate={vi.fn()} onResume={vi.fn()} onCancel={vi.fn()} />,
+			<StudioControls isGenerating={false} studioStatus={getStudioStatusMeta("failed")} awaitingConfirm={false} hasRecovery={false} onGenerate={vi.fn()} onCancel={vi.fn()} />,
 		);
-		expect(screen.getByRole("button", { name: "重试失败阶段" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "重新生成" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "重试失败阶段" })).toBeNull();
 	});
 
-	it("shows resume and stop for a recoverable run", async () => {
-		const user = userEvent.setup();
-		const onResume = vi.fn();
-		renderControls({ hasRecovery: true, studioStatus: getStudioStatusMeta("recoverable"), onResume });
-		await user.click(screen.getByRole("button", { name: "恢复" }));
-		expect(onResume).toHaveBeenCalledTimes(1);
-		expect(screen.getByRole("button", { name: "停止当前任务" })).toBeInTheDocument();
+	it("leaves resume and cancel to the inbox for a recoverable run", () => {
+		renderControls({ hasRecovery: true, studioStatus: getStudioStatusMeta("recoverable") });
+		expect(screen.queryByRole("button", { name: "恢复" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "停止当前任务" })).toBeNull();
 		expect(screen.queryByRole("button", { name: "开始生成" })).toBeNull();
 	});
 

@@ -298,7 +298,9 @@ vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
     isGenerating,
     onConfirm,
     onCancel,
+    inboxActions,
   }: {
+    inboxActions?: { onResume: () => void };
     collapsed?: boolean;
     onCollapsedChange?: (collapsed: boolean) => void;
     isGenerating?: boolean;
@@ -317,6 +319,9 @@ vi.mock('~/features/comic-workflow/agent/AgentPanel', () => ({
       </button>
       <button type="button" onClick={onCancel}>
         停止生成
+      </button>
+      <button type="button" onClick={() => inboxActions?.onResume()}>
+        恢复运行
       </button>
     </div>
   ),
@@ -338,14 +343,12 @@ vi.mock('~/components/layout/StudioControls', () => ({
   StudioControls: ({
     onGenerate,
     onCancel,
-    onResume,
     onOpenInbox,
     awaitingConfirm,
     studioStatus,
   }: {
     onGenerate?: () => void;
     onCancel?: () => void;
-    onResume?: () => void;
     onOpenInbox?: () => void;
     awaitingConfirm?: boolean;
     studioStatus?: { state: string };
@@ -356,7 +359,6 @@ vi.mock('~/components/layout/StudioControls', () => ({
     >
       <button type="button" onClick={onGenerate}>开始生成</button>
       <button type="button" onClick={onCancel}>取消</button>
-      <button type="button" onClick={onResume}>恢复运行</button>
       <button type="button" onClick={onOpenInbox}>
         {awaitingConfirm ? '去确认' : '打开待处理'}
       </button>

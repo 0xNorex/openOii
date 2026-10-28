@@ -3,6 +3,10 @@ import { ChevronDoubleLeftIcon, SparklesIcon } from "@heroicons/react/24/outline
 import { ChatPanel } from "~/components/chat/ChatPanel";
 import { IconButton } from "~/components/ui/IconButton";
 import { PlainButton } from "~/components/ui/PlainButton";
+import { InboxPanel, type InboxActions } from "./InboxPanel";
+import type { InboxItem } from "./inboxItems";
+
+export type AgentPanelTab = "activity" | "inbox";
 
 interface AgentPanelProps {
 	projectId: number;
@@ -13,8 +17,10 @@ interface AgentPanelProps {
 	onCollapsedChange: (collapsed: boolean) => void;
 	/** Mobile: render inline in the page flow instead of floating over the canvas. */
 	inline?: boolean;
-	/** Shown on the collapsed pill so a pending approval is never hidden. */
-	pendingCount?: number;
+	tab: AgentPanelTab;
+	onTabChange: (tab: AgentPanelTab) => void;
+	inboxItems: InboxItem[];
+	inboxActions: InboxActions;
 }
 
 /**
@@ -29,8 +35,12 @@ export function AgentPanel({
 	collapsed,
 	onCollapsedChange,
 	inline = false,
-	pendingCount = 0,
+	tab,
+	onTabChange,
+	inboxItems,
+	inboxActions,
 }: AgentPanelProps) {
+	const pendingCount = inboxItems.length;
 	if (collapsed && !inline) {
 		return (
 			<PlainButton
@@ -61,10 +71,32 @@ export function AgentPanel({
 			data-shell="agent-panel"
 		>
 			<div className="flex items-center justify-between gap-1 border-b border-ink/10 py-1 pl-3 pr-1">
-				<h2 className="m-0 inline-flex items-center gap-1.5 text-sm font-semibold">
-					<SparklesIcon className="h-4 w-4 text-primary" aria-hidden="true" />
-					活动
-				</h2>
+				<div className="flex items-center gap-1" role="tablist" aria-label="Agent 面板">
+					{(
+						[
+							["activity", "活动"],
+							["inbox", "待处理"],
+						] as const
+					).map(([id, label]) => (
+						<PlainButton
+							key={id}
+							role="tab"
+							id={`agent-tab-${id}`}
+							aria-selected={tab === id}
+							aria-controls={`agent-tabpanel-${id}`}
+							className={clsx(
+								"inline-flex touch-target-dense items-center gap-1 rounded-md px-2 text-sm font-semibold transition-colors duration-fast",
+								tab === id ? "bg-primary/10 text-primary" : "text-ink-muted hover:text-ink",
+							)}
+							onClick={() => onTabChange(id)}
+						>
+							{label}
+							{id === "inbox" && pendingCount > 0 ? (
+								<span className="rounded-full bg-primary px-1.5 text-xs text-primary-content">{pendingCount}</span>
+							) : null}
+						</PlainButton>
+					))}
+				</div>
 				{inline ? null : (
 					<IconButton
 						className="text-ink-muted hover:text-ink"
@@ -77,13 +109,22 @@ export function AgentPanel({
 					</IconButton>
 				)}
 			</div>
-			<div className="min-h-0 flex-1 overflow-hidden">
-				<ChatPanel
-					projectId={projectId}
-					onConfirm={onConfirm}
-					onCancel={onCancel}
-					isGenerating={isGenerating}
-				/>
+			<div
+				className="flex min-h-0 flex-1 flex-col overflow-hidden"
+				role="tabpanel"
+				id={`agent-tabpanel-${tab}`}
+				aria-labelledby={`agent-tab-${tab}`}
+			>
+				{tab === "inbox" ? (
+					<InboxPanel items={inboxItems} actions={inboxActions} />
+				) : (
+					<ChatPanel
+						projectId={projectId}
+						onConfirm={onConfirm}
+						onCancel={onCancel}
+						isGenerating={isGenerating}
+					/>
+				)}
 			</div>
 		</aside>
 	);

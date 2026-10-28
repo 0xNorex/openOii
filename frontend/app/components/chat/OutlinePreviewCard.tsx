@@ -6,7 +6,8 @@ import type { StoryOutline } from "~/types";
 interface OutlinePreviewCardProps {
 	outline: StoryOutline;
 	visualBible?: string | null;
-	onConfirm: () => void;
+	/** 省略时不显示“确认大纲”（审批按钮只在收件箱卡片上）。 */
+	onConfirm?: () => void;
 	onRegenerate: (feedback: string) => void;
 }
 
@@ -102,9 +103,11 @@ export function OutlinePreviewCard({
 			)}
 
 			<div className="flex gap-2 pt-1">
-				<Button size="sm" variant="primary" onClick={onConfirm} className="flex-1">
-					确认大纲
-				</Button>
+				{onConfirm ? (
+					<Button size="sm" variant="primary" onClick={onConfirm} className="flex-1">
+						确认大纲
+					</Button>
+				) : null}
 				<Button size="sm" variant="secondary" onClick={handleRegenerate} className="flex-1">
 					重新生成
 				</Button>

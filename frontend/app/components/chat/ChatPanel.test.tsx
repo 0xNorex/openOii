@@ -62,8 +62,6 @@ function renderChatPanel(isGenerating = false) {
 			<PromptBar
 				selectionLabel={null}
 				awaitingConfirm={runState.awaitingConfirm}
-				awaitingAgent={runState.awaitingAgent}
-				recoveryGate={runState.recoveryGate}
 				isGenerating={isGenerating}
 				onSendFeedback={onSendFeedback}
 				onConfirm={onConfirm}
@@ -115,25 +113,16 @@ describe("ChatPanel", () => {
 		expect(screen.getByRole("button", { name: "停止生成" })).toBeInTheDocument();
 	});
 
-	it("shows awaiting confirm area and sends trimmed feedback to confirm", async () => {
+	it("sends prompt-bar feedback to confirm while awaiting, without its own approval bar", async () => {
 		const user = userEvent.setup();
 		seedRunState({ awaitingConfirm: true, awaitingAgent: "plan" });
-		setChatFeed([
-			{
-				id: "1",
-				agent: "plan",
-				role: "assistant",
-				content: "完整内容",
-				summary: "规划摘要",
-			},
-		]);
 
 		renderChatPanel(true);
 
-		expect(screen.getByText(/规划 已完成/)).toBeInTheDocument();
-
+		// 审批按钮只在收件箱；输入框仍可提交修改意见
+		expect(screen.queryByRole("button", { name: /通过/ })).not.toBeInTheDocument();
 		await user.type(screen.getByRole("textbox"), "  修改剧情节奏  ");
-		await user.click(screen.getByRole("button", { name: /通过/ }));
+		await user.keyboard("{Enter}");
 
 		expect(onConfirm).toHaveBeenLastCalledWith("修改剧情节奏");
 	});

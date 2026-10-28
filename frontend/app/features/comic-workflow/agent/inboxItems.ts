@@ -7,7 +7,7 @@ import {
 import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
-	| { kind: "gate"; id: "gate"; title: string; detail: string | null; gate: RunAwaitingConfirmEventData | null }
+	| { kind: "gate"; id: string; title: string; detail: string | null; gate: RunAwaitingConfirmEventData | null }
 	| { kind: "recoverable"; id: "recoverable"; title: string; detail: string }
 	| { kind: "blocked"; id: "blocked"; title: string; clips: BlockingClip[] }
 	| { kind: "failed"; id: "failed"; title: string; detail: string };
@@ -40,7 +40,8 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		const name = (agent && AGENT_NAME_MAP[agent]) || stageTitle(input.recoveryGate?.current_stage) || "当前阶段";
 		items.push({
 			kind: "gate",
-			id: "gate",
+			// 每个审批门一个 id，换阶段时重新提醒
+			id: `gate:${agent ?? "unknown"}`,
 			title: `${name}已完成，等待确认`,
 			detail: input.recoveryGate?.question || input.recoveryGate?.message || null,
 			gate: input.recoveryGate,

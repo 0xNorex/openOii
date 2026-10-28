@@ -1,5 +1,4 @@
 import {
-	ArrowPathIcon,
 	StopIcon,
 	SparklesIcon,
 	ClockIcon,
@@ -22,7 +21,6 @@ interface StudioControlsProps {
 	awaitingConfirm: boolean;
 	hasRecovery: boolean;
 	onGenerate?: () => void;
-	onResume: () => void;
 	onCancel: () => void;
 	/** Status pill click: open the pending / chat panel. */
 	onOpenInbox?: () => void;
@@ -55,7 +53,6 @@ export function StudioControls({
 	awaitingConfirm,
 	hasRecovery,
 	onGenerate,
-	onResume,
 	onCancel,
 	onOpenInbox,
 	generateDisabled,
@@ -78,13 +75,8 @@ export function StudioControls({
 	const stageLabel = stageIndex >= 0 ? STAGE_PIPELINE[stageIndex].label : null;
 	const progressPercent =
 		studioStatus.progress === null ? null : Math.round(studioStatus.progress * 100);
-	const generateLabel =
-		studioStatus.state === "idle"
-			? "开始生成"
-			: studioStatus.state === "failed" ||
-					studioStatus.state === "recoverable"
-				? "重试失败阶段"
-				: "重新生成";
+	// “从失败阶段重试”只在收件箱；这里只有开始 / 重新生成
+	const generateLabel = studioStatus.state === "idle" ? "开始生成" : "重新生成";
 	const hasTools = Boolean(onOpenVersions || onExport);
 	const pillText = [studioStatus.label, stageLabel, progressPercent === null ? null : `${progressPercent}%`]
 		.filter(Boolean)
@@ -168,22 +160,7 @@ export function StudioControls({
 					</div>
 				) : null}
 
-				{hasRecovery && !isGenerating ? (
-					<>
-						<Button
-							variant="primary"
-							size="sm"
-							className={chromeBtn}
-							onClick={onResume}
-						>
-							<ArrowPathIcon className="h-3.5 w-3.5" aria-hidden="true" />
-							恢复
-						</Button>
-						<IconButton onClick={onCancel} aria-label="停止当前任务">
-							<StopIcon className="h-3.5 w-3.5" aria-hidden="true" />
-						</IconButton>
-					</>
-				) : null}
+				{/* 恢复 / 取消只在收件箱；这里只放生成和停止 */}
 				{isGenerating ? (
 					<Button
 						variant="ghost"

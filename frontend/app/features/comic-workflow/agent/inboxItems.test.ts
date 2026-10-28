@@ -31,6 +31,12 @@ describe("deriveInboxItems", () => {
 		]);
 	});
 
+	it("gives each gate its own id so a new stage re-opens the inbox", () => {
+		const [plan] = deriveInboxItems({ ...base, awaitingConfirm: true, awaitingAgent: "plan" });
+		const [render] = deriveInboxItems({ ...base, awaitingConfirm: true, awaitingAgent: "render" });
+		expect(plan.id).not.toBe(render.id);
+	});
+
 	it("does not list a recoverable run behind an open gate", () => {
 		const items = deriveInboxItems({ ...base, awaitingConfirm: true, recoveryControl: recoverable });
 		expect(items.map((i) => i.kind)).toEqual(["gate"]);

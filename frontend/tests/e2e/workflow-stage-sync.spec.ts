@@ -251,8 +251,8 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		});
 	});
 
-	await expect(page.getByText("确认继续，或输入修改意见")).toBeVisible();
-	await expect(page.getByRole("button", { name: "通过并继续" })).toBeVisible();
+	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
+	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 
 	await page.evaluate(() => {
 		window.__mockWs.dispatch({
@@ -266,6 +266,8 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		});
 	});
 
+	// 审批门把面板切到了收件箱；阶段头在活动流里
+	await page.getByRole("tab", { name: "活动" }).click();
 	await expect(page.getByText("渲染阶段")).toBeVisible();
 
 	await page.evaluate(() => {
@@ -286,8 +288,8 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		});
 	});
 
-	await expect(page.getByText("确认继续，或输入修改意见")).toBeVisible();
-	await expect(page.getByRole("button", { name: "通过并继续" })).toBeVisible();
+	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
+	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 
 	await page.evaluate(() => {
 		window.__mockWs.dispatch({
@@ -301,6 +303,7 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		});
 	});
 
+	await page.getByRole("tab", { name: "活动" }).click();
 	await expect(page.getByText("合成阶段")).toBeVisible();
 });
 
@@ -338,17 +341,17 @@ test("recovery card keeps plan_approval checkpoint as resume target", async ({ p
 
 	await openChatPanel(page);
 
-	await page.getByRole("button", { name: /开始生成|重新生成|重试失败阶段/ }).click();
+	await page.getByRole("button", { name: /开始生成|重新生成/ }).click();
 
-	await expect(page.getByText("恢复", { exact: true })).toBeVisible();
+	await expect(page.getByRole("button", { name: "继续", exact: true })).toBeVisible();
 
 	await expect.poll(() => routes.resumeCalls).toBe(0);
 
-	await page.getByText("恢复", { exact: true }).click();
+	await page.getByRole("button", { name: "继续", exact: true }).click();
 
 	await expect.poll(() => routes.generateCalls).toBe(1);
 	await expect.poll(() => routes.resumeCalls).toBe(1);
-	await expect(page.getByText("恢复", { exact: true })).toHaveCount(0);
+	await expect(page.getByText(/运行中断于/)).toHaveCount(0);
 });
 
 test("full business flow: generate → plan → confirm → render → confirm → compose → complete", async ({
@@ -423,7 +426,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 	const runStarted = page.waitForResponse(
 		(response) => response.url().endsWith("/api/v1/projects/7/runs") && response.request().method() === "POST",
 	);
-	await page.getByRole("button", { name: /开始生成|重新生成|重试失败阶段/ }).click();
+	await page.getByRole("button", { name: /开始生成|重新生成/ }).click();
 	await runStarted;
 
 	await page.evaluate(() => {
@@ -471,10 +474,10 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		});
 	});
 
-	await expect(page.getByText("确认继续，或输入修改意见")).toBeVisible();
-	await expect(page.getByRole("button", { name: "通过并继续" })).toBeVisible();
+	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
+	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 
-	await page.getByRole("button", { name: "通过并继续" }).click();
+	await page.getByRole("button", { name: "确认继续" }).click();
 
 	await page.evaluate(() => {
 		window.__mockWs.dispatch({
@@ -512,9 +515,9 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		});
 	});
 
-	await expect(page.getByText("确认继续，或输入修改意见")).toBeVisible();
+	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
 
-	await page.getByRole("button", { name: "通过并继续" }).click();
+	await page.getByRole("button", { name: "确认继续" }).click();
 
 	await page.evaluate(() => {
 		window.__mockWs.dispatch({

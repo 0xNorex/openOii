@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { Link } from "react-router-dom";
@@ -15,7 +16,9 @@ import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { buildComicWorkflow } from "~/features/comic-workflow/graph/buildComicWorkflow";
-import { AgentPanel } from "~/features/comic-workflow/agent/AgentPanel";
+import { AgentPanel, type AgentPanelTab } from "~/features/comic-workflow/agent/AgentPanel";
+import type { InboxActions } from "~/features/comic-workflow/agent/InboxPanel";
+import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorColumn } from "~/features/comic-workflow/inspector/InspectorColumn";
 import { PromptBar } from "~/features/workbench/PromptBar";
 import {
@@ -65,6 +68,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const [agentCollapsed, setAgentCollapsed] = useState(
 		() => typeof window !== "undefined" && window.innerWidth < 1440,
 	);
+	const [agentTab, setAgentTab] = useState<AgentPanelTab>("activity");
 	const [assetsOpen, setAssetsOpen] = useState(false);
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 	const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
@@ -124,11 +128,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		}
 	}, [runIsGenerating, projectId, queryClient]);
 
-	useEffect(() => {
-		if (runAwaitingConfirm && runModePreference === "manual") {
-			setAgentCollapsed(false);
-		}
-	}, [runAwaitingConfirm, runModePreference]);
+
 
 	const selectedWorkflowNode = useMemo(() => {
 		if (!project || !selectedNodeId) return null;
@@ -188,7 +188,66 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const workspaceLoading = projectLoading;
 	const isMobileWorkbench = useIsMobileWorkbench();
 
-	const studioStatus = useMemo(
+	const inboxItems = useMemo(
+		() =>
+			deriveInboxItems({
+				awaitingConfirm: runAwaitingConfirm,
+				awaitingAgent: runState.awaitingAgent,
+				recoveryGate: runState.recoveryGate,
+				recoveryControl: runRecoveryControl,
+				isGenerating: hasActiveRun,
+				projectStatus: project?.status,
+				blockingClips: project?.blocking_clips,
+			}),
+		[
+			runAwaitingConfirm,
+			runState.awaitingAgent,
+			runState.recoveryGate,
+			runRecoveryControl,
+			hasActiveRun,
+			project?.status,
+			project?.blocking_clips,
+		],
+	);
+
+	// 有新的待处理条目就展开面板并切到收件箱；自动确认模式下的审批门会自动通过，不打扰；
+	// 清空后回到活动流
+	const seenInboxIds = useRef<Set<string>>(new Set());
+	useEffect(() => {
+		const fresh = inboxItems.filter(
+			(item) =>
+				!seenInboxIds.current.has(item.id) &&
+				!(item.kind === "gate" && runModePreference === "yolo"),
+		);
+		const hadItems = seenInboxIds.current.size > 0;
+		seenInboxIds.current = new Set(inboxItems.map((item) => item.id));
+		if (fresh.length > 0) {
+			setAgentTab("inbox");
+			setAgentCollapsed(false);
+		} else if (hadItems && inboxItems.length === 0) {
+			// 处理完了就回到活动流
+			setAgentTab("activity");
+		}
+	}, [inboxItems, runModePreference]);
+
+	const openInbox = useCallback(() => {
+		setAgentTab("inbox");
+		setAgentCollapsed(false);
+	}, []);
+
+	const inboxActions: InboxActions = {
+		onConfirm: handleConfirm,
+		onRequestChanges: () => {
+			document.querySelector<HTMLTextAreaElement>('[data-shell="prompt-bar"] textarea')?.focus();
+		},
+		onResume: handleResume,
+		onCancel: handleCancel,
+		onRetry: handleGenerate,
+		onSelectShot: (shotId) => canvasEvents.emit("select-workflow-node", { nodeId: `shot:${shotId}` }),
+		retryDisabled: generatePending,
+	};
+
+	const derivedStudioStatus = useMemo(
 		() =>
 			deriveStudioStatus({
 				isGenerating: runIsGenerating,
@@ -214,6 +273,11 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			runCurrentStage,
 			runProgress,
 		],
+	);
+	// 待处理数只认收件箱条目
+	const studioStatus = useMemo(
+		() => ({ ...derivedStudioStatus, pendingCount: inboxItems.length }),
+		[derivedStudioStatus, inboxItems.length],
 	);
 
 	// 标签页标题前缀显示状态，切到别的标签也能看到进度
@@ -352,11 +416,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						awaitingConfirm={runAwaitingConfirm}
 						hasRecovery={hasRecovery}
 						onGenerate={handleGenerate}
-						onResume={handleResume}
 						onCancel={handleCancel}
-						onOpenInbox={() => {
-							setAgentCollapsed(false);
-						}}
+						onOpenInbox={openInbox}
 						generateDisabled={generatePending || hasActiveRun}
 						onOpenVersions={handleOpenVersions}
 						onExport={handleExportWebtoon}
@@ -399,6 +460,10 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						isGenerating={hasActiveRun}
 						collapsed={false}
 						onCollapsedChange={setAgentCollapsed}
+						tab={agentTab}
+						onTabChange={setAgentTab}
+						inboxItems={inboxItems}
+						inboxActions={inboxActions}
 					/>
 				) : null}
 				{!isMobileWorkbench ? (
@@ -426,15 +491,16 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								isGenerating={hasActiveRun}
 								collapsed={agentCollapsed}
 								onCollapsedChange={setAgentCollapsed}
-								pendingCount={studioStatus.pendingCount}
+								tab={agentTab}
+								onTabChange={setAgentTab}
+								inboxItems={inboxItems}
+								inboxActions={inboxActions}
 							/>
 						</div>
 						{/* PromptBar 常驻画布下方：选中 → 提示 → 定点重跑 的核心入口 */}
 						<PromptBar
 							selectionLabel={selectionLabel}
 							awaitingConfirm={runAwaitingConfirm}
-							awaitingAgent={runState.awaitingAgent}
-							recoveryGate={runState.recoveryGate}
 							isGenerating={hasActiveRun}
 							onSendFeedback={handleFeedback}
 							onConfirm={handleConfirm}
@@ -458,8 +524,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				<PromptBar
 					selectionLabel={selectionLabel}
 					awaitingConfirm={runAwaitingConfirm}
-					awaitingAgent={runState.awaitingAgent}
-					recoveryGate={runState.recoveryGate}
 					isGenerating={hasActiveRun}
 					onSendFeedback={handleFeedback}
 					onConfirm={handleConfirm}
