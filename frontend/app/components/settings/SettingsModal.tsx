@@ -340,7 +340,7 @@ export function SettingsModal() {
 	const renderConfigItem = (item: ConfigItem) => (
 		<div
 			key={item.key}
-			className="rounded-md border-2 border-ink/15 bg-paper-200/70 p-2.5"
+			className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5"
 		>
 			<div className="mb-1.5 flex flex-wrap items-center gap-1.5">
 				<span className="font-mono text-xs font-bold">
@@ -386,7 +386,7 @@ export function SettingsModal() {
 		const providerCard = (value: string, title: string, desc: string) => (
 			<label
 				className={`
-						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
+						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast
           ${
 						textProvider === value
 							? "border-info bg-info/10"
@@ -419,7 +419,7 @@ export function SettingsModal() {
 				</div>
 
 				{providerItem && (
-					<div className="rounded-md border-2 border-ink/15 bg-paper-200/70 p-2.5">
+					<div className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5">
 						<div className="mb-2 flex items-center gap-1.5">
 							<span className="font-mono text-xs font-bold">
 								TEXT_PROVIDER
@@ -501,7 +501,7 @@ export function SettingsModal() {
 		const providerCard = (value: string, title: string, desc: string) => (
 			<label
 				className={`
-						  flex cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
+						  flex cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast
           ${
 						imageProvider === value
 							? "border-info bg-info/10"
@@ -534,7 +534,7 @@ export function SettingsModal() {
 				</div>
 
 				{providerItem && (
-					<div className="rounded-md border-2 border-ink/15 bg-paper-200/70 p-2.5">
+					<div className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5">
 						<div className="mb-2 flex items-center gap-1.5">
 							<span className="font-mono text-xs font-bold">
 								IMAGE_PROVIDER
@@ -631,7 +631,7 @@ export function SettingsModal() {
 		const providerCard = (value: string, title: string, desc: string) => (
 			<label
 				className={`
-						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
+						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast
           ${
 						videoProvider === value
 							? "border-info bg-info/10"
@@ -664,7 +664,7 @@ export function SettingsModal() {
 				</div>
 
 				{providerItem && (
-					<div className="rounded-md border-2 border-ink/15 bg-paper-200/70 p-2.5">
+					<div className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5">
 						<div className="mb-2 flex items-center gap-1.5">
 							<span className="font-mono text-xs font-bold">
 								VIDEO_PROVIDER
@@ -770,7 +770,7 @@ export function SettingsModal() {
 				labelledBy="settings-modal-title"
 				className="flex max-h-[92dvh] w-[min(96vw,76rem)] flex-col p-0"
 			>
-				<div className="flex shrink-0 items-center justify-between border-b-2 border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
+				<div className="flex shrink-0 items-center justify-between border-b border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
 					<h3
 						id="settings-modal-title"
 						className="flex items-center gap-1.5 text-md font-bold"
@@ -798,7 +798,7 @@ export function SettingsModal() {
 					<div className="p-3">
 						<div
 							role="alert"
-							className="alert-doodle bg-error/10 text-error-fg border-error border-2 border-ink/20 py-2 text-sm"
+							className="alert-doodle bg-error/10 text-error-fg border border-error py-2 text-sm"
 						>
 							<ExclamationCircleIcon className="h-5 w-5" />
 							<span>加载配置失败，请检查后端服务是否正常运行。</span>
@@ -812,7 +812,7 @@ export function SettingsModal() {
 						className="flex min-h-0 flex-1 flex-col"
 					>
 						<div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-							<nav className="shrink-0 border-b-2 border-ink/15 bg-paper-200/45 p-2 lg:w-56 lg:border-b-0 lg:border-r-2" aria-label="设置分类">
+							<nav className="shrink-0 border-b border-ink/15 bg-paper-200/45 p-2 lg:w-56 lg:border-b-0 lg:border-r" aria-label="设置分类">
 							<div role="tablist" aria-label="设置分类" onKeyDown={handleTabKeyDown} className="flex gap-1.5 overflow-x-auto lg:flex-col">
 								{sections.map((section) => {
 									const cfg = tabConfig[section.key];
@@ -830,9 +830,9 @@ export function SettingsModal() {
 											tabIndex={isActive ? 0 : -1}
 											onClick={() => handleTabChange(section.key)}
 											className={`
-                        flex min-h-9 shrink-0 items-center justify-between gap-2 border-2 px-2.5
+                        touch-target-dense flex shrink-0 items-center justify-between gap-2 border px-2.5
                         text-xs font-semibold lg:w-full
-												border-2 border-ink/20 transition-colors duration-fast
+												border border-ink/20 transition-colors duration-fast
                         ${
 													isActive
 														? "bg-info text-info-content"
@@ -945,7 +945,7 @@ export function SettingsModal() {
 							{alertState.message}
 						</p>
 						{alertState.details && (
-							<div className="mt-2 rounded-md border-2 border-ink/15 bg-paper-200 p-2">
+							<div className="mt-2 rounded-md border border-ink/15 bg-paper-200 p-2">
 								<p className="m-0 whitespace-pre-line text-xs">
 									{alertState.details}
 								</p>

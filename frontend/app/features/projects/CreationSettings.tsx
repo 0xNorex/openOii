@@ -35,7 +35,7 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 
 	return (
 		<details className="border-t border-ink/10 pt-2">
-			<summary className="min-h-9 cursor-pointer py-2 text-xs font-bold">画面设置（可选）· 风格、宇宙、参考图、镜头与角色</summary>
+			<summary className="touch-target-dense cursor-pointer py-2 text-xs font-bold">画面设置（可选）· 风格、宇宙、参考图、镜头与角色</summary>
 			<div className="grid gap-3 pt-2 sm:grid-cols-2">
 				<label className="block text-xs font-bold">
 					画面风格
@@ -77,7 +77,7 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 						value={value.shotCount ?? ""}
 						placeholder="自动"
 						onChange={(event) => set({ shotCount: event.target.value ? Number(event.target.value) : undefined })}
-						className="input-doodle mt-1 h-9 w-full bg-paper-100 text-sm"
+						className="input-doodle touch-target-dense mt-1 h-9 w-full bg-paper-100 text-sm"
 						disabled={disabled}
 					/>
 				</label>

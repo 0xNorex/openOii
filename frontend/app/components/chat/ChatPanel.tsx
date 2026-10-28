@@ -106,18 +106,18 @@ export function ChatPanel({
 			variant={isYolo ? "primary" : "ghost"}
 		size="sm"
 			className="h-8 min-h-8 border-2 px-2 text-xs font-bold"
-			aria-label={isYolo ? "切换交互模式" : "切换 YOLO 模式"}
-			title={isYolo ? "YOLO 模式：自动确认" : "交互模式：逐阶段确认"}
+			aria-label={isYolo ? "切换逐步确认" : "切换自动确认"}
+			title={isYolo ? "自动确认：阶段自动通过" : "逐步确认：每个阶段由你确认"}
 		>
           {isYolo ? (
             <>
               <BoltIcon className="h-3.5 w-3.5" aria-hidden="true" />
-				  YOLO
+				  自动
             </>
           ) : (
             <>
               <AdjustmentsHorizontalIcon className="h-3.5 w-3.5" aria-hidden="true" />
-				  交互
+				  逐步
             </>
           )}
 		</Button>

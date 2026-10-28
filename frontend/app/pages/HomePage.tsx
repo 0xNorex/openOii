@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi, universesApi } from "~/services/api";
 import { Button } from "~/components/ui/Button";
@@ -12,7 +12,8 @@ import { SvgIcon } from "~/components/ui/SvgIcon";
 import { CreationSettings, type CreationSettingsValue } from "~/features/projects/CreationSettings";
 import { toast } from "~/utils/toast";
 import type { CreateProjectPayload } from "~/types";
-import { PlainButton } from "../components/ui/PlainButton";
+import { PlainButton } from "~/components/ui/PlainButton";
+import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 
 const AssetDrawer = lazy(() =>
 	import("~/components/panels/AssetDrawer").then((module) => ({ default: module.AssetDrawer })),
@@ -23,6 +24,12 @@ const HistoryDrawer = lazy(() =>
 
 const DEFAULT_SKILL_ID = "story-anime";
 const DEFAULT_STYLE = "anime";
+
+const EXAMPLE_PROMPTS = [
+	"一个灯塔管理员发现了一张会发光的地图，地图上的岛屿每晚都会移动。",
+	"末班地铁上，一只橘猫带着失忆的女孩寻找她丢失的名字。",
+	"雨夜的旧书店里，少年翻开一本会写下明天的日记。",
+];
 
 export function HomePage() {
 	const navigate = useNavigate();
@@ -48,6 +55,14 @@ export function HomePage() {
 			universeId: Number.isFinite(requestedUniverseId) && requestedUniverseId > 0 ? requestedUniverseId : null,
 		}));
 	}, [requestedUniverseId]);
+
+	const { data: projects = [] } = useQuery({
+		queryKey: ["projects"],
+		queryFn: () => projectsApi.list(),
+	});
+	const recentProjects = [...projects]
+		.sort((a, b) => (b.updated_at ?? "").localeCompare(a.updated_at ?? ""))
+		.slice(0, 3);
 
 	const { data: universes = [] } = useQuery({
 		queryKey: ["universes"],
@@ -136,7 +151,7 @@ export function HomePage() {
 								icon={<SvgIcon name="pencil" size={16} />}
 								title="故事创意"
 								meta={story.length + "/5000"}
-								className="min-h-[20rem] border-2 border-ink/15 bg-paper-100 p-3 sm:min-h-[24rem] sm:p-4"
+								className="min-h-[20rem] rounded-lg border border-ink/15 bg-surface p-3 sm:min-h-[24rem] sm:p-4"
 							>
 								<div className="flex min-h-0 flex-1 flex-col">
 									<textarea
@@ -153,6 +168,20 @@ export function HomePage() {
 										autoComplete="off"
 										spellCheck
 									/>
+									{!story ? (
+										<div className="mt-2 flex flex-col gap-1.5" aria-label="示例提示">
+											<span className="text-xs text-ink-muted">试试这些开头：</span>
+											{EXAMPLE_PROMPTS.map((prompt) => (
+												<PlainButton
+													key={prompt}
+													className="touch-target-dense rounded-md border border-ink/15 px-3 py-2 text-left text-sm text-ink-muted transition-colors duration-fast hover:border-primary hover:text-ink"
+													onClick={() => setStory(prompt)}
+												>
+													{prompt}
+												</PlainButton>
+											))}
+										</div>
+									) : null}
 									{story.length > 4500 ? <p className="m-0 mt-1 text-xs font-bold text-warning-fg">还可输入 {5000 - story.length} 字</p> : null}
 								</div>
 
@@ -161,14 +190,14 @@ export function HomePage() {
 										<span className="font-mono text-xs uppercase text-ink-muted">选择创作模式</span>
 										<div className="grid grid-cols-2 gap-2">
 											{[
-												{ value: "review", label: "交互模式", description: "每个阶段由你确认", icon: "check" },
-												{ value: "quick", label: "YOLO 模式", description: "自动确认，一口气生成", icon: "zap" },
+												{ value: "review", label: "逐步确认", description: "每个阶段由你确认", icon: "check" },
+												{ value: "quick", label: "自动确认", description: "阶段自动通过，一口气生成", icon: "zap" },
 											].map((mode) => {
 												const active = creationMode === mode.value;
 												return (
 													<PlainButton
 														key={mode.value}
-														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 border-2 px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-ink/15 bg-paper-100 text-ink-muted hover:border-primary/40")}
+														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-ink/15 bg-surface text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
@@ -200,6 +229,27 @@ export function HomePage() {
 								{selectedUniverse ? <p className="m-0 text-xs text-ink-muted">将加入「{selectedUniverse.name}」宇宙 · 第 {chapterNumber} 章</p> : null}
 								{createMutation.error ? <p className="m-0 border-l-2 border-error bg-error/10 px-3 py-2 text-xs text-error-fg" role="alert">{createMutation.error.message || "创建项目失败，请重试。"}</p> : null}
 							</DeskSection>
+							{recentProjects.length > 0 ? (
+								<section aria-labelledby="recent-projects" className="flex flex-col gap-2">
+									<div className="flex items-center justify-between">
+										<h2 id="recent-projects" className="m-0 text-sm text-ink-muted">最近项目</h2>
+										<Link to="/projects" className="touch-target-dense inline-flex items-center px-2 text-sm text-primary hover:underline">全部项目</Link>
+									</div>
+									<ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-3">
+										{recentProjects.map((project) => {
+											const status = getProjectStatusMeta(project.status);
+											return (
+												<li key={project.id}>
+													<Link to={"/project/" + project.id} className="flex min-h-[var(--touch-target-min)] flex-col gap-1 rounded-md border border-ink/15 bg-surface px-3 py-2 transition-colors duration-fast hover:border-primary">
+														<span className="truncate text-sm font-semibold text-ink">{project.title}</span>
+														<span className={"text-xs " + status.textCls}>{status.label}</span>
+													</Link>
+												</li>
+											);
+										})}
+									</ul>
+								</section>
+							) : null}
 						</div>
 					</PageContent>
 				</PageBody>

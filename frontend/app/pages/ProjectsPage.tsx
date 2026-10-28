@@ -46,6 +46,7 @@ export function ProjectsPage() {
 	const queryClient = useQueryClient();
 	const [deleteTarget, setDeleteTarget] = useState<number[] | null>(null);
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+	const [selecting, setSelecting] = useState(false);
 
 	const {
 		data: projects,
@@ -127,6 +128,11 @@ export function ProjectsPage() {
 		setSelectedIds(checked ? visibleProjects.map((project) => project.id) : []);
 	};
 
+	const toggleSelecting = () => {
+		setSelecting((on) => !on);
+		setSelectedIds([]);
+	};
+
 	const handleConfirmDelete = () => {
 		if (deleteTarget && deleteTarget.length > 0) {
 			deleteMutation.mutate(deleteTarget);
@@ -145,11 +151,19 @@ export function ProjectsPage() {
 					description="继续制作中的故事，或从新想法开始一部漫剧。"
 					actions={
 						<>
-							<div className="grid grid-cols-3 gap-1.5">
+							<div className="grid grid-cols-2 gap-1.5">
 								<Metric label="全部" value={visibleProjects.length} />
 								<Metric label="成片" value={completedCount} />
-								<Metric label="已选" value={selectedCount} />
 							</div>
+							<Button
+								variant="secondary"
+								size="sm"
+								onClick={toggleSelecting}
+								disabled={visibleProjects.length === 0}
+								aria-pressed={selecting}
+							>
+								{selecting ? "完成" : "选择"}
+							</Button>
 							<Link to="/">
 								<Button size="sm">
 									<PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -160,12 +174,13 @@ export function ProjectsPage() {
 					}
 				/>
 
+				{selecting ? (
 				<section
-					className="border-y-2 border-ink/15 bg-paper-100/85"
+					className="rounded-lg border border-ink/15 bg-surface"
 					aria-label="项目批量操作"
 				>
 					<div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between">
-						<label className="touch-target-dense flex cursor-pointer select-none items-center gap-2 px-1.5 text-xs font-semibold text-ink-muted">
+						<label className="touch-target flex cursor-pointer select-none items-center gap-2 px-1.5 text-xs font-semibold text-ink-muted">
 							<input
 								type="checkbox"
 								checked={allSelected}
@@ -191,6 +206,7 @@ export function ProjectsPage() {
 						</div>
 					</div>
 				</section>
+				) : null}
 
 				<section className="min-h-0 flex-1" aria-label="项目列表">
 					{isLoading ? (
@@ -200,10 +216,10 @@ export function ProjectsPage() {
 					) : visibleProjects.length === 0 ? (
 						<EmptyState />
 					) : (
-						<div className="overflow-hidden border-y-2 border-ink/15 bg-paper-100">
+						<div className="overflow-hidden rounded-lg border border-ink/15 bg-surface">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
-							<div className="hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem] sm:gap-3 sm:px-3">
-								<span />
+							<div className={"hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
+								{selecting ? <span /> : null}
 								<span>项目</span>
 								<span>状态</span>
 								<span>更新</span>
@@ -214,6 +230,7 @@ export function ProjectsPage() {
 									<ProjectRow
 										key={project.id}
 										project={project}
+										selecting={selecting}
 										selected={selectedIds.includes(project.id)}
 										onSelectedChange={(checked) =>
 											handleToggleSelect(project.id, checked)
@@ -256,13 +273,18 @@ function Metric({ label, value }: { label: string; value: number }) {
 	);
 }
 
+const ROW_COLS = "sm:grid-cols-[minmax(0,1fr)_7rem_7rem_2.75rem]";
+const ROW_COLS_SELECTING = "sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem]";
+
 function ProjectRow({
 	project,
+	selecting,
 	selected,
 	onSelectedChange,
 	onDelete,
 }: {
 	project: Project;
+	selecting: boolean;
 	selected: boolean;
 	onSelectedChange: (checked: boolean) => void;
 	onDelete: () => void;
@@ -272,8 +294,9 @@ function ProjectRow({
 
 	return (
 		// <sm 卡片式三列（勾选｜内容｜删除，状态行落到第二行）；sm+ 维持五列表格网格
-		<article className="grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-paper-200/55 sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem] sm:items-center sm:gap-3 sm:px-3 sm:py-4">
-			<label className="touch-target-dense flex cursor-pointer items-center justify-center rounded-md hover:bg-paper-200">
+		<article className={"grid min-h-20 items-start gap-x-2 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-paper-200/55 sm:items-center sm:gap-3 sm:px-3 sm:py-4 " + (selecting ? "grid-cols-[auto_minmax(0,1fr)_auto] " + ROW_COLS_SELECTING : "grid-cols-[minmax(0,1fr)_auto] " + ROW_COLS)}>
+			{selecting ? (
+			<label className="touch-target flex cursor-pointer items-center justify-center rounded-md hover:bg-paper-200">
 				<input
 					type="checkbox"
 					aria-label={`选择项目 ${project.title}`}
@@ -282,6 +305,7 @@ function ProjectRow({
 					className="checkbox checkbox-sm"
 				/>
 			</label>
+			) : null}
 
 			<Link
 				to={`/project/${project.id}`}
@@ -306,13 +330,13 @@ function ProjectRow({
 						计划 {project.target_shot_count ?? "自动"} 镜头
 					</span>
 					{project.creation_mode ? (
-						<span>{project.creation_mode === "quick" ? "YOLO 模式" : project.creation_mode === "review" ? "交互模式" : project.creation_mode}</span>
+						<span>{project.creation_mode === "quick" ? "自动确认" : project.creation_mode === "review" ? "逐步确认" : project.creation_mode}</span>
 					) : null}
 				</div>
 			</Link>
 
 			{/* <sm 状态胶囊+时间戳合并为一行小字；sm+ 用 contents 还原为两个独立网格单元 */}
-			<div className="col-start-2 row-start-2 flex flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
+			<div className={(selecting ? "col-start-2" : "col-start-1") + " row-start-2 flex flex-wrap items-center gap-x-2 gap-y-1 sm:contents"}>
 				<span
 					className={`inline-flex min-h-7 items-center justify-center rounded-full border px-2 text-xs font-bold ${status.badgeCls}`}
 				>
@@ -325,7 +349,7 @@ function ProjectRow({
 			</div>
 
 			<IconButton
-				className="col-start-3 row-start-1 justify-self-end text-error-fg hover:bg-error-bg sm:col-auto sm:row-auto"
+				className={(selecting ? "col-start-3" : "col-start-2") + " row-start-1 justify-self-end text-error-fg hover:bg-error-bg sm:col-auto sm:row-auto"}
 				onClick={onDelete}
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"

@@ -162,7 +162,7 @@ export function UniverseDetailPage() {
 			<PageShell data-shell="universe-detail-error">
 				<TopBar />
 				<div className="flex flex-1 items-center justify-center p-4">
-					<div className="flex min-h-[10rem] w-full max-w-md flex-col items-center justify-center gap-3 rounded-lg border-2 border-error/25 bg-error/5 px-4 text-center">
+					<div className="flex min-h-[10rem] w-full max-w-md flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-4 text-center">
 						<div>
 							<p className="m-0 text-md font-bold text-error-fg">
 								宇宙加载失败

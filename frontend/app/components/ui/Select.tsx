@@ -21,7 +21,7 @@ export function Select({
 				{...props}
 				className={clsx(
 					"input-doodle w-full appearance-none bg-paper-100 pr-8 text-ink",
-					compact ? "h-8 min-h-8 px-2 py-1 text-xs" : "h-9 min-h-9 px-2.5 py-1.5 text-base",
+					compact ? "h-8 min-h-8 px-2 py-1 text-xs" : "h-9 touch-target-dense px-2.5 py-1.5 text-base",
 					className,
 				)}
 			/>

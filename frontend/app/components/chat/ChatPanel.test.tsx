@@ -126,7 +126,7 @@ describe("ChatPanel", () => {
 
 		renderChatPanel(false);
 
-		await user.click(screen.getByRole("button", { name: "切换 YOLO 模式" }));
+		await user.click(screen.getByRole("button", { name: "切换自动确认" }));
 
 		expect(useEditorStore.getState().runMode).toBe("yolo");
 	});
@@ -146,13 +146,13 @@ describe("ChatPanel", () => {
 
 		renderChatPanel(true);
 
-		await user.click(screen.getByRole("button", { name: "切换 YOLO 模式" }));
+		await user.click(screen.getByRole("button", { name: "切换自动确认" }));
 
 		expect(useEditorStore.getState().runMode).toBe("yolo");
 		expect(onConfirm).toHaveBeenLastCalledWith(undefined);
 	});
 
-	it("hides manual confirm bar in YOLO mode", () => {
+	it("hides manual confirm bar in auto-confirm mode", () => {
 		seedRunState({ awaitingConfirm: true, awaitingAgent: "plan" });
 		useEditorStore.getState().setRunMode("yolo");
 

@@ -25,7 +25,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 	return (
 		<div className="group relative" data-shell="universe-card">
 			<Link to={`/universes/${universe.id}`} className="block">
-				<Card className="h-full border-2 !p-3 transition-[box-shadow,transform] duration-fast hover:-translate-y-px sm:!p-4">
+				<Card className="h-full !p-3 transition-colors duration-fast hover:border-primary sm:!p-4">
 					{universe.cover_image_url ? (
 						<div className="-mx-1 -mt-1 mb-3 h-24 overflow-hidden border border-ink/10">
 							<img

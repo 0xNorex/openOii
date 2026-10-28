@@ -204,6 +204,8 @@ describe('ProjectsPage', () => {
 
     render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
 
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '选择' }));
     await user.click(screen.getByLabelText('全选'));
     await user.click(screen.getByRole('button', { name: '批量删除（2）' }));
 
@@ -289,8 +291,10 @@ describe('ProjectsPage', () => {
     expect(screen.getByText('Project 2')).toBeInTheDocument();
   });
 
-  it('uses card-style rows below sm and keeps the five-column table grid from sm up', () => {
+  it('uses card-style rows below sm and keeps the five-column table grid from sm up', async () => {
+    const user = userEvent.setup();
     const { container } = render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+    await user.click(screen.getByRole('button', { name: '选择' }));
 
     // 表头 <sm 隐藏，sm+ 才按表格网格展示
     const headerRow = screen.getByText('状态').parentElement;
@@ -316,10 +320,13 @@ describe('ProjectsPage', () => {
     expect(deleteButton).toHaveClass('touch-target-dense');
     const batchButton = screen.getByRole('button', { name: '批量删除（0）' });
     expect(batchButton).toHaveClass('touch-target-dense');
+    expect(screen.getByRole('checkbox', { name: '选择项目 Project 1' }).closest('label')).toHaveClass('touch-target');
   });
 
-  it('labels per-project selection and delete controls for assistive technology', () => {
+  it('labels per-project selection and delete controls for assistive technology', async () => {
+    const user = userEvent.setup();
     render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+    await user.click(screen.getByRole('button', { name: '选择' }));
 
     expect(screen.getByRole('checkbox', { name: '选择项目 Project 1' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: '选择项目 Project 2' })).toBeInTheDocument();

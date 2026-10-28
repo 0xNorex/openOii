@@ -27,7 +27,7 @@ export function SharedCharacterCard({
 		>
 			<div className="mb-1.5 flex items-center gap-2">
 				{imageUrl ? (
-					<div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border-2 border-primary/25">
+					<div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-primary/25">
 						<img
 							src={imageUrl}
 							alt={character.name}
@@ -38,7 +38,7 @@ export function SharedCharacterCard({
 						/>
 					</div>
 				) : (
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border-2 border-ink/10 bg-paper-200">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ink/10 bg-paper-200">
 						<UserIcon className="h-4 w-4 text-ink/30" aria-hidden="true" />
 					</div>
 				)}

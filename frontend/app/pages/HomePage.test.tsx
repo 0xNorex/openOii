@@ -8,6 +8,13 @@ import { projectsApi } from "~/services/api";
 
 vi.mock("~/services/api", () => ({
 	projectsApi: {
+		list: vi.fn(() =>
+			Promise.resolve([
+				{ id: 1, title: "旧项目一", status: "ready", updated_at: "2026-01-01T00:00:00Z" },
+				{ id: 2, title: "旧项目二", status: "draft", updated_at: "2026-01-03T00:00:00Z" },
+				{ id: 3, title: "旧项目三", status: "planning", updated_at: "2026-01-02T00:00:00Z" },
+				{ id: 4, title: "旧项目四", status: "draft", updated_at: "2025-12-01T00:00:00Z" },
+			])),
 		create: vi.fn(() => Promise.resolve({ id: 7 })),
 		uploadReference: vi.fn(() => Promise.resolve({ url: "/r.png", reference_images: ["/r.png"] })),
 	},
@@ -75,11 +82,23 @@ describe("HomePage", () => {
 		expect(screen.queryByRole("heading", { name: "创作设置" })).toBeNull();
 	});
 
-	it("offers interactive and YOLO creation modes", async () => {
+	it("lists the three most recent projects and fills an example prompt", async () => {
 		const user = userEvent.setup();
 		renderHomePage();
-		const interactive = screen.getByRole("button", { name: /交互模式/ });
-		const yolo = screen.getByRole("button", { name: /YOLO 模式/ });
+		const recent = await screen.findByRole("region", { name: "最近项目" });
+		const links = Array.from(recent.querySelectorAll("li a")).map((a) => a.textContent);
+		expect(links).toEqual(["旧项目二草稿", "旧项目三规划中", "旧项目一成片可用"]);
+		const example = screen.getAllByRole("button", { name: /灯塔管理员/ })[0];
+		await user.click(example);
+		expect(screen.getByLabelText("输入你的故事创意")).toHaveValue(example.textContent);
+		expect(screen.queryByRole("button", { name: /灯塔管理员/ })).toBeNull();
+	});
+
+	it("offers step-by-step and auto-confirm creation modes", async () => {
+		const user = userEvent.setup();
+		renderHomePage();
+		const interactive = screen.getByRole("button", { name: /逐步确认/ });
+		const yolo = screen.getByRole("button", { name: /自动确认/ });
 		expect(interactive).toHaveAttribute("aria-pressed", "true");
 		expect(yolo).toHaveAttribute("aria-pressed", "false");
 		await user.click(yolo);
@@ -125,13 +144,13 @@ describe("HomePage", () => {
 		expect(uploadReference).toHaveBeenCalledWith(7, file);
 	});
 
-	it("creates a YOLO project and starts it on the workbench", async () => {
+	it("creates an auto-confirm project and starts it on the workbench", async () => {
 		const user = userEvent.setup();
 		renderHomePage();
 		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {
 			target: { value: "A quick story" },
 		});
-		await user.click(screen.getByRole("button", { name: /YOLO 模式/ }));
+		await user.click(screen.getByRole("button", { name: /自动确认/ }));
 		await user.click(screen.getByRole("button", { name: "开始创作" }));
 		expect(await screen.findByTestId("location")).toHaveTextContent("/project/7?autoStart=true");
 		expect(create).toHaveBeenCalledWith(

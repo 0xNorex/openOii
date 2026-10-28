@@ -199,7 +199,7 @@ export function TopBar({ projectId }: TopBarProps) {
 	const { pathname } = useLocation();
 
 	const chromeBtn =
-		"touch-target-dense !h-8 !min-h-8 gap-1 !px-2 transition-colors duration-fast";
+		"touch-target-dense !h-8 gap-1 !px-2 transition-colors duration-fast";
 
 	const homeActive = pathname === "/";
 	const projectsActive =

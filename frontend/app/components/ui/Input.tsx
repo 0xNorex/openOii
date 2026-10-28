@@ -22,7 +22,7 @@ export function Input({ label, error, className, ...props }: InputProps) {
       <input
         id={id}
         className={clsx(
-          "input-doodle h-9 min-h-9 w-full px-2.5 py-1.5 text-base",
+          "input-doodle h-9 touch-target-dense w-full px-2.5 py-1.5 text-base",
           error && "border-error",
           className,
         )}
