@@ -49,7 +49,7 @@ const BANNED: Array<[RegExp, string]> = [
 ];
 
 /** 漫画点缀白名单（spec §7.6）：CMYK 偏移框只在成片卡上 */
-const COMIC_FRAME_OWNERS = ["app/features/comic-workflow/canvas/shapes/WorkflowShapeUtils.tsx"];
+const COMIC_FRAME_OWNERS = ["app/features/comic-workflow/canvas/WorkflowCards.tsx"];
 
 /** 弹层只有一个原语：ui/Dialog（原生 <dialog> 顶层），其余文件不许手搓 */
 const DIALOG_OWNERS = ["app/components/ui/Dialog.tsx", "app/setupTests.ts"];
