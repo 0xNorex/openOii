@@ -65,7 +65,7 @@ describe('ConfirmModal', () => {
     const user = userEvent.setup();
     render(<ConfirmModal {...defaultProps} />);
 
-    await user.click(screen.getByRole('dialog').parentElement!);
+    await user.click(screen.getByRole('dialog'));
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
   });
 

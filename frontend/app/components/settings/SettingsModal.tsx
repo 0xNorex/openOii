@@ -4,7 +4,7 @@ import { useSettingsStore } from "~/stores/settingsStore";
 import { configApi } from "~/services/api";
 import type { ConfigItem, ConfigValue } from "~/types";
 import { ConfigInput } from "./ConfigInput";
-import { useDialogFocus } from "~/components/ui/useDialogFocus";
+import { Dialog } from "~/components/ui/Dialog";
 import { groupConfigs } from "~/utils/configGroups";
 import {
 	XMarkIcon,
@@ -70,12 +70,6 @@ export function SettingsModal() {
 	}, [config]);
 
 	const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-	const modalRef = useRef<HTMLDivElement>(null);
-	const alertRef = useRef<HTMLDivElement>(null);
-	useDialogFocus(modalRef, isModalOpen, closeModal);
-	useDialogFocus(alertRef, isModalOpen && alertState.show, () => {
-		setAlertState((current) => ({ ...current, show: false }));
-	});
 
 	// 切换标签页
 	const handleTabChange = (tab: string) => {
@@ -765,14 +759,13 @@ export function SettingsModal() {
 	};
 
 	return (
-		<div className="dialog-overlay">
-			<div
-				ref={modalRef}
-				tabIndex={-1}
-				className="dialog-panel flex max-h-[92dvh] w-[min(96vw,76rem)] flex-col p-0"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="settings-modal-title"
+		<>
+			<Dialog
+				open
+				onClose={closeModal}
+				closeOnBackdrop={false}
+				labelledBy="settings-modal-title"
+				className="flex max-h-[92dvh] w-[min(96vw,76rem)] flex-col p-0"
 			>
 				<div className="flex shrink-0 items-center justify-between border-b-2 border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
 					<h3
@@ -924,61 +917,62 @@ export function SettingsModal() {
 						</div>
 					</form>
 				)}
-			</div>
+			</Dialog>
 
-			{alertState.show && (
-				<div className="dialog-overlay z-popover">
-					<div ref={alertRef} tabIndex={-1} className="dialog-panel max-w-md p-4" role="dialog" aria-modal="true" aria-labelledby="settings-alert-title">
-						<div className="flex items-start gap-2.5">
-							<div
-								className={`shrink-0 ${
-									alertState.type === "success"
-										? "text-success"
-										: alertState.type === "error"
-											? "text-error"
-											: "text-warning"
-								}`}
-							>
-								{alertState.type === "success" ? (
-									<CheckCircleIcon className="h-6 w-6" />
-								) : (
-									<ExclamationCircleIcon className="h-6 w-6" />
-								)}
-							</div>
+			<Dialog
+				open={alertState.show}
+				onClose={() => setAlertState((current) => ({ ...current, show: false }))}
+				labelledBy="settings-alert-title"
+				className="max-w-md p-4"
+			>
+				<div className="flex items-start gap-2.5">
+					<div
+						className={`shrink-0 ${
+							alertState.type === "success"
+								? "text-success"
+								: alertState.type === "error"
+									? "text-error"
+									: "text-warning"
+						}`}
+					>
+						{alertState.type === "success" ? (
+							<CheckCircleIcon className="h-6 w-6" />
+						) : (
+							<ExclamationCircleIcon className="h-6 w-6" />
+						)}
+					</div>
 
-							<div className="min-w-0 flex-1">
-								<h3 id="settings-alert-title" className="mb-1 font-heading text-md font-bold">
-									{alertState.title}
-								</h3>
-								<p className="m-0 text-sm text-ink/80">
-									{alertState.message}
+					<div className="min-w-0 flex-1">
+						<h3 id="settings-alert-title" className="mb-1 font-heading text-md font-bold">
+							{alertState.title}
+						</h3>
+						<p className="m-0 text-sm text-ink/80">
+							{alertState.message}
+						</p>
+						{alertState.details && (
+							<div className="mt-2 rounded-md border-2 border-ink/15 bg-paper-200 p-2">
+								<p className="m-0 whitespace-pre-line text-xs">
+									{alertState.details}
 								</p>
-								{alertState.details && (
-									<div className="mt-2 rounded-md border-2 border-ink/15 bg-paper-200 p-2">
-										<p className="m-0 whitespace-pre-line text-xs">
-											{alertState.details}
-										</p>
-									</div>
-								)}
 							</div>
-						</div>
-
-						<div className="dialog-actions">
-							<button
-								type="button"
-								onClick={() => {
-									setAlertState({ ...alertState, show: false });
-									closeModal();
-								}}
-								className="btn-doodle bg-primary text-primary-content h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
-							>
-								确定
-							</button>
-						</div>
+						)}
 					</div>
 				</div>
-			)}
-		</div>
+
+				<div className="dialog-actions">
+					<button
+						type="button"
+						onClick={() => {
+							setAlertState({ ...alertState, show: false });
+							closeModal();
+						}}
+						className="btn-doodle bg-primary text-primary-content h-8 min-h-8 border-2 border-ink/20 px-3 text-xs"
+					>
+						确定
+					</button>
+				</div>
+			</Dialog>
+		</>
 	);
 }
 

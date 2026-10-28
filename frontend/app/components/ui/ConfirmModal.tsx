@@ -1,6 +1,6 @@
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { useDialogFocus } from "./useDialogFocus";
+import { Dialog } from "./Dialog";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -25,13 +25,8 @@ export function ConfirmModal({
   variant = "danger",
   isLoading = false,
 }: ConfirmModalProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  useDialogFocus(panelRef, isOpen, () => {
-    if (!isLoading) onClose();
-  }, cancelRef);
-
-  if (!isOpen) return null;
+  const titleId = useId();
 
   const variantStyles = {
     danger: {
@@ -54,59 +49,52 @@ export function ConfirmModal({
   const styles = variantStyles[variant];
 
   return (
-    <div
-      className="dialog-overlay"
-      onClick={(event) => {
-        if (!isLoading && event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      dismissible={!isLoading}
+      labelledBy={titleId}
+      initialFocusRef={cancelRef}
+      className="w-full max-w-md p-4"
     >
-      <div
-        ref={panelRef}
-        className="dialog-panel w-full max-w-md p-4"
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-modal-title"
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${styles.iconBg}`}
-          >
-            <ExclamationTriangleIcon className={`h-5 w-5 ${styles.icon}`} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <h3
-              id="confirm-modal-title"
-              className="m-0 font-heading text-md font-bold"
-            >
-              {title}
-            </h3>
-            <p className="m-0 mt-1 text-sm text-ink-muted">{message}</p>
-          </div>
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${styles.iconBg}`}
+        >
+          <ExclamationTriangleIcon className={`h-5 w-5 ${styles.icon}`} />
         </div>
 
-        <div className="dialog-actions">
-          <button
-            ref={cancelRef}
-            type="button"
-            className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
-            onClick={onClose}
-            disabled={isLoading}
+        <div className="min-w-0 flex-1">
+          <h3
+            id={titleId}
+            className="m-0 font-heading text-md font-bold"
           >
-            {cancelText}
-          </button>
-          <button
-            type="button"
-            className={`btn-doodle ${styles.button} h-9 min-h-9 border-2 border-ink/20 px-3 text-sm`}
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
-            {isLoading && <span className=" spinner-doodle h-4 w-4" />}
-            {confirmText}
-          </button>
+            {title}
+          </h3>
+          <p className="m-0 mt-1 text-sm text-ink-muted">{message}</p>
         </div>
       </div>
-    </div>
+
+      <div className="dialog-actions">
+        <button
+          ref={cancelRef}
+          type="button"
+          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          {cancelText}
+        </button>
+        <button
+          type="button"
+          className={`btn-doodle ${styles.button} h-9 min-h-9 border-2 border-ink/20 px-3 text-sm`}
+          onClick={onConfirm}
+          disabled={isLoading}
+        >
+          {isLoading && <span className=" spinner-doodle h-4 w-4" />}
+          {confirmText}
+        </button>
+      </div>
+    </Dialog>
   );
 }

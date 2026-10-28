@@ -50,7 +50,7 @@ describe("Modal", () => {
         content
       </Modal>
     );
-    fireEvent.click(screen.getByRole("dialog").parentElement!);
+    fireEvent.click(screen.getByRole("dialog"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

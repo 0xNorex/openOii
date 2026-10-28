@@ -173,12 +173,38 @@
     @apply border-b border-ink/10 px-2 py-1.5;
   }
 
-  .dialog-overlay {
-    @apply fixed inset-0 z-modal flex items-center justify-center bg-neutral/45 p-4;
+  /* Native <dialog> in the top layer (ui/Dialog.tsx): it fills the viewport
+     so a click on the empty area around the panel is a backdrop click. */
+  .dialog {
+    @apply m-0 h-full max-h-none w-full max-w-none overflow-hidden border-0 bg-transparent p-4 text-ink;
+  }
+
+  .dialog[open] {
+    @apply flex items-center justify-center;
+  }
+
+  .dialog::backdrop {
+    @apply bg-neutral/45;
+  }
+
+  .dialog-sheet-right[open] {
+    @apply items-stretch justify-end p-0;
+  }
+
+  .dialog-sheet-bottom[open] {
+    @apply items-end p-0;
   }
 
   .dialog-panel {
-    @apply relative z-10 max-h-[90dvh] overflow-y-auto rounded-lg border-2 border-ink/20 bg-paper-100 shadow-brutal-sm;
+    @apply relative max-h-[90dvh] overflow-y-auto rounded-lg border-2 border-ink/20 bg-paper-100 shadow-brutal-sm;
+  }
+
+  .dialog-sheet-right .dialog-panel {
+    @apply h-full max-h-none rounded-none border-y-0 border-r-0;
+  }
+
+  .dialog-sheet-bottom .dialog-panel {
+    @apply w-full rounded-b-none border-b-0;
   }
 
   .dialog-actions {
