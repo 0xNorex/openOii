@@ -6,7 +6,9 @@
 
 @layer base {
   /* placeholder 用语义令牌，浏览器默认灰在纸色底上对比度不够 */
-  ::placeholder {
+  /* 需与 Tailwind preflight 的 input::placeholder 同等特异性才能覆盖 */
+  input::placeholder,
+  textarea::placeholder {
     color: var(--ink-muted);
     opacity: 1;
   }
@@ -265,6 +267,16 @@
   --xy-selection-background-color: rgb(var(--color-primary) / 0.08);
   --xy-selection-border: 1px dashed rgb(var(--color-primary));
   font-family: var(--font-sans);
+}
+
+/* 保留 React Flow 署名，但用主题色和 11px 字号保证可读 */
+.infinite-canvas-container .react-flow__attribution {
+  background: rgb(var(--color-paper-100) / 0.8);
+}
+
+.infinite-canvas-container .react-flow__attribution a {
+  color: var(--ink-muted);
+  font-size: 11px;
 }
 
 /* 选中态由卡片自身的 ring 表达，去掉 React Flow 默认的节点轮廓 */
