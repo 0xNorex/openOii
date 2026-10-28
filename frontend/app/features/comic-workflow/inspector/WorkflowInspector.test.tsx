@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { canvasEvents } from "~/components/canvas/canvasEvents";
 import type { Character } from "~/types";
 import type { ComicWorkflowNode } from "../graph/types";
 import { WorkflowInspector } from "./WorkflowInspector";
@@ -72,9 +73,35 @@ describe("WorkflowInspector", () => {
 			/>,
 		);
 
-		await user.click(screen.getByRole("button", { name: "操作" }));
+		await user.click(screen.getByRole("button", { name: "生成" }));
 
 		expect(screen.getByText("生成运行中，结构写入操作已锁定。")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /批准/ })).toBeDisabled();
+	});
+
+	it("splits the inspector into four sections, starting at 选区", async () => {
+		const user = userEvent.setup();
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
+
+		for (const name of ["选区", "属性", "生成", "历史"]) {
+			expect(screen.getByRole("button", { name })).toBeInTheDocument();
+		}
+		expect(screen.getByText("一致性特征")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "属性" }));
+		expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
+	});
+
+	it("opens the version compare drawer for the selection from 历史", async () => {
+		const user = userEvent.setup();
+		const seen = vi.fn();
+		const off = canvasEvents.on("version-history", seen);
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
+
+		await user.click(screen.getByRole("button", { name: "历史" }));
+		expect(screen.getByText("v1")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "对比版本" }));
+		expect(seen).toHaveBeenCalledWith({ entityType: "character", entityId: 1 });
+		off();
 	});
 });

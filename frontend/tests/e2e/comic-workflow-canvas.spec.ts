@@ -294,9 +294,9 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(card).toBeVisible();
 
 	await card.click();
-	await expect(page.getByRole("button", { name: "概览" })).toBeVisible();
-	await expect(page.getByRole("button", { name: "内容" })).toBeVisible();
-	await expect(page.getByRole("button", { name: "操作" })).toBeVisible();
+	for (const name of ["选区", "属性", "生成", "历史"]) {
+		await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+	}
 
 	await expect(page.getByRole("button", { name: "重排镜头顺序" })).toHaveCount(0);
 

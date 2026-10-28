@@ -95,7 +95,11 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 
 	useEffect(() => {
 		return canvasEvents.on("version-history", (target) => {
-			setVersionTarget({ entityType: target.entityType, entityId: target.entityId });
+			setVersionTarget(
+				target.entityType && target.entityId != null
+					? { entityType: target.entityType, entityId: target.entityId }
+					: null,
+			);
 			setVersionOpen(true);
 		});
 	}, []);

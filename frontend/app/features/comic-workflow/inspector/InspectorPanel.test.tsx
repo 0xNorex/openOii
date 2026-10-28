@@ -45,4 +45,13 @@ describe("InspectorPanel", () => {
 		await userEvent.click(screen.getByRole("button", { name: "展开检查器" }));
 		expect(onOpenChange).toHaveBeenCalledWith(true);
 	});
+
+	it("collapses on Escape", async () => {
+		const onOpenChange = vi.fn();
+		render(<InspectorPanel {...base} selectedNode={shot} open onOpenChange={onOpenChange} />);
+
+		screen.getByRole("button", { name: "收起检查器" }).focus();
+		await userEvent.keyboard("{Escape}");
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
 });

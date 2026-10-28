@@ -3,7 +3,8 @@ export interface CanvasEvents {
   "preview-image": { src: string; alt: string };
   "preview-video": { src: string; title: string };
   "select-workflow-node": { nodeId: string };
-  "version-history": { entityType: "character" | "shot"; entityId: number };
+  /** 不带实体时打开项目级版本对比。 */
+  "version-history": { entityType?: "character" | "shot"; entityId?: number };
   /** 成片卡「重新合成」→ ProjectPage 复用生成/恢复通路 */
   "request-regenerate": { source: "output-card" };
 }

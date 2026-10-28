@@ -55,6 +55,12 @@ export function InspectorPanel({
 			className="absolute bottom-16 right-3 top-3 z-panel flex w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
 			aria-label="检查器"
 			data-shell="inspector-panel"
+			onKeyDown={(event) => {
+				// Esc 收起；输入框里的 Esc 留给输入框
+				const target = event.target as HTMLElement;
+				if (event.key !== "Escape" || target.closest("input, textarea, select")) return;
+				onOpenChange(false);
+			}}
 		>
 			<div className="flex items-center justify-between gap-1 border-b border-ink/10 py-1 pl-3 pr-1">
 				<h2 className="text-sm font-semibold">{hasSelection ? "检查器" : "项目"}</h2>
