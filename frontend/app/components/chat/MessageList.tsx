@@ -177,7 +177,7 @@ export function MessageList({ messages }: MessageListProps) {
 				: msg.role === "tool_result"
 					? "工具结果"
 					: msg.role === "step"
-						? "执行中"
+						? "步骤"
 						: msg.role === "step_result"
 							? "步骤结果"
 							: msg.role === "result"

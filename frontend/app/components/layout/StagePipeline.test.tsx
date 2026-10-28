@@ -2,15 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { getWorkbenchStatusMeta } from "~/features/comic-workflow/state/deriveWorkbenchStatus";
+import { getStudioStatusMeta } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { StagePipeline } from "./StagePipeline";
 
 function renderStagePipeline(props: Partial<Parameters<typeof StagePipeline>[0]> = {}) {
 	return render(
 		<StagePipeline
-			currentStage="plan"
 			isGenerating={false}
-			workbenchStatus={getWorkbenchStatusMeta("idle")}
+			studioStatus={getStudioStatusMeta("idle")}
 			awaitingConfirm={false}
 			hasRecovery={false}
 			onResume={vi.fn()}
@@ -21,6 +20,23 @@ function renderStagePipeline(props: Partial<Parameters<typeof StagePipeline>[0]>
 }
 
 describe("StagePipeline", () => {
+	it("hides progress and stage highlight when no run is active", () => {
+		renderStagePipeline({ studioStatus: getStudioStatusMeta("ready") });
+
+		expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+		expect(document.querySelector("[aria-current='step']")).toBeNull();
+	});
+
+	it("shows progress and the current stage while generating", () => {
+		renderStagePipeline({
+			isGenerating: true,
+			studioStatus: { ...getStudioStatusMeta("generating"), stage: "render", progress: 0.42 },
+		});
+
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "42");
+		expect(screen.getByText("渲染")).toHaveAttribute("aria-current", "step");
+	});
+
 	it("does not duplicate the sidebar chat entry while idle", () => {
 		renderStagePipeline({ onToggleChat: vi.fn() });
 
@@ -50,7 +66,7 @@ describe("StagePipeline", () => {
 
 	it("announces the current workbench status", () => {
 		const { container } = renderStagePipeline({
-			workbenchStatus: getWorkbenchStatusMeta("awaitingConfirm"),
+			studioStatus: getStudioStatusMeta("awaitingConfirm"),
 		});
 
 		expect(screen.getByText("工作台状态：待确认")).toBeInTheDocument();
@@ -111,7 +127,7 @@ describe("StagePipeline", () => {
 
 	it("keeps the status label text visible on all viewports", () => {
 		renderStagePipeline({
-			workbenchStatus: getWorkbenchStatusMeta("ready"),
+			studioStatus: getStudioStatusMeta("ready"),
 		});
 
 		const label = screen.getByText("成片可用");

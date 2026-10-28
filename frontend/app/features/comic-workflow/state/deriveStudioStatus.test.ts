@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryControlRead } from "~/types";
-import { deriveWorkbenchStatus } from "./deriveWorkbenchStatus";
+import { deriveStudioStatus } from "./deriveStudioStatus";
 
 function recoveryControl(
 	state: RecoveryControlRead["state"],
@@ -44,10 +44,10 @@ const baseInput = {
 	blockingClips: [],
 };
 
-describe("deriveWorkbenchStatus", () => {
+describe("deriveStudioStatus", () => {
 	it("prioritizes confirmation over active generation", () => {
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				isGenerating: true,
 				currentRunId: 11,
@@ -58,7 +58,7 @@ describe("deriveWorkbenchStatus", () => {
 
 	it("marks resumable conflicts as recoverable", () => {
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				recoveryControl: recoveryControl("recoverable"),
 				currentRunId: 9,
@@ -68,7 +68,7 @@ describe("deriveWorkbenchStatus", () => {
 
 	it("keeps active runs in the generating state", () => {
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				recoveryControl: recoveryControl("active"),
 			}).state,
@@ -77,7 +77,7 @@ describe("deriveWorkbenchStatus", () => {
 
 	it("exposes cancelled as a terminal run state", () => {
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				lastRunStatus: "cancelled",
 			}).state,
@@ -86,7 +86,7 @@ describe("deriveWorkbenchStatus", () => {
 
 	it("distinguishes blocked, superseded, ready, and idle artifact states", () => {
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				blockingClips: [
 					{ shot_id: 1, order: 1, status: "missing", reason: "missing_video" },
@@ -95,7 +95,7 @@ describe("deriveWorkbenchStatus", () => {
 		).toBe("blocked");
 
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				projectStatus: "superseded",
 				projectVideoUrl: "/static/final.mp4",
@@ -103,13 +103,81 @@ describe("deriveWorkbenchStatus", () => {
 		).toBe("superseded");
 
 		expect(
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				...baseInput,
 				projectStatus: "ready",
 				projectVideoUrl: "/static/final.mp4",
 			}).state,
 		).toBe("ready");
 
-		expect(deriveWorkbenchStatus(baseInput).state).toBe("idle");
+		expect(deriveStudioStatus(baseInput).state).toBe("idle");
+	});
+
+	it("drops stale progress and stage once the run is no longer active", () => {
+		const status = deriveStudioStatus({
+			...baseInput,
+			projectStatus: "ready",
+			projectVideoUrl: "/static/final.mp4",
+			currentStage: "plan",
+			progress: 0.08,
+		});
+		expect(status).toMatchObject({
+			state: "ready",
+			tone: "success",
+			stage: null,
+			progress: null,
+			pendingCount: 0,
+		});
+	});
+
+	it("reports stage and progress only while generating", () => {
+		expect(
+			deriveStudioStatus({
+				...baseInput,
+				isGenerating: true,
+				currentStage: "render",
+				progress: 0.5,
+			}),
+		).toMatchObject({ state: "generating", tone: "info", stage: "render", progress: 0.5 });
+
+		expect(
+			deriveStudioStatus({
+				...baseInput,
+				isGenerating: true,
+				awaitingConfirm: true,
+				currentStage: "plan_approval",
+				progress: 0.3,
+			}),
+		).toMatchObject({
+			state: "awaitingConfirm",
+			label: "待确认",
+			tone: "warning",
+			stage: "plan_approval",
+			progress: null,
+			pendingCount: 1,
+		});
+	});
+
+	it("ranks a finished cut above a cancelled last run", () => {
+		expect(
+			deriveStudioStatus({
+				...baseInput,
+				lastRunStatus: "cancelled",
+				projectStatus: "ready",
+				projectVideoUrl: "/static/final.mp4",
+			}).state,
+		).toBe("ready");
+	});
+
+	it("ranks failure above blockers", () => {
+		expect(
+			deriveStudioStatus({
+				...baseInput,
+				projectStatus: "failed",
+				blockingClips: [
+					{ shot_id: 1, order: 1, status: "missing", reason: "missing_video" },
+				],
+			}).state,
+		).toBe("failed");
 	});
 });

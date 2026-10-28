@@ -3,11 +3,11 @@ import { useMemo } from "react";
 import { Button } from "~/components/ui/Button";
 import { getStaticUrl } from "~/services/api";
 import type { Character, Shot } from "~/types";
-import type { WorkbenchStatus } from "../state/deriveWorkbenchStatus";
+import { type StudioStatus, studioStatusDotClass } from "../state/deriveStudioStatus";
 
 interface MobileWorkbenchPreviewProps {
 	projectId: number;
-	workbenchStatus: WorkbenchStatus;
+	studioStatus: StudioStatus;
 	/** 后端原始 video_url（未拼 base） */
 	videoUrl: string | null;
 	shots: Shot[];
@@ -17,21 +17,9 @@ interface MobileWorkbenchPreviewProps {
 	retryDisabled?: boolean;
 }
 
-const STATUS_DOT: Record<WorkbenchStatus["state"], string> = {
-	idle: "bg-ink/35",
-	generating: "bg-warning animate-pulse",
-	awaitingConfirm: "bg-info",
-	recoverable: "bg-warning",
-	cancelled: "bg-ink/35",
-	ready: "bg-success",
-	superseded: "bg-warning",
-	failed: "bg-error",
-	blocked: "bg-error",
-};
-
 export function MobileWorkbenchPreview({
 	projectId,
-	workbenchStatus,
+	studioStatus,
 	videoUrl,
 	shots,
 	characters,
@@ -44,8 +32,8 @@ export function MobileWorkbenchPreview({
 		getStaticUrl(`/api/v1/projects/${projectId}/final-video`) ?? videoSrc;
 	const canRetry =
 		Boolean(onRetry) &&
-		(workbenchStatus.state === "failed" ||
-			workbenchStatus.state === "recoverable");
+		(studioStatus.state === "failed" ||
+			studioStatus.state === "recoverable");
 	const orderedShots = useMemo(
 		() => [...shots].sort((a, b) => a.order - b.order),
 		[shots],
@@ -64,15 +52,15 @@ export function MobileWorkbenchPreview({
 			<div className="rounded-lg border-2 border-ink/10 bg-paper-100 p-3 shadow-brutal-sm">
 				<div className="flex items-center gap-2">
 					<span
-						className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_DOT[workbenchStatus.state]}`}
+						className={`h-2.5 w-2.5 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
 						aria-hidden="true"
 					/>
 					<h2 className="m-0 font-heading text-sm font-bold">
-						{workbenchStatus.label}
+						{studioStatus.label}
 					</h2>
 				</div>
 				<p className="m-0 mt-1 text-xs text-ink-muted">
-					{workbenchStatus.description}
+					{studioStatus.description}
 				</p>
 				{canRetry ? (
 					<Button

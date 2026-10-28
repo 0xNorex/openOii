@@ -97,8 +97,9 @@ export function ComicWorkflowCanvas({
 			shots,
 			blockingClips: project.blocking_clips,
 			isGenerating,
+			awaitingConfirm,
 		});
-	}, [project, characters, shots, isGenerating]);
+	}, [project, characters, shots, isGenerating, awaitingConfirm]);
 
 	const layout = useMemo(
 		() => (graph ? layoutComicWorkflow(graph) : null),

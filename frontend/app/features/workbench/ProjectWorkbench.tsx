@@ -23,8 +23,8 @@ import {
 import { InspectorColumn } from "~/features/comic-workflow/inspector/InspectorColumn";
 import { PromptBar } from "~/features/workbench/PromptBar";
 import {
-	deriveWorkbenchStatus,
-} from "~/features/comic-workflow/state/deriveWorkbenchStatus";
+	deriveStudioStatus,
+} from "~/features/comic-workflow/state/deriveStudioStatus";
 import { MobileWorkbenchPreview } from "~/features/comic-workflow/mobile/MobileWorkbenchPreview";
 import { useIsMobileWorkbench } from "~/features/comic-workflow/mobile/useIsMobileWorkbench";
 import { useRunController } from "~/features/run/useRunController";
@@ -132,9 +132,10 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			shots,
 			blockingClips: project.blocking_clips,
 			isGenerating: runIsGenerating,
+			awaitingConfirm: runAwaitingConfirm,
 		});
 		return graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-	}, [project, characters, shots, selectedNodeId, runIsGenerating]);
+	}, [project, characters, shots, selectedNodeId, runIsGenerating, runAwaitingConfirm]);
 
 	// Brief 不在画布上（见 layoutComicWorkflow）：未选中任何卡片时，
 	// 右栏 Inspector 回落到它，项目级上下文保持可达。
@@ -181,9 +182,9 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const workspaceLoading = projectLoading;
 	const isMobileWorkbench = useIsMobileWorkbench();
 
-	const workbenchStatus = useMemo(
+	const studioStatus = useMemo(
 		() =>
-			deriveWorkbenchStatus({
+			deriveStudioStatus({
 				isGenerating: runIsGenerating,
 				currentRunId: runCurrentRunId,
 				awaitingConfirm: runAwaitingConfirm,
@@ -192,6 +193,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				projectVideoUrl: project?.video_url,
 				blockingClips: project?.blocking_clips,
 				lastRunStatus,
+				currentStage: runCurrentStage,
+				progress: runProgress,
 			}),
 		[
 			runIsGenerating,
@@ -202,6 +205,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			project?.video_url,
 			project?.blocking_clips,
 			lastRunStatus,
+			runCurrentStage,
+			runProgress,
 		],
 	);
 
@@ -323,10 +328,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			</a>
 			<TopBar projectId={projectId} />
 			<StagePipeline
-				currentStage={runCurrentStage}
 				isGenerating={hasActiveRun}
-				progress={runProgress}
-				workbenchStatus={workbenchStatus}
+				studioStatus={studioStatus}
 				awaitingConfirm={runAwaitingConfirm}
 				hasRecovery={hasRecovery}
 				onGenerate={handleGenerate}
@@ -355,7 +358,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				{isMobileWorkbench ? (
 					<MobileWorkbenchPreview
 						projectId={projectId}
-						workbenchStatus={workbenchStatus}
+						studioStatus={studioStatus}
 						videoUrl={project.video_url}
 						shots={shots}
 						characters={characters}

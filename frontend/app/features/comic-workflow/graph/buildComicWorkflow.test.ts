@@ -217,6 +217,26 @@ describe("buildComicWorkflow", () => {
 		).toBe("needs_recompose");
 	});
 
+	it("marks draft cards as review only under an active approval gate", () => {
+		const input = {
+			project: project({ status: "ready", video_url: "/static/final.mp4" }),
+			characters: [character()],
+			shots: [shot()],
+			isGenerating: false,
+		};
+		const statusOf = (graph: ReturnType<typeof buildComicWorkflow>, id: string) =>
+			graph.nodes.find((node) => node.id === id)?.status;
+
+		const idle = buildComicWorkflow(input);
+		expect(statusOf(idle, "character:1")).toBe("unconfirmed");
+		expect(statusOf(idle, "shot:10")).toBe("unconfirmed");
+		expect(idle.sections.find((s) => s.section === "shotline")?.status).toBe("unconfirmed");
+
+		const gated = buildComicWorkflow({ ...input, isGenerating: true, awaitingConfirm: true });
+		expect(statusOf(gated, "character:1")).toBe("review");
+		expect(statusOf(gated, "shot:10")).toBe("review");
+	});
+
 	it("sorts shots by order then id", () => {
 		expect(
 			sortShots([

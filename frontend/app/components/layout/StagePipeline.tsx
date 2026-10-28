@@ -9,17 +9,17 @@ import {
 	ArrowDownTrayIcon,
 	EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
-import type { WorkflowStage } from "~/types";
 import { STAGE_PIPELINE, getPipelineStageIndex } from "~/utils/pipeline";
 import { Button } from "~/components/ui/Button";
-import type { WorkbenchStatus } from "~/features/comic-workflow/state/deriveWorkbenchStatus";
+import {
+	type StudioStatus,
+	studioStatusDotClass,
+} from "~/features/comic-workflow/state/deriveStudioStatus";
 import { useEffect, useRef, useState } from "react";
 
 interface StagePipelineProps {
-	currentStage: WorkflowStage;
 	isGenerating: boolean;
-	progress?: number;
-	workbenchStatus: WorkbenchStatus;
+	studioStatus: StudioStatus;
 	awaitingConfirm: boolean;
 	hasRecovery: boolean;
 	onGenerate?: () => void;
@@ -34,18 +34,6 @@ interface StagePipelineProps {
 	exportBusy?: boolean;
 }
 
-const STATUS_DOT: Record<WorkbenchStatus["state"], string> = {
-	idle: "bg-ink/35",
-	generating: "bg-warning animate-pulse",
-	awaitingConfirm: "bg-info",
-	recoverable: "bg-warning",
-	cancelled: "bg-ink/35",
-	ready: "bg-success",
-	superseded: "bg-warning",
-	failed: "bg-error",
-	blocked: "bg-error",
-};
-
 const chromeBtn =
 	"touch-target-dense !h-8 !min-h-8 gap-1 !px-2 text-xs transition-colors duration-fast";
 
@@ -58,10 +46,8 @@ function runMenuAction(action: () => void) {
 }
 
 export function StagePipeline({
-	currentStage,
 	isGenerating,
-	progress = 0,
-	workbenchStatus,
+	studioStatus,
 	awaitingConfirm,
 	hasRecovery,
 	onGenerate,
@@ -83,13 +69,15 @@ export function StagePipeline({
 		document.addEventListener("pointerdown", closeOnOutsideClick);
 		return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
 	}, [toolsOpen]);
-	const currentIndex = getPipelineStageIndex(currentStage);
-	const progressPercent = Math.max(0, Math.min(100, Math.round(progress * 100)));
+	// 阶段高亮与进度只在运行活跃时出现（stage / progress 由 deriveStudioStatus 置空）
+	const currentIndex = studioStatus.stage ? getPipelineStageIndex(studioStatus.stage) : -1;
+	const progressPercent =
+		studioStatus.progress === null ? null : Math.round(studioStatus.progress * 100);
 	const generateLabel =
-		workbenchStatus.state === "idle"
+		studioStatus.state === "idle"
 			? "开始生成"
-			: workbenchStatus.state === "failed" ||
-					workbenchStatus.state === "recoverable"
+			: studioStatus.state === "failed" ||
+					studioStatus.state === "recoverable"
 				? "重试失败阶段"
 				: "重新生成";
 	const hasTools = Boolean(onOpenVersions || onExport);
@@ -100,37 +88,41 @@ export function StagePipeline({
 			data-shell="stage-pipeline"
 		>
 			<span className="sr-only" aria-live="polite">
-				工作台状态：{workbenchStatus.label}
+				工作台状态：{studioStatus.label}
 			</span>
 
 			<div
 				className="flex min-w-0 items-center gap-2"
-				title={workbenchStatus.description}
+				title={studioStatus.description}
 			>
 				<span
-					className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[workbenchStatus.state]}`}
+					className={`h-2 w-2 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
 					aria-hidden="true"
 				/>
 				{/* 状态文案在所有视口可见：<sm 只剩色点时色盲无法区分状态 */}
 				<span className="inline-block max-w-[4.5rem] truncate font-mono text-2xs font-semibold tabular-nums text-ink-muted sm:max-w-[5.5rem]">
-					{workbenchStatus.label}
+					{studioStatus.label}
 				</span>
-				<div
-					className="h-1 w-14 overflow-hidden rounded-full bg-ink/10 sm:w-20"
-					role="progressbar"
-					aria-label="生成进度"
-					aria-valuemin={0}
-					aria-valuemax={100}
-					aria-valuenow={progressPercent}
-				>
-					<div
-						className="h-full rounded-full bg-primary transition-[width] duration-normal"
-						style={{ width: `${progressPercent}%` }}
-					/>
-				</div>
-				<span className="w-8 font-mono text-2xs tabular-nums text-ink-muted">
-					{progressPercent}%
-				</span>
+				{progressPercent === null ? null : (
+					<>
+						<div
+							className="h-1 w-14 overflow-hidden rounded-full bg-ink/10 sm:w-20"
+							role="progressbar"
+							aria-label="生成进度"
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={progressPercent}
+						>
+							<div
+								className="h-full rounded-full bg-primary transition-[width] duration-normal"
+								style={{ width: `${progressPercent}%` }}
+							/>
+						</div>
+						<span className="w-8 font-mono text-2xs tabular-nums text-ink-muted">
+							{progressPercent}%
+						</span>
+					</>
+				)}
 			</div>
 
 			<nav
@@ -157,7 +149,7 @@ export function StagePipeline({
 									<CheckIcon className="h-3 w-3" aria-hidden="true" />
 								) : null}
 								{stage.label}
-								{current && hasRecovery && !isGenerating ? (
+								{current && studioStatus.state === "recoverable" ? (
 									<ExclamationTriangleIcon
 										className="h-3 w-3 text-warning-content"
 										aria-hidden="true"

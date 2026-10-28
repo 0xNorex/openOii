@@ -22,6 +22,7 @@ export type WorkflowNodeStatus =
 	| "draft"
 	| "generating"
 	| "review"
+	| "unconfirmed"
 	| "approved"
 	| "blocked"
 	| "superseded"

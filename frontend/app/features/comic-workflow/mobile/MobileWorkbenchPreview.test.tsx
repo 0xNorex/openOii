@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Character, Shot } from "~/types";
-import { getWorkbenchStatusMeta } from "../state/deriveWorkbenchStatus";
+import { getStudioStatusMeta } from "../state/deriveStudioStatus";
 import { MobileWorkbenchPreview } from "./MobileWorkbenchPreview";
 
 function makeShot(overrides: Partial<Shot> = {}): Shot {
@@ -34,7 +34,7 @@ function renderPreview(
 	return render(
 		<MobileWorkbenchPreview
 			projectId={7}
-			workbenchStatus={getWorkbenchStatusMeta("idle")}
+			studioStatus={getStudioStatusMeta("idle")}
 			videoUrl={null}
 			shots={[]}
 			characters={[]}
@@ -45,7 +45,7 @@ function renderPreview(
 
 describe("MobileWorkbenchPreview", () => {
 	it("shows the desktop hint and visible status copy (not a title attribute)", () => {
-		renderPreview({ workbenchStatus: getWorkbenchStatusMeta("generating") });
+		renderPreview({ studioStatus: getStudioStatusMeta("generating") });
 
 		expect(screen.getByText("完整画布编辑请用桌面端打开")).toBeInTheDocument();
 		expect(screen.getByText("生成中")).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("MobileWorkbenchPreview", () => {
 		const onRetry = vi.fn();
 
 		renderPreview({
-			workbenchStatus: getWorkbenchStatusMeta("failed"),
+			studioStatus: getStudioStatusMeta("failed"),
 			onRetry,
 		});
 
@@ -70,7 +70,7 @@ describe("MobileWorkbenchPreview", () => {
 
 	it("offers a retry action for recoverable runs", () => {
 		renderPreview({
-			workbenchStatus: getWorkbenchStatusMeta("recoverable"),
+			studioStatus: getStudioStatusMeta("recoverable"),
 			onRetry: vi.fn(),
 		});
 
@@ -89,7 +89,7 @@ describe("MobileWorkbenchPreview", () => {
 
 	it("renders the final video player with a download link", () => {
 		renderPreview({
-			workbenchStatus: getWorkbenchStatusMeta("ready"),
+			studioStatus: getStudioStatusMeta("ready"),
 			videoUrl: "/static/videos/final.mp4",
 		});
 

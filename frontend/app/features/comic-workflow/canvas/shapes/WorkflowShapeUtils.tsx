@@ -49,7 +49,8 @@ const SECTION_STYLE = {
 const STATUS_COPY: Record<WorkflowNodeStatus, { label: string; cls: string }> = {
 	draft: { label: "待生成", cls: "bg-paper-200 text-ink-muted" },
 	generating: { label: "生成中", cls: "bg-warning/15 text-warning" },
-	review: { label: "待审阅", cls: "bg-warning/15 text-warning" },
+	review: { label: "待确认", cls: "bg-warning/15 text-warning" },
+	unconfirmed: { label: "未确认", cls: "bg-paper-200 text-ink-muted" },
 	approved: { label: "已批准", cls: "bg-success/15 text-success" },
 	blocked: { label: "阻塞", cls: "bg-error/15 text-error" },
 	superseded: { label: "需重合成", cls: "bg-warning/15 text-warning" },
@@ -152,7 +153,7 @@ function InlineEditableText({
 	);
 }
 
-/** 待审阅卡的动作行：通过 / 重做 直接上卡，不必逐个打开面板 */
+/** 待确认卡的动作行：通过 / 重做 直接上卡，不必逐个打开面板 */
 function ReviewActions({
 	onApprove,
 	onRedo,

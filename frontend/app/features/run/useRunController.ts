@@ -20,7 +20,7 @@ import type {
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import { toSimplifiedStage } from "~/utils/workflowStage";
-import type { LastRunTerminalStatus } from "../comic-workflow/state/deriveWorkbenchStatus";
+import type { LastRunTerminalStatus } from "../comic-workflow/state/deriveStudioStatus";
 
 type FeedbackType = "plan" | "render" | "compose";
 

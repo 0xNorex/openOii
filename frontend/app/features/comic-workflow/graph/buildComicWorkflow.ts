@@ -25,15 +25,19 @@ export interface BuildComicWorkflowInput {
 	shots: Shot[];
 	blockingClips?: BlockingClip[] | null;
 	isGenerating: boolean;
+	/** 当前运行停在审批门上：只有这时草稿卡片才算"待确认"。 */
+	awaitingConfirm?: boolean;
 }
 
 function nodeStatusFromApproval(
 	approvalState: "draft" | "approved" | "superseded",
 	isGenerating: boolean,
+	awaitingConfirm: boolean,
 ): WorkflowNodeStatus {
 	if (approvalState === "approved") return "approved";
 	if (approvalState === "superseded") return "superseded";
-	return isGenerating ? "generating" : "review";
+	if (awaitingConfirm) return "review";
+	return isGenerating ? "generating" : "unconfirmed";
 }
 
 export function sortShots(shots: Shot[]): Shot[] {
@@ -158,7 +162,8 @@ function sectionStatus(
 	if (sectionNodes.some((node) => node.status === "generating")) {
 		return "generating";
 	}
-	return "review";
+	if (sectionNodes.some((node) => node.status === "review")) return "review";
+	return "unconfirmed";
 }
 
 function sectionCountLabel(
@@ -187,6 +192,7 @@ export function buildComicWorkflow({
 	shots,
 	blockingClips,
 	isGenerating,
+	awaitingConfirm = false,
 }: BuildComicWorkflowInput): ComicWorkflowGraph {
 	const orderedShots = sortShots(shots);
 	const visibleCharacters = characters.filter(hasCharacterContent);
@@ -223,7 +229,7 @@ export function buildComicWorkflow({
 			section: "elements",
 			title: character.name || `角色 ${character.id}`,
 			subtitle: character.has_embedding ? "可复用角色资产" : "角色设定",
-			status: nodeStatusFromApproval(character.approval_state, isGenerating),
+			status: nodeStatusFromApproval(character.approval_state, isGenerating, awaitingConfirm),
 			entityId: character.id,
 			character,
 			imageUrl:
@@ -237,7 +243,7 @@ export function buildComicWorkflow({
 			section: "shotline",
 			title: `S${String(shot.order).padStart(2, "0")}`,
 			subtitle: shot.scene || shot.camera || "镜头节点",
-			status: nodeStatusFromApproval(shot.approval_state, isGenerating),
+			status: nodeStatusFromApproval(shot.approval_state, isGenerating, awaitingConfirm),
 			entityId: shot.id,
 			shot,
 			imageUrl: shot.image_url,

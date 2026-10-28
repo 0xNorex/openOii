@@ -341,18 +341,18 @@ vi.mock('~/components/layout/StagePipeline', () => ({
     onResume,
     onToggleChat,
     awaitingConfirm,
-    workbenchStatus,
+    studioStatus,
   }: {
     onGenerate?: () => void;
     onCancel?: () => void;
     onResume?: () => void;
     onToggleChat?: () => void;
     awaitingConfirm?: boolean;
-    workbenchStatus?: { state: string };
+    studioStatus?: { state: string };
   }) => (
     <div
       data-testid="stage-pipeline"
-      data-workbench-status={workbenchStatus?.state}
+      data-workbench-status={studioStatus?.state}
     >
       <button type="button" onClick={onGenerate}>开始生成</button>
       <button type="button" onClick={onCancel}>取消</button>
@@ -370,13 +370,13 @@ vi.mock('~/components/layout/StageView', () => ({
 
 vi.mock('~/features/comic-workflow/mobile/MobileWorkbenchPreview', () => ({
   MobileWorkbenchPreview: ({
-    workbenchStatus,
+    studioStatus,
   }: {
-    workbenchStatus?: { state: string };
+    studioStatus?: { state: string };
   }) => (
     <div
       data-testid="mobile-workbench-preview"
-      data-workbench-status={workbenchStatus?.state}
+      data-workbench-status={studioStatus?.state}
     >
       完整画布编辑请用桌面端打开
     </div>

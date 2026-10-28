@@ -75,6 +75,27 @@ describe("Design Contract: 弹层统一走 ui/Dialog", () => {
 	});
 });
 
+describe("Design Contract: 运行进度只经 deriveStudioStatus 读取", () => {
+	// 进度条只能吃 StudioStatus.progress（运行不活跃时为 null），避免"成片可用 + 8%"
+	it("组件不直接接收或读取 run progress", () => {
+		const hits = sources
+			.filter(({ file, text }) =>
+				/\bprogress=\{/.test(text) ||
+				(file !== "app/features/workbench/ProjectWorkbench.tsx" && /\brunProgress\b/.test(text)),
+			)
+			.map(({ file }) => file);
+		expect(hits, `用 deriveStudioStatus(...).progress：\n${hits.join("\n")}`).toEqual([]);
+	});
+
+	it("ProjectWorkbench 只把 runProgress 交给 deriveStudioStatus", () => {
+		const text = sources.find(({ file }) => file === "app/features/workbench/ProjectWorkbench.tsx")!.text;
+		const uses = text.match(/\brunProgress\b/g) ?? [];
+		// 解构、deriveStudioStatus 入参、useMemo 依赖
+		expect(uses).toHaveLength(3);
+		expect(text).toMatch(/deriveStudioStatus\(\{[^}]*progress: runProgress/);
+	});
+});
+
 describe("Design Contract: 不透明度阶梯是 5 的倍数", () => {
 	it("源码不含 /8 /12 /65 这类随手档", () => {
 		const bad: string[] = [];
