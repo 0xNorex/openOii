@@ -527,6 +527,10 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 									onSelectedNodeIdChange={handleSelectedNodeIdChange}
 									onSelectedNodeIdsChange={handleSelectedNodeIdsChange}
 									onOpenAssets={() => setAssetsOpen(true)}
+									fitInsets={{
+										left: agentCollapsed ? 0 : 372,
+										right: inspectorOpen ? 332 : 0,
+									}}
 								/>
 							</Suspense>
 							<AgentPanel

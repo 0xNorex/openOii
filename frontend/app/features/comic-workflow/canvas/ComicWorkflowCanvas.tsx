@@ -30,6 +30,18 @@ import {
 	syncTldrawProjection,
 	type WorkflowInteractionMode,
 } from "./syncTldrawProjection";
+import { FlowWorkflowView } from "./flow/FlowWorkflowView";
+
+/** 过渡期开关：localStorage['openoii.canvas'] === 'flow' 时用 React Flow 渲染。 */
+function useFlowRenderer() {
+	return useState(() => {
+		try {
+			return localStorage.getItem("openoii.canvas") === "flow";
+		} catch {
+			return false;
+		}
+	})[0];
+}
 
 interface ComicWorkflowCanvasProps {
 	projectId: number;
@@ -38,6 +50,8 @@ interface ComicWorkflowCanvasProps {
 	onSelectedNodeIdsChange?: (nodeIds: string[]) => void;
 	/** Opens the asset library from the canvas toolbar. */
 	onOpenAssets?: () => void;
+	/** 浮动面板占掉的左右宽度（px），适应视图时避开。 */
+	fitInsets?: { left: number; right: number };
 }
 
 const components: TLComponents = {
@@ -64,7 +78,9 @@ export function ComicWorkflowCanvas({
 	onSelectedNodeIdChange,
 	onSelectedNodeIdsChange,
 	onOpenAssets,
+	fitInsets,
 }: ComicWorkflowCanvasProps) {
+	const flowRenderer = useFlowRenderer();
 	const editorRef = useRef<Editor | null>(null);
 	const [isInitialized, setIsInitialized] = useState(false);
 	const [previewImage, setPreviewImage] = useState<{
@@ -213,6 +229,48 @@ export function ComicWorkflowCanvas({
 		);
 	}
 
+	const previewModals = (
+		<>
+			{previewImage ? (
+				<ImagePreviewModal
+					src={previewImage.src}
+					alt={previewImage.alt}
+					onClose={() => setPreviewImage(null)}
+				/>
+			) : null}
+
+			{previewVideo ? (
+				<VideoPreviewModal
+					src={previewVideo.src}
+					title={previewVideo.title}
+					onClose={() => setPreviewVideo(null)}
+				/>
+			) : null}
+		</>
+	);
+
+	if (flowRenderer) {
+		return (
+			<>
+				<FlowWorkflowView
+					projectId={projectId}
+					graph={graph}
+					layout={layout}
+					interactionMode={interactionMode}
+					sortMode={sortMode}
+					structureLocked={structureLocked}
+					onToggleSortMode={() => setSortMode((v) => !v)}
+					onSorted={() => setSortMode(false)}
+					onSelectedNodeIdChange={onSelectedNodeIdChange}
+					onSelectedNodeIdsChange={onSelectedNodeIdsChange}
+					onOpenAssets={onOpenAssets}
+					fitInsets={fitInsets}
+				/>
+				{previewModals}
+			</>
+		);
+	}
+
 	return (
 		<>
 			<div className="infinite-canvas-container relative h-full w-full">
@@ -254,21 +312,7 @@ export function ComicWorkflowCanvas({
 				</Tldraw>
 			</div>
 
-			{previewImage ? (
-				<ImagePreviewModal
-					src={previewImage.src}
-					alt={previewImage.alt}
-					onClose={() => setPreviewImage(null)}
-				/>
-			) : null}
-
-			{previewVideo ? (
-				<VideoPreviewModal
-					src={previewVideo.src}
-					title={previewVideo.title}
-					onClose={() => setPreviewVideo(null)}
-				/>
-			) : null}
+			{previewModals}
 		</>
 	);
 }

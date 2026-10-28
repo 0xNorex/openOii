@@ -668,6 +668,8 @@ export interface WorkflowFrameViewProps {
 	eyebrow: string;
 	countLabel: string;
 	draggable?: boolean;
+	/** tldraw 需要拦截指针以免误选；React Flow 自己处理，传 false。 */
+	isolatePointer?: boolean;
 }
 
 /** 分区框：渲染器无关（tldraw shape 与 React Flow node 共用）。 */
@@ -677,6 +679,7 @@ export function WorkflowFrameView({
 	eyebrow,
 	countLabel,
 	draggable = true,
+	isolatePointer = true,
 }: WorkflowFrameViewProps) {
 	const style = SECTION_STYLE[section];
 	return (
@@ -685,7 +688,7 @@ export function WorkflowFrameView({
 			className={`h-full w-full rounded-xl border-3 border-ink/15 p-3 text-ink ${
 				draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
 			} ${style.surface}`}
-			onPointerDown={draggable ? undefined : stopCanvasPointer}
+			onPointerDown={draggable || !isolatePointer ? undefined : stopCanvasPointer}
 		>
 			<div className="flex items-center gap-2">
 				<span className={`h-7 w-1 rounded-full ${style.accent}`} />
@@ -715,10 +718,13 @@ export function WorkflowCardView({
 	node,
 	draggable = false,
 	selected = false,
+	isolatePointer = true,
 }: {
 	node: ComicWorkflowNode;
 	draggable?: boolean;
 	selected?: boolean;
+	/** tldraw：拦截指针并在点击时自己发选中事件；React Flow 自己管选中，传 false。 */
+	isolatePointer?: boolean;
 }) {
 	return (
 		<article
@@ -726,8 +732,8 @@ export function WorkflowCardView({
 			className={`h-full select-none overflow-hidden rounded-lg bg-paper-100 text-ink ${
 				node.kind === "output" ? "comic-frame" : "border border-paper-300"
 			} ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-paper-50" : ""}`}
-			onPointerDown={draggable ? undefined : stopCanvasPointer}
-			onClick={() => selectWorkflowNode(node.id)}
+			onPointerDown={draggable || !isolatePointer ? undefined : stopCanvasPointer}
+			onClick={isolatePointer ? () => selectWorkflowNode(node.id) : undefined}
 		>
 			{node.kind === "character" ? <CharacterCard node={node} /> : null}
 			{node.kind === "shot" ? <ShotCard node={node} /> : null}

@@ -3,6 +3,7 @@ import type { Project, Shot } from "~/types";
 import { buildComicWorkflow } from "../../graph/buildComicWorkflow";
 import { layoutComicWorkflow } from "../../graph/layoutComicWorkflow";
 import { shotReadingOrder, toFlowNodes, type CardFlowNode } from "./toFlowNodes";
+import { storyboardViewport } from "./FlowWorkflowView";
 
 function project(overrides: Partial<Project> = {}): Project {
 	return {
@@ -140,5 +141,27 @@ describe("shotReadingOrder", () => {
 			{ shot_id: 11, order: 1 },
 			{ shot_id: 10, order: 2 },
 		]);
+	});
+});
+
+describe("storyboardViewport", () => {
+	it("centres a board that fits, between the panels", () => {
+		const v = storyboardViewport(
+			{ x: 0, y: 0, width: 400, height: 200 },
+			{ width: 1400, height: 900 },
+			{ left: 300, right: 300 },
+		);
+		expect(v.zoom).toBe(1);
+		expect(v.x).toBe(348 + (1400 - 696 - 400) / 2);
+	});
+
+	it("stops at the readable zoom and anchors top-left when too big", () => {
+		const v = storyboardViewport(
+			{ x: 100, y: 50, width: 4000, height: 4000 },
+			{ width: 1000, height: 800 },
+		);
+		expect(v.zoom).toBeCloseTo(12 / 13);
+		expect(v.x).toBeCloseTo(48 - 100 * v.zoom);
+		expect(v.y).toBeCloseTo(48 - 50 * v.zoom);
 	});
 });

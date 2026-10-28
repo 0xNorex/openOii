@@ -26,7 +26,36 @@ interface ComicCanvasToolbarProps {
 	onOpenAssets?: () => void;
 }
 
-export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
+/** 渲染器无关的视图控制（tldraw 与 React Flow 各自实现）。 */
+export interface CanvasViewControls {
+	tool: "select" | "hand";
+	setTool: (tool: "select" | "hand") => void;
+	zoomPercent: number;
+	zoomIn: () => void;
+	zoomOut: () => void;
+	zoomReset: () => void;
+	fit: () => void;
+}
+
+export const ComicCanvasToolbar = track(function ComicCanvasToolbar(
+	props: ComicCanvasToolbarProps,
+) {
+	const editor = useEditor();
+	const center = () => editor.getViewportScreenCenter();
+	const animation = { duration: motionDuration("fast") };
+	const controls: CanvasViewControls = {
+		tool: editor.getCurrentToolId() === "hand" ? "hand" : "select",
+		setTool: (tool) => editor.setCurrentTool(tool),
+		zoomPercent: Math.round(editor.getZoomLevel() * 100),
+		zoomIn: () => editor.zoomIn(center(), { animation }),
+		zoomOut: () => editor.zoomOut(center(), { animation }),
+		zoomReset: () => editor.resetZoom(center(), { animation }),
+		fit: () => fitStoryboard(editor, motionDuration("normal")),
+	};
+	return <ComicCanvasToolbarView {...props} controls={controls} />;
+});
+
+export function ComicCanvasToolbarView({
 	projectId,
 	onResetLayout,
 	sortMode = false,
@@ -34,33 +63,9 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 	onToggleSortMode,
 	fillDisabled = false,
 	onOpenAssets,
-}: ComicCanvasToolbarProps) {
-	const editor = useEditor();
-	const currentTool = editor.getCurrentToolId();
-	const zoomPercent = Math.round(editor.getZoomLevel() * 100);
+	controls,
+}: ComicCanvasToolbarProps & { controls: CanvasViewControls }) {
 	const [filling, setFilling] = useState(false);
-
-	const handleZoomIn = useCallback(() => {
-		editor.zoomIn(editor.getViewportScreenCenter(), {
-			animation: { duration: motionDuration("fast") },
-		});
-	}, [editor]);
-
-	const handleZoomOut = useCallback(() => {
-		editor.zoomOut(editor.getViewportScreenCenter(), {
-			animation: { duration: motionDuration("fast") },
-		});
-	}, [editor]);
-
-	const handleZoomReset = useCallback(() => {
-		editor.resetZoom(editor.getViewportScreenCenter(), {
-			animation: { duration: motionDuration("fast") },
-		});
-	}, [editor]);
-
-	const handleZoomToFit = useCallback(() => {
-		fitStoryboard(editor, motionDuration("normal"));
-	}, [editor]);
 
 	const handleFillEmpty = useCallback(
 		async (type: "image" | "video") => {
@@ -92,39 +97,39 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 			aria-label="画布工具栏"
 		>
 			<ToolButton
-				active={currentTool === "select"}
+				active={controls.tool === "select"}
 				label="选择工具"
-				onClick={() => editor.setCurrentTool("select")}
+				onClick={() => controls.setTool("select")}
 			>
 				<CursorArrowRaysIcon className="h-4 w-4" />
 			</ToolButton>
 			<ToolButton
-				active={currentTool === "hand"}
+				active={controls.tool === "hand"}
 				label="抓手工具"
-				onClick={() => editor.setCurrentTool("hand")}
+				onClick={() => controls.setTool("hand")}
 			>
 				<HandRaisedIcon className="h-4 w-4" />
 			</ToolButton>
 
 			<Divider />
 
-			<ToolButton label="缩小" onClick={handleZoomOut}>
+			<ToolButton label="缩小" onClick={controls.zoomOut}>
 				<MagnifyingGlassMinusIcon className="h-4 w-4" />
 			</ToolButton>
 			<Button
 				variant="ghost"
 				size="sm"
 				className="touch-target-dense h-8 min-h-8 min-w-[3.25rem] font-mono text-xs"
-				onClick={handleZoomReset}
-				aria-label={`${zoomPercent}%，重置缩放`}
+				onClick={controls.zoomReset}
+				aria-label={`${controls.zoomPercent}%，重置缩放`}
 				title="重置缩放"
 			>
-				{zoomPercent}%
+				{controls.zoomPercent}%
 			</Button>
-			<ToolButton label="放大" onClick={handleZoomIn}>
+			<ToolButton label="放大" onClick={controls.zoomIn}>
 				<MagnifyingGlassPlusIcon className="h-4 w-4" />
 			</ToolButton>
-			<ToolButton label="适应视图" onClick={handleZoomToFit}>
+			<ToolButton label="适应视图" onClick={controls.fit}>
 				<ArrowsPointingOutIcon className="h-4 w-4" />
 			</ToolButton>
 
@@ -174,7 +179,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 
 		</div>
 	);
-});
+}
 
 function Divider() {
 	return <div className="mx-0.5 h-5 w-px bg-ink/15" />;
