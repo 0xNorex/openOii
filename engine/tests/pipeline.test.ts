@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import SqliteDatabase from "better-sqlite3";
@@ -46,8 +46,6 @@ describe("pipeline runner (fake providers, auto-mode)", () => {
     const shared = new SharedDb(edb.db);
     const llm = new TextLlmService(edb);
     process.env.ENGINE_STATIC_DIR = join(cleanupDir, "static");
-    // The managed media root must exist, as backend/app/static does in a checkout.
-    mkdirSync(process.env.ENGINE_STATIC_DIR, { recursive: true });
     const runnerFor = (runId: number) => new PipelineRunner(edb, leaseRun(shared, runId), llm);
     return { runnerFor, shared, edb };
   }

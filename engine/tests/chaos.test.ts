@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import SqliteDatabase from "better-sqlite3";
@@ -271,8 +271,6 @@ describe("5. observability under failure", () => {
       process.env.IMAGE_PROVIDER = "fake";
       process.env.VIDEO_PROVIDER = "fake";
       process.env.ENGINE_STATIC_DIR = join(dir, "static");
-      // The managed media root must exist, as backend/app/static does in a checkout.
-      mkdirSync(process.env.ENGINE_STATIC_DIR, { recursive: true });
 
       edb.db
         .prepare(

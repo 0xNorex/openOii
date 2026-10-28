@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import SqliteDatabase from "better-sqlite3";
@@ -41,8 +41,6 @@ describe("targeted runs", () => {
 
   function boot() {
     process.env.ENGINE_STATIC_DIR = join(cleanupDir, "static");
-    // The managed media root must exist, as backend/app/static does in a checkout.
-    mkdirSync(process.env.ENGINE_STATIC_DIR, { recursive: true });
     const edb = new EngineDatabase(dbFile);
     const shared = new SharedDb(edb.db);
     const runnerFor = (runId: number) =>

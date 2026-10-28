@@ -351,6 +351,7 @@ export class MediaService {
   }
 
   private managedMediaDirectory(): string {
+    mkdirSync(this.settings.staticDir, { recursive: true });
     const root = realpathSync(this.settings.staticDir);
     const dir = join(root, "managed-v1");
     try {
