@@ -6,7 +6,7 @@ interface LoadingOverlayProps {
 export function LoadingOverlay({ text, className }: LoadingOverlayProps) {
   return (
     <div
-      className={`absolute inset-0 z-sticky flex flex-col items-center justify-center bg-paper-100/80 ${
+      className={`absolute inset-0 z-panel flex flex-col items-center justify-center bg-paper-100/80 ${
         className || ""
       }`}
       role="status"

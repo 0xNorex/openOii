@@ -344,10 +344,10 @@ export function SettingsModal() {
 					{item.key.toUpperCase()}
 				</span>
 				{item.is_sensitive && (
-					<span className="badge-doodle bg-warning/15 text-warning border-warning/30 text-2xs px-1.5 py-0.5">敏感</span>
+					<span className="badge-doodle bg-warning/15 text-warning-fg border-warning/30 text-xs px-1.5 py-0.5">敏感</span>
 				)}
 				{item.source === "env" && (
-					<span className="badge-doodle bg-info/15 text-info border-info/30 text-2xs px-1.5 py-0.5">仅.env</span>
+					<span className="badge-doodle bg-info/15 text-info-fg border-info/30 text-xs px-1.5 py-0.5">仅.env</span>
 				)}
 			</div>
 			<ConfigInput
@@ -355,7 +355,7 @@ export function SettingsModal() {
 				value={String(formState[item.key] ?? "")}
 				onChange={handleInputChange}
 			/>
-			<p className="mt-1.5 text-2xs text-ink-muted">
+			<p className="mt-1.5 text-xs text-ink-muted">
 				{getConfigDescription(item.key)}
 			</p>
 		</div>
@@ -386,7 +386,7 @@ export function SettingsModal() {
 						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
           ${
 						textProvider === value
-							? "border-accent bg-accent/10"
+							? "border-info bg-info/10"
 							: "border-ink/20 hover:bg-paper-300"
 					}
         `}
@@ -397,11 +397,11 @@ export function SettingsModal() {
 					value={value}
 					checked={textProvider === value}
 					onChange={handleInputChange}
-					className="radio radio-accent radio-sm"
+					className="h-4 w-4 accent-primary"
 				/>
 				<div className="min-w-0">
 					<div className="text-sm font-bold">{title}</div>
-					<div className="text-2xs text-ink-muted">
+					<div className="text-xs text-ink-muted">
 						{desc}
 					</div>
 				</div>
@@ -410,7 +410,7 @@ export function SettingsModal() {
 
 		return (
 			<div className="space-y-3">
-				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info">
+				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
 					<InformationCircleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 					<span>{tabConfig[activeTab]?.desc}</span>
 				</div>
@@ -421,7 +421,7 @@ export function SettingsModal() {
 							<span className="font-mono text-xs font-bold">
 								TEXT_PROVIDER
 							</span>
-							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-2xs px-1.5 py-0.5">必选</span>
+							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-xs px-1.5 py-0.5">必选</span>
 						</div>
 						<div className="flex flex-col gap-2 lg:flex-row">
 							{providerCard("anthropic", "Anthropic Claude", "Anthropic 兼容接口，推荐使用")}
@@ -433,11 +433,11 @@ export function SettingsModal() {
 
 				{textProvider === "anthropic" && anthropicItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<SparklesIcon className="h-3.5 w-3.5" />
 							Anthropic Claude 配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{anthropicItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -445,11 +445,11 @@ export function SettingsModal() {
 
 				{textProvider === "openai" && openaiItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<SparklesIcon className="h-3.5 w-3.5" />
 							OpenAI 兼容接口配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{openaiItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -457,15 +457,15 @@ export function SettingsModal() {
 
 				{textProvider === "fake" && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<SparklesIcon className="h-3.5 w-3.5" />
 							Fake 本地测试配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{activeSection.items
 								.filter((i) => i.key.toLowerCase().startsWith("fake_text_"))
 								.map(renderConfigItem)}
-							<p className="m-0 px-1 text-2xs text-ink-muted">
+							<p className="m-0 px-1 text-xs text-ink-muted">
 								启用后生成链路不会调用外部文本生成 API。
 							</p>
 						</div>
@@ -501,7 +501,7 @@ export function SettingsModal() {
 						  flex cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
           ${
 						imageProvider === value
-							? "border-accent bg-accent/10"
+							? "border-info bg-info/10"
 							: "border-ink/20 hover:bg-paper-300"
 					}
         `}
@@ -512,11 +512,11 @@ export function SettingsModal() {
 					value={value}
 					checked={imageProvider === value}
 					onChange={handleInputChange}
-					className="radio radio-accent radio-sm"
+					className="h-4 w-4 accent-primary"
 				/>
 				<div className="min-w-0">
 					<div className="text-sm font-bold">{title}</div>
-					<div className="text-2xs text-ink-muted">
+					<div className="text-xs text-ink-muted">
 						{desc}
 					</div>
 				</div>
@@ -525,7 +525,7 @@ export function SettingsModal() {
 
 		return (
 			<div className="space-y-3">
-				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info">
+				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
 					<InformationCircleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 					<span>{tabConfig[activeTab]?.desc}</span>
 				</div>
@@ -536,7 +536,7 @@ export function SettingsModal() {
 							<span className="font-mono text-xs font-bold">
 								IMAGE_PROVIDER
 							</span>
-							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-2xs px-1.5 py-0.5">必选</span>
+							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-xs px-1.5 py-0.5">必选</span>
 						</div>
 						<div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
 							{providerCard("openai", "OpenAI 兼容", "可用于 gpt-image-2 等兼容接口")}
@@ -549,13 +549,13 @@ export function SettingsModal() {
 				{(imageProvider === "modelscope" || imageProvider === "openai") &&
 					imageApiItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<PhotoIcon className="h-3.5 w-3.5" />
 							{imageProvider === "modelscope"
 								? "ModelScope 图像接口配置"
 								: "OpenAI 兼容接口配置"}
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{imageApiItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -563,13 +563,13 @@ export function SettingsModal() {
 
 				{imageProvider === "fake" && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<PhotoIcon className="h-3.5 w-3.5" />
 							Fake 本地测试配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{fakeItems.map(renderConfigItem)}
-							<p className="m-0 px-1 text-2xs text-ink-muted">
+							<p className="m-0 px-1 text-xs text-ink-muted">
 								未配置固定 URL 时会返回内置 SVG 占位图。
 							</p>
 						</div>
@@ -631,7 +631,7 @@ export function SettingsModal() {
 						  flex flex-1 cursor-pointer items-center gap-2 rounded-md border-2 p-2.5 transition-colors duration-fast
           ${
 						videoProvider === value
-							? "border-accent bg-accent/10"
+							? "border-info bg-info/10"
 							: "border-ink/20 hover:bg-paper-300"
 					}
         `}
@@ -642,11 +642,11 @@ export function SettingsModal() {
 					value={value}
 					checked={videoProvider === value}
 					onChange={handleInputChange}
-					className="radio radio-accent radio-sm"
+					className="h-4 w-4 accent-primary"
 				/>
 				<div className="min-w-0">
 					<div className="text-sm font-bold">{title}</div>
-					<div className="text-2xs text-ink-muted">
+					<div className="text-xs text-ink-muted">
 						{desc}
 					</div>
 				</div>
@@ -655,7 +655,7 @@ export function SettingsModal() {
 
 		return (
 			<div className="space-y-3">
-				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info">
+				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
 					<InformationCircleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 					<span>{tabConfig[activeTab]?.desc}</span>
 				</div>
@@ -666,7 +666,7 @@ export function SettingsModal() {
 							<span className="font-mono text-xs font-bold">
 								VIDEO_PROVIDER
 							</span>
-							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-2xs px-1.5 py-0.5">必选</span>
+							<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-xs px-1.5 py-0.5">必选</span>
 						</div>
 						<div className="flex flex-col gap-2 lg:flex-row">
 							{providerCard("doubao", "豆包视频", "火山引擎 Ark API，国内推荐")}
@@ -678,11 +678,11 @@ export function SettingsModal() {
 
 				{videoProvider === "doubao" && doubaoItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<VideoCameraIcon className="h-3.5 w-3.5" />
 							豆包视频配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{doubaoItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -690,11 +690,11 @@ export function SettingsModal() {
 
 				{videoProvider === "openai" && openaiItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<VideoCameraIcon className="h-3.5 w-3.5" />
 							OpenAI 兼容接口配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{openaiItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -702,11 +702,11 @@ export function SettingsModal() {
 
 				{videoProvider === "fake" && fakeItems.length > 0 && (
 					<div className="space-y-2">
-						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-accent">
+						<h4 className="m-0 flex items-center gap-1.5 text-xs font-bold text-info-fg">
 							<VideoCameraIcon className="h-3.5 w-3.5" />
 							Fake 本地测试配置
 						</h4>
-						<div className="space-y-2 rounded-r-md bg-accent/5 py-1.5 pl-2.5">
+						<div className="space-y-2 rounded-r-md bg-info/5 py-1.5 pl-2.5">
 							{fakeItems.map(renderConfigItem)}
 						</div>
 					</div>
@@ -739,7 +739,7 @@ export function SettingsModal() {
 
 		return (
 			<div className="space-y-3">
-				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info">
+				<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
 					<InformationCircleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 					<span>{tabConfig[activeTab]?.desc}</span>
 				</div>
@@ -772,9 +772,9 @@ export function SettingsModal() {
 						id="settings-modal-title"
 						className="flex items-center gap-1.5 font-heading text-md font-bold"
 					>
-						<Cog6ToothIcon className="h-5 w-5 text-accent" />
+						<Cog6ToothIcon className="h-5 w-5 text-info-fg" />
 						<span>系统设置</span>
-						<span className="hidden font-mono text-2xs font-normal uppercase text-ink-muted sm:inline">providers / storage / runtime</span>
+						<span className="hidden font-mono text-xs font-normal uppercase text-ink-muted sm:inline">providers / storage / runtime</span>
 					</h3>
 					<button
 						type="button"
@@ -797,7 +797,7 @@ export function SettingsModal() {
 					<div className="p-3">
 						<div
 							role="alert"
-							className="alert-doodle bg-error/10 text-error border-error border-2 border-ink/20 py-2 text-sm"
+							className="alert-doodle bg-error/10 text-error-fg border-error border-2 border-ink/20 py-2 text-sm"
 						>
 							<ExclamationCircleIcon className="h-5 w-5" />
 							<span>加载配置失败，请检查后端服务是否正常运行。</span>
@@ -835,7 +835,7 @@ export function SettingsModal() {
 												border-2 border-ink/20 transition-colors duration-fast
                         ${
 													isActive
-														? "bg-accent text-accent-content shadow-brutal-sm"
+														? "bg-info text-info-content shadow-brutal-sm"
 														: "bg-paper-200 hover:bg-paper-300"
 												}
                       `}
@@ -844,8 +844,8 @@ export function SettingsModal() {
 											<span>{cfg?.title || section.title}</span>
 											<span
 												className={`
-                        rounded px-1 py-0.5 text-2xs tabular-nums
-                        ${isActive ? "bg-accent-content/20" : "bg-paper-300"}
+                        rounded px-1 py-0.5 text-xs tabular-nums
+                        ${isActive ? "bg-info-content/20" : "bg-paper-300"}
                       `}
 											>
 												{section.items.length}
@@ -874,7 +874,7 @@ export function SettingsModal() {
 						</div>
 
 						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t-2 border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
-							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-2xs text-info">
+							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-info-fg">
 								<InformationCircleIcon className="h-4 w-4 shrink-0" />
 								<span className="truncate">
 									大部分配置保存后立即生效，数据库/Redis 配置需重启
@@ -929,10 +929,10 @@ export function SettingsModal() {
 					<div
 						className={`shrink-0 ${
 							alertState.type === "success"
-								? "text-success"
+								? "text-success-fg"
 								: alertState.type === "error"
-									? "text-error"
-									: "text-warning"
+									? "text-error-fg"
+									: "text-warning-fg"
 						}`}
 					>
 						{alertState.type === "success" ? (

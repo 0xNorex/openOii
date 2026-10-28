@@ -58,7 +58,7 @@ export function PromptBar({
 
 	return (
 		<footer
-			className="z-sticky shrink-0 border-t-2 border-ink/15 bg-paper-100 px-2 py-1.5 sm:px-3"
+			className="z-panel shrink-0 border-t-2 border-ink/15 bg-paper-100 px-2 py-1.5 sm:px-3"
 			data-shell="prompt-bar"
 		>
 			{showOutlinePreview && recoveryGate?.story_outline ? (
@@ -84,7 +84,7 @@ export function PromptBar({
 						<p className="m-0 text-xs font-bold">
 							{(awaitingAgent && AGENT_NAME_MAP[awaitingAgent]) || awaitingAgent || "工作流"} 已完成
 						</p>
-						<p className="m-0 text-2xs text-ink-muted">确认继续，或输入修改意见</p>
+						<p className="m-0 text-xs text-ink-muted">确认继续，或输入修改意见</p>
 					</div>
 					<Button
 						variant="primary"
@@ -104,7 +104,7 @@ export function PromptBar({
 			<div className="mx-auto flex max-w-5xl items-center gap-2">
 				{selectionLabel ? (
 					<span
-						className="max-w-[35vw] shrink-0 truncate rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-2xs font-semibold text-accent"
+						className="max-w-[35vw] shrink-0 truncate rounded-md border border-info/30 bg-info/10 px-2 py-1 text-xs font-semibold text-info-fg"
 						aria-label={`当前选择：${selectionLabel}`}
 						title={selectionLabel}
 					>
@@ -128,7 +128,7 @@ export function PromptBar({
 				</div>
 			</div>
 			{isGenerating && !awaitingConfirm ? (
-				<p className="m-0 mt-1 text-center text-2xs text-ink-muted" role="status">
+				<p className="m-0 mt-1 text-center text-xs text-ink-muted" role="status">
 					当前阶段进行中，待审批后可提交修改
 				</p>
 			) : null}

@@ -152,12 +152,12 @@ export function HomePage() {
 										autoComplete="off"
 										spellCheck
 									/>
-									{story.length > 4500 ? <p className="m-0 mt-1 text-2xs font-bold text-warning">还可输入 {5000 - story.length} 字</p> : null}
+									{story.length > 4500 ? <p className="m-0 mt-1 text-xs font-bold text-warning-fg">还可输入 {5000 - story.length} 字</p> : null}
 								</div>
 
 								<div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-3">
 									<div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-label="创作模式">
-										<span className="font-mono text-2xs uppercase text-ink-muted">选择创作模式</span>
+										<span className="font-mono text-xs uppercase text-ink-muted">选择创作模式</span>
 										<div className="grid grid-cols-2 gap-2">
 											{[
 												{ value: "review", label: "交互模式", description: "每个阶段由你确认", icon: "check" },
@@ -173,7 +173,7 @@ export function HomePage() {
 														aria-pressed={active}
 													>
 														<span className="inline-flex items-center gap-1.5 font-heading text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
-														<span className={"text-left text-2xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
+														<span className={"text-left text-xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
 													</button>
 												);
 											})}
@@ -197,8 +197,8 @@ export function HomePage() {
 									universes={universes}
 									disabled={createMutation.isPending}
 								/>
-								{selectedUniverse ? <p className="m-0 text-2xs text-ink-muted">将加入「{selectedUniverse.name}」宇宙 · 第 {chapterNumber} 章</p> : null}
-								{createMutation.error ? <p className="m-0 border-l-2 border-error bg-error/10 px-3 py-2 text-xs text-error" role="alert">{createMutation.error.message || "创建项目失败，请重试。"}</p> : null}
+								{selectedUniverse ? <p className="m-0 text-xs text-ink-muted">将加入「{selectedUniverse.name}」宇宙 · 第 {chapterNumber} 章</p> : null}
+								{createMutation.error ? <p className="m-0 border-l-2 border-error bg-error/10 px-3 py-2 text-xs text-error-fg" role="alert">{createMutation.error.message || "创建项目失败，请重试。"}</p> : null}
 							</DeskSection>
 						</div>
 					</PageContent>

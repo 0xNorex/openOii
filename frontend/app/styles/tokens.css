@@ -5,41 +5,40 @@
 
 @layer base {
   :root {
-    /* —— Comic Workbench palette (owned here; no UI plugin theme) —— */
-    --color-primary: 232 183 48;
-    --color-primary-content: 26 26 26;
-    --color-secondary: 212 94 139;
-    --color-secondary-content: 26 26 26;
-    --color-accent: 42 168 184;
-    --color-accent-content: 26 26 26;
-    --color-neutral: 30 30 46;
-    --color-neutral-content: 230 237 243;
-    --color-paper-100: 250 250 245;
-    --color-paper-200: 240 239 230;
-    --color-paper-300: 226 224 212;
-    --color-ink: 44 44 58;
-    --color-info: 42 168 184;
-    --color-info-content: 26 26 26;
-    --color-success: 76 175 125;
-    --color-success-content: 26 26 26;
-    --color-warning: 232 148 58;
-    --color-warning-content: 26 26 26;
-    --color-error: 192 58 58;
+    /* —— Studio palette（spec §7.2）：印版品红主色 + 暖中性 ——
+     * 通道值写成 "r g b"，供 Tailwind 的 /alpha 修饰使用。
+     * paper-100 = bg（页面/画布底），paper-200 = sunken（输入框、分区底），
+     * paper-300 = border（分隔线），surface = 浮层面板与卡片。 */
+    --color-primary: 176 33 95; /* #B0215F */
+    --color-primary-content: 255 255 255;
+    --color-neutral: 28 28 34;
+    --color-neutral-content: 236 236 241;
+    --color-surface: 255 255 255;
+    --color-paper-100: 247 247 244; /* #F7F7F4 bg */
+    --color-paper-200: 239 238 233; /* #EFEEE9 sunken */
+    --color-paper-300: 222 221 214; /* #DEDDD6 border */
+    --color-border-strong: 138 138 148; /* #8A8A94 控件轮廓，WCAG 1.4.11 */
+    --color-ink: 28 28 34; /* #1C1C22 */
+    /* 状态色 = 状态文字色（*-fg）；饱和填充只用于状态点、细描边和实心徽标 */
+    --color-info: 11 110 127; /* #0B6E7F */
+    --color-info-content: 255 255 255;
+    --color-success: 31 122 77; /* #1F7A4D */
+    --color-success-content: 255 255 255;
+    --color-warning: 154 91 0; /* #9A5B00 */
+    --color-warning-content: 255 255 255;
+    --color-error: 180 35 24; /* #B42318 */
     --color-error-content: 255 255 255;
+    --status-bg-alpha: 0.1;
 
     /* —— Brand plates (CMYK registration, theme-aware) —— */
     --cmyk-cyan: 0.55 0.14 180;
     --cmyk-magenta: 0.55 0.26 330;
 
     /* —— Text contrast tokens (theme-aware) ——
-     * 同一语义在两套主题达到同一对比目标，而不是同一 alpha 数值。
-     * muted: 次级正文/元信息，全部 paper 表面 ≥4.5:1
-     * subtle: 纯装饰标签，≥3:1
-     * primary-ink: 品牌黄作为「文字」的形态；填充色使用 --color-primary
-     */
-    --ink-muted: rgb(var(--color-ink) / 0.72);
+     * muted: 次要文字与 placeholder，在 bg / sunken 上 ≥4.5:1
+     * subtle: 纯装饰标签，≥3:1 */
+    --ink-muted: #5b5b66;
     --ink-subtle: rgb(var(--color-ink) / 0.55);
-    --primary-ink: #7a5a00;
 
     /* —— Spacing (dense default; use for new chrome) —— */
     --space-0: 0;
@@ -54,23 +53,27 @@
     --space-12: 3rem; /* 48 */
 
     /* —— Type scale (dense desk; display stays splash-only) —— */
-    --text-2xs: 0.625rem; /* 10 — mono labels */
-    --text-xs: 0.75rem; /* 12 */
+    --text-xs: 0.75rem; /* 12 — 下限 */
     --text-sm: 0.8125rem; /* 13 */
     --text-base: 0.875rem; /* 14 body on desk */
     --text-md: 1rem; /* 16 */
     --text-lg: 1.125rem; /* 18 */
     --text-xl: 1.25rem; /* 20 */
+    --text-2xl: 1.5rem; /* 24 */
 
     --leading-tight: 1.15;
     --leading-snug: 1.35;
     --leading-normal: 1.5;
 
-    /* —— Radius —— */
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-xl: 0px;
+    /* —— Radius（spec §7.5）：控件 6px，卡片与面板 10px，胶囊用 rounded-full —— */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+    --radius-xl: 10px;
+
+    /* —— Elevation：平面元素只用 1px border；浮层面板一级，Dialog 再加一级 —— */
+    --shadow-panel: 0 4px 16px rgb(0 0 0 / 0.08);
+    --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.16);
 
     /* —— Touch —— */
     --touch-target-min: 44px; /* primary actions, WCAG-friendly */
@@ -93,43 +96,40 @@
     /* 画布几何（卡片/九宫格/frame 内距）的 SSOT 是 layoutComicWorkflow.ts：
      * tldraw 消费 px 数值，这里不保留 rem 副本以免两套数字漂移。 */
 
-    /* —— Z-Index —— */
-    --z-dropdown: 10;
-    --z-sticky: 20;
-    --z-fixed: 30;
-    --z-modal: 50;
-    --z-popover: 60;
+    /* —— Z-Index：一套刻度（spec §7.5）。画布 0；Dialog/Drawer 走浏览器
+     * top layer，不占 z 档。 */
+    --z-panel: 20; /* 画布工具条、浮层面板、页面 chrome */
+    --z-popover: 40; /* 下拉、菜单 */
+    --z-toast: 60;
     --z-tooltip: 70;
-    /* 画布上方的浮动面板（检查器、侧栏）；弹窗走浏览器 top layer，不占 z 档 */
-    --z-panel: 20;
   }
 
-  [data-theme="doodle-dark"] {
-    --color-primary: 240 192 80;
-    --color-primary-content: 26 26 26;
-    --color-secondary: 224 104 152;
-    --color-secondary-content: 26 26 26;
-    --color-accent: 64 192 208;
-    --color-accent-content: 22 22 30;
-    --color-neutral: 42 42 58;
-    --color-neutral-content: 208 208 224;
-    --color-paper-100: 22 22 30;
-    --color-paper-200: 30 30 40;
-    --color-paper-300: 40 40 58;
-    --color-ink: 216 216 232;
-    --color-info: 64 192 208;
-    --color-info-content: 22 22 30;
-    --color-success: 96 207 144;
-    --color-success-content: 22 22 30;
-    --color-warning: 240 176 80;
-    --color-warning-content: 22 22 30;
-    --color-error: 232 104 104;
-    --color-error-content: 22 22 30;
+  [data-theme="dark"] {
+    --color-primary: 242 122 174; /* #F27AAE */
+    --color-primary-content: 18 18 22;
+    --color-neutral: 8 8 10;
+    --color-neutral-content: 236 236 241;
+    --color-surface: 27 27 33; /* #1B1B21 */
+    --color-paper-100: 18 18 22; /* #121216 */
+    --color-paper-200: 36 36 44; /* #24242C */
+    --color-paper-300: 51 51 61; /* #33333D */
+    --color-border-strong: 110 110 122; /* #6E6E7A */
+    --color-ink: 236 236 241; /* #ECECF1 */
+    --color-info: 95 207 224; /* #5FCFE0 */
+    --color-info-content: 18 18 22;
+    --color-success: 111 211 160; /* #6FD3A0 */
+    --color-success-content: 18 18 22;
+    --color-warning: 242 179 90; /* #F2B35A */
+    --color-warning-content: 18 18 22;
+    --color-error: 255 138 128; /* #FF8A80 */
+    --color-error-content: 18 18 22;
+    --status-bg-alpha: 0.15;
     --cmyk-cyan: 0.6 0.12 195;
     --cmyk-magenta: 0.6 0.24 340;
-    --ink-muted: rgb(var(--color-ink) / 0.62);
+    --ink-muted: #a3a3af;
     --ink-subtle: rgb(var(--color-ink) / 0.45);
-    --primary-ink: #f0c050;
+    --shadow-panel: 0 4px 16px rgb(0 0 0 / 0.4);
+    --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.5);
   }
 
   /* 触屏下密集档自动升到无障碍下限；桌面密集布局不受影响 */

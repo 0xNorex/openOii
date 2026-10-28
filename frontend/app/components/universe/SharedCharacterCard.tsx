@@ -43,14 +43,14 @@ export function SharedCharacterCard({
 					</div>
 				)}
 				<div className="min-w-0 flex-1">
-					<p className="m-0 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+					<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 						cast
 					</p>
 					<h3 className="m-0 truncate font-heading text-sm font-bold">
 						{character.name}
 					</h3>
 				</div>
-				<span className="shrink-0 font-mono text-2xs tabular-nums text-ink-muted">
+				<span className="shrink-0 font-mono text-xs tabular-nums text-ink-muted">
 					v{character.version}
 				</span>
 			</div>
@@ -60,7 +60,7 @@ export function SharedCharacterCard({
 					{tags.slice(0, 3).map((tag) => (
 						<span
 							key={tag}
-							className="rounded-full border border-primary/15 bg-primary/10 px-1.5 py-px font-bold text-2xs text-primary-ink"
+							className="rounded-full border border-primary/15 bg-primary/10 px-1.5 py-px font-bold text-xs text-primary"
 						>
 							{tag}
 						</span>
@@ -69,11 +69,11 @@ export function SharedCharacterCard({
 			) : null}
 
 			{character.description ? (
-				<p className="m-0 line-clamp-2 flex-1 text-2xs text-ink-muted">
+				<p className="m-0 line-clamp-2 flex-1 text-xs text-ink-muted">
 					{character.description}
 				</p>
 			) : (
-				<p className="m-0 flex-1 text-2xs text-ink-muted">
+				<p className="m-0 flex-1 text-xs text-ink-muted">
 					无描述
 				</p>
 			)}
@@ -82,7 +82,7 @@ export function SharedCharacterCard({
 				<Button
 					size="sm"
 					variant="secondary"
-					className="mt-2 w-full !h-7 !min-h-7 text-2xs"
+					className="mt-2 w-full !h-7 !min-h-7 text-xs"
 					onClick={() => onImport(character)}
 				>
 					导入章节

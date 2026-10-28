@@ -166,7 +166,7 @@ describe("SettingsModal", () => {
 		if (textTab) {
 			await user.click(textTab);
 			// 验证标签页切换（检查是否有 accent 背景色）
-			expect(textTab).toHaveClass("bg-accent");
+			expect(textTab).toHaveClass("bg-info");
 		}
 	});
 

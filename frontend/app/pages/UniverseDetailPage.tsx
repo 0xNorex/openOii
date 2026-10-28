@@ -163,7 +163,7 @@ export function UniverseDetailPage() {
 				<div className="flex flex-1 items-center justify-center p-4">
 					<div className="flex min-h-[10rem] w-full max-w-md flex-col items-center justify-center gap-3 rounded-lg border-2 border-error/25 bg-error/5 px-4 text-center">
 						<div>
-							<p className="m-0 font-heading text-md font-bold text-error">
+							<p className="m-0 font-heading text-md font-bold text-error-fg">
 								宇宙加载失败
 							</p>
 							<p className="m-0 mt-0.5 text-xs text-ink-muted">
@@ -336,22 +336,22 @@ export function UniverseDetailPage() {
 												)}
 												<Link
 													to={`/project/${ch.project_id}`}
-													className="truncate font-heading text-sm font-bold transition-colors duration-fast hover:text-primary-ink"
+													className="truncate font-heading text-sm font-bold transition-colors duration-fast hover:text-primary"
 												>
 													{ch.chapter_title || ch.project_title || "未命名"}
 												</Link>
-												<span className="font-mono text-2xs text-ink-muted">
+												<span className="font-mono text-xs text-ink-muted">
 													#{ch.project_id}
 												</span>
 												{!ch.is_main_story ? (
-													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-ink/15 text-2xs px-1.5 py-0.5 shrink-0">
+													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-ink/15 text-xs px-1.5 py-0.5 shrink-0">
 														外传
 													</span>
 												) : null}
 											</div>
 											<button
 												type="button"
-								className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-7 min-h-7 gap-1 px-2 text-xs text-error/50 hover:text-error"
+								className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm h-7 min-h-7 gap-1 px-2 text-xs text-error-fg hover:text-error-fg"
 												aria-label={`从宇宙移除${ch.chapter_title || ch.project_title || "未命名项目"}`}
 												title="从宇宙移除"
 												onClick={() =>
@@ -372,7 +372,7 @@ export function UniverseDetailPage() {
 						meta={`${u.shared_characters.length} 个`}
 						actions={
 							<>
-								<label className="flex items-center gap-1 text-2xs text-ink-muted">
+								<label className="flex items-center gap-1 text-xs text-ink-muted">
 									导入到
 									<Select
 										density="compact"

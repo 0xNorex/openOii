@@ -33,12 +33,12 @@ const SECTION_STYLE = {
 		surface: "bg-primary/5",
 	},
 	elements: {
-		accent: "bg-secondary",
-		surface: "bg-secondary/5 halftone-bg",
+		accent: "bg-primary",
+		surface: "bg-primary/5 halftone-bg",
 	},
 	shotline: {
-		accent: "bg-accent",
-		surface: "bg-accent/5 halftone-bg",
+		accent: "bg-info",
+		surface: "bg-info/5 halftone-bg",
 	},
 	output: {
 		accent: "bg-ink",
@@ -48,13 +48,13 @@ const SECTION_STYLE = {
 
 const STATUS_COPY: Record<WorkflowNodeStatus, { label: string; cls: string }> = {
 	draft: { label: "待生成", cls: "bg-paper-200 text-ink-muted" },
-	generating: { label: "生成中", cls: "bg-warning/15 text-warning" },
-	review: { label: "待确认", cls: "bg-warning/15 text-warning" },
+	generating: { label: "生成中", cls: "bg-warning/15 text-warning-fg" },
+	review: { label: "待确认", cls: "bg-warning/15 text-warning-fg" },
 	unconfirmed: { label: "未确认", cls: "bg-paper-200 text-ink-muted" },
-	approved: { label: "已批准", cls: "bg-success/15 text-success" },
-	blocked: { label: "阻塞", cls: "bg-error/15 text-error" },
-	superseded: { label: "需重合成", cls: "bg-warning/15 text-warning" },
-	ready: { label: "可用", cls: "bg-success/15 text-success" },
+	approved: { label: "已批准", cls: "bg-success/15 text-success-fg" },
+	blocked: { label: "阻塞", cls: "bg-error/15 text-error-fg" },
+	superseded: { label: "需重合成", cls: "bg-warning/15 text-warning-fg" },
+	ready: { label: "可用", cls: "bg-success/15 text-success-fg" },
 };
 
 function stopCanvasPointer(e: React.PointerEvent<HTMLElement>) {
@@ -214,7 +214,7 @@ function selectWorkflowNode(nodeId: string) {
 function statusBadge(status: WorkflowNodeStatus) {
 	const copy = STATUS_COPY[status] ?? STATUS_COPY.draft;
 	return (
-		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-ink/15 px-2 py-0.5 text-2xs font-medium ${copy.cls}`}>
+		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-ink/15 px-2 py-0.5 text-xs font-medium ${copy.cls}`}>
 			<span className="h-2 w-2 rounded-full bg-current opacity-60" />
 			{copy.label}
 		</span>
@@ -281,7 +281,7 @@ function CharacterRefStrip({
 
 	return (
 		<div className="mt-1.5 flex items-center gap-1" onPointerDown={stopAll}>
-			<span className="shrink-0 font-mono text-2xs uppercase text-ink-muted">
+			<span className="shrink-0 font-mono text-xs uppercase text-ink-muted">
 				参考 {refs.length}
 			</span>
 			<div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
@@ -324,7 +324,7 @@ function CharacterRefStrip({
 						stopAll(e);
 						fileRef.current?.click();
 					}}
-					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-ink/25 text-ink-muted transition-colors duration-fast hover:border-primary/50 hover:text-primary-ink"
+					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-ink/25 text-ink-muted transition-colors duration-fast hover:border-primary/50 hover:text-primary"
 				>
 					{busy === "upload" ? (
 						<span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
@@ -392,7 +392,7 @@ function CharacterCard({
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="star" accentClass="bg-secondary" compact />
+				<CardHeader node={node} icon="star" accentClass="bg-primary" compact />
 				{node.character.description ? (
 					<p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
 						{node.character.description}
@@ -401,10 +401,10 @@ function CharacterCard({
 				<CharacterRefStrip node={node} />
 				<div className="mt-auto flex flex-wrap gap-1 pt-1.5">
 					{node.character.has_embedding ? (
-							<span className="inline-flex rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-2xs text-primary-content">资产一致性</span>
+							<span className="inline-flex rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-xs text-primary-content">资产一致性</span>
 					) : null}
 					{node.character.visual_notes ? (
-							<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-2xs text-ink-muted">视觉笔记</span>
+							<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-xs text-ink-muted">视觉笔记</span>
 					) : null}
 				</div>
 				{node.status === "review" ? (
@@ -448,10 +448,10 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 					<EmptyMedia label="等待分镜图" />
 				)}
 				{/* 九宫格 cell index */}
-				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border-2 border-ink/20 bg-accent px-1 font-mono text-2xs font-bold text-accent-content shadow-brutal-sm">
+				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border-2 border-ink/20 bg-info px-1 font-mono text-xs font-bold text-info-content shadow-brutal-sm">
 					{cell}
 				</span>
-				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-2xs tabular-nums">
+				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-xs tabular-nums">
 					{node.shot.duration ? `${node.shot.duration}s` : "未定时长"}
 				</span>
 				<div className="absolute right-2 top-2">
@@ -463,8 +463,8 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="clapperboard" accentClass="bg-accent" compact />
-				<p className="m-0 mt-1 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+				<CardHeader node={node} icon="clapperboard" accentClass="bg-info" compact />
+				<p className="m-0 mt-1 font-mono text-xs uppercase tracking-wide text-ink-muted">
 					格 {cell}
 				</p>
 				<div className="mt-1.5">
@@ -490,7 +490,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 						ariaLabel={`格 ${cell} 对白`}
 						rows={2}
 						disabled={editLocked}
-						displayClassName="line-clamp-2 p-0.5 text-xs italic text-primary-ink"
+						displayClassName="line-clamp-2 p-0.5 text-xs italic text-primary"
 						save={(next) =>
 							saveShotPatch(node.entityId, {
 								expected_revision: node.shot.revision,
@@ -501,12 +501,12 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				</div>
 				<div className="mt-auto flex flex-wrap gap-1 pt-1.5">
 					{node.characterNames.length > 0 ? (
-						<span className="inline-flex max-w-full truncate rounded-full border border-secondary/30 bg-secondary px-1.5 py-0.5 text-2xs text-secondary-content">
+						<span className="inline-flex max-w-full truncate rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-xs text-primary-content">
 							{node.characterNames.join("、")}
 						</span>
 					) : null}
 					{node.shot.camera ? (
-						<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/80 px-1.5 py-0.5 text-2xs text-ink-muted">{node.shot.camera}</span>
+						<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/80 px-1.5 py-0.5 text-xs text-ink-muted">{node.shot.camera}</span>
 					) : null}
 				</div>
 				{node.status === "review" ? (
@@ -587,7 +587,7 @@ function OutputCard({
 
 			{node.blockingClips.length > 0 ? (
 				<div className="mt-2 min-h-0 overflow-y-auto rounded-lg border border-warning/25 bg-warning/10 p-2">
-					<p className="m-0 font-mono text-2xs uppercase text-warning">
+					<p className="m-0 font-mono text-xs uppercase text-warning-fg">
 						阻塞项 {node.blockingClips.length}
 					</p>
 					<ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-xs leading-relaxed text-ink">
@@ -604,7 +604,7 @@ function OutputCard({
 
 			{node.exports.length > 0 ? (
 				<div className="mt-auto pt-2" onPointerDown={stopAll}>
-					<p className="m-0 font-mono text-2xs uppercase text-ink-muted">
+					<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 						导出记录 {node.exports.length}
 					</p>
 					<div className="mt-1 flex flex-col gap-0.5">
@@ -663,7 +663,7 @@ function CardHeader({
 					</p>
 					{statusBadge(node.status)}
 				</div>
-				<p className="m-0 truncate font-mono text-2xs uppercase text-ink-muted">
+				<p className="m-0 truncate font-mono text-xs uppercase text-ink-muted">
 					{node.subtitle}
 				</p>
 			</div>
@@ -732,7 +732,7 @@ export class WorkflowFrameShapeUtil extends ShapeUtil<WorkflowFrameShape> {
 					<div className="flex items-center gap-2">
 						<span className={`h-7 w-1 rounded-full ${style.accent}`} />
 						<div className="min-w-0">
-							<p className="m-0 font-mono text-2xs uppercase text-ink-muted">
+							<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 								{eyebrow}
 							</p>
 							{/* countLabel 并入标题行尾：头部固定两行，layout 侧 frameHeader=56 才装得下 */}
@@ -741,7 +741,7 @@ export class WorkflowFrameShapeUtil extends ShapeUtil<WorkflowFrameShape> {
 									{title}
 								</p>
 								{countLabel ? (
-									<p className="m-0 shrink-0 font-mono text-2xs uppercase text-ink-muted">
+									<p className="m-0 shrink-0 font-mono text-xs uppercase text-ink-muted">
 										{countLabel}
 									</p>
 								) : null}

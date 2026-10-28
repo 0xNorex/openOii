@@ -30,7 +30,7 @@ export function Input({ label, error, className, ...props }: InputProps) {
       />
       {error && (
         <label className="block min-h-0 p-0">
-          <span className="text-2xs text-error">
+          <span className="text-xs text-error-fg">
             {error}
           </span>
         </label>

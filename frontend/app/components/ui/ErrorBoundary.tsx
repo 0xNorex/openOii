@@ -40,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="card-doodle max-w-md p-4 text-center shadow-brutal-sm sm:p-5">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
               <svg
-                className="h-6 w-6 text-error"
+                className="h-6 w-6 text-error-fg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -61,11 +61,11 @@ export class ErrorBoundary extends Component<Props, State> {
               应用遇到了意外错误，请尝试刷新页面。
             </p>
             {this.state.error && (
-              <details className="mb-3 rounded-md bg-paper-200 p-2 text-left text-2xs">
+              <details className="mb-3 rounded-md bg-paper-200 p-2 text-left text-xs">
                 <summary className="mb-1 cursor-pointer font-medium">
                   错误详情
                 </summary>
-                <pre className="overflow-auto text-error">
+                <pre className="overflow-auto text-error-fg">
                   {this.state.error.message}
                 </pre>
               </details>

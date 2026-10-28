@@ -153,7 +153,7 @@ export function WorkspaceSidebar({
 							}}
 							id={tabId(tab.key)}
 							className={clsx(
-								"touch-target-dense flex items-center justify-center gap-1 text-2xs font-semibold transition-colors duration-fast",
+								"touch-target-dense flex items-center justify-center gap-1 text-xs font-semibold transition-colors duration-fast",
 								activeTab === tab.key
 									? "bg-primary text-primary-content"
 									: "text-ink-muted hover:bg-paper-200",
@@ -269,12 +269,12 @@ function AssetsPanel({ projectId, active }: { projectId: number; active: boolean
 			<div className="border-b border-ink/10 px-2 py-1.5">
 				<div className="mb-1.5 flex items-center justify-between gap-2">
 					<div className="min-w-0">
-						<p className="m-0 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+						<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 							assets
 						</p>
 						<h2 className="m-0 font-heading text-sm font-bold">资产库</h2>
 					</div>
-					<span className="rounded-full border border-ink/10 bg-paper-200 px-2 py-0.5 font-mono text-2xs tabular-nums text-ink-muted">
+					<span className="rounded-full border border-ink/10 bg-paper-200 px-2 py-0.5 font-mono text-xs tabular-nums text-ink-muted">
 						{data?.total ?? 0}
 					</span>
 				</div>
@@ -292,7 +292,7 @@ function AssetsPanel({ projectId, active }: { projectId: number; active: boolean
 							key={type}
 							type="button"
 							className={clsx(
-								"touch-target-dense h-8 min-h-8 text-2xs font-semibold transition-colors duration-fast",
+								"touch-target-dense h-8 min-h-8 text-xs font-semibold transition-colors duration-fast",
 								assetType === type
 									? "bg-primary text-primary-content"
 									: "bg-paper-200 text-ink-muted hover:bg-paper-300",
@@ -369,10 +369,10 @@ function AssetTile({
 			</div>
 			<div className="p-1.5">
 				<div className="flex items-center gap-1">
-					<span className="rounded-full border border-ink/10 bg-paper-200 px-1.5 py-px font-mono text-2xs font-bold text-ink-muted">
+					<span className="rounded-full border border-ink/10 bg-paper-200 px-1.5 py-px font-mono text-xs font-bold text-ink-muted">
 						{asset.asset_type === "character" ? "角色" : "场景"}
 					</span>
-					<h3 className="m-0 min-w-0 flex-1 truncate font-heading text-2xs font-bold">
+					<h3 className="m-0 min-w-0 flex-1 truncate font-heading text-xs font-bold">
 						{asset.name}
 					</h3>
 				</div>
@@ -380,7 +380,7 @@ function AssetTile({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="!h-7 !min-h-7 gap-1 !px-1.5 text-2xs"
+						className="!h-7 !min-h-7 gap-1 !px-1.5 text-xs"
 						disabled={busy}
 						onClick={onUse}
 					>
@@ -390,7 +390,7 @@ function AssetTile({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="!h-7 !min-h-7 !px-1.5 text-error"
+						className="!h-7 !min-h-7 !px-1.5 text-error-fg"
 						disabled={busy}
 						onClick={onDelete}
 						aria-label="删除资产"

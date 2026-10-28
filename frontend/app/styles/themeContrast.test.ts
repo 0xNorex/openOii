@@ -7,7 +7,7 @@ const tokensCss = readFileSync(resolve(__dirname, "./tokens.css"), "utf-8");
 type Theme = "root" | "dark";
 
 function tokenValue(theme: Theme, name: string): string {
-  const split = tokensCss.indexOf('[data-theme="doodle-dark"]');
+  const split = tokensCss.indexOf('[data-theme="dark"]');
   const source = theme === "root" ? tokensCss.slice(0, split) : tokensCss.slice(split);
   const match = source.match(new RegExp(`${name}:\\s*([^;]+);`));
   if (!match) throw new Error(`tokens.css 缺少 ${name}`);
@@ -39,43 +39,54 @@ function contrast(foreground: [number, number, number], background: [number, num
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-function alphaContrast(foreground: [number, number, number], alpha: number, background: [number, number, number]): number {
-  const composite = foreground.map((channel, index) => channel * alpha + background[index] * (1 - alpha)) as [number, number, number];
-  return contrast(composite, background);
+/** 颜色令牌：hex 或 "r g b"；带 alpha 的 rgb(var(--color-ink) / a) 合成到给定底色上。 */
+function textColor(theme: Theme, name: string, background: [number, number, number]): [number, number, number] {
+  const value = tokenValue(theme, name);
+  const alpha = value.match(/rgb\(var\(--color-ink\)\s*\/\s*([\d.]+)\)/);
+  if (!alpha) return tokenColor(theme, name);
+  const ink = tokenColor(theme, "--color-ink");
+  const a = Number(alpha[1]);
+  return ink.map((channel, index) => channel * a + background[index] * (1 - a)) as [number, number, number];
 }
 
-function tokenAlpha(theme: Theme, name: string): number {
-  const match = tokenValue(theme, name).match(/\/\s*([\d.]+)\)/);
-  if (!match) throw new Error(`${name} 不包含 alpha`);
-  return Number(match[1]);
-}
-
-const PAIRS = ["primary", "secondary", "accent", "neutral", "info", "success", "warning", "error"] as const;
-const SURFACES = ["--color-paper-100", "--color-paper-200", "--color-paper-300"] as const;
-const THEMES = [["doodle", "root"], ["doodle-dark", "dark"]] as const;
+const FILLS = ["primary", "neutral", "info", "success", "warning", "error"] as const;
+const STATUS = ["info", "success", "warning", "error"] as const;
+/** bg、sunken、border（偶尔作底）、surface */
+const SURFACES = ["--color-paper-100", "--color-paper-200", "--color-paper-300", "--color-surface"] as const;
+const THEMES = [["light", "root"], ["dark", "dark"]] as const;
 
 describe.each(THEMES)("主题 %s", (_name, theme) => {
-  it.each(PAIRS)("%s 与其文字色对比度 ≥ 4.5:1", (key) => {
+  const on = (fg: string, surface: string) =>
+    contrast(textColor(theme, fg, tokenColor(theme, surface)), tokenColor(theme, surface));
+
+  it.each(FILLS)("%s 填充上的文字色 ≥ 4.5:1", (key) => {
     expect(contrast(tokenColor(theme, `--color-${key}-content`), tokenColor(theme, `--color-${key}`))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(SURFACES)("ink 在 %s 上对比度 ≥ 7:1", (surface) => {
-    expect(contrast(tokenColor(theme, "--color-ink"), tokenColor(theme, surface))).toBeGreaterThanOrEqual(7);
+  it.each(SURFACES)("ink 在 %s 上 ≥ 7:1", (surface) => {
+    expect(on("--color-ink", surface)).toBeGreaterThanOrEqual(7);
   });
 
-  it.each(SURFACES)("muted 文本在 %s 上对比度 ≥ 4.5:1", (surface) => {
-    expect(alphaContrast(tokenColor(theme, "--color-ink"), tokenAlpha(theme, "--ink-muted"), tokenColor(theme, surface))).toBeGreaterThanOrEqual(4.5);
+  it.each(SURFACES)("ink-muted 在 %s 上 ≥ 4.5:1", (surface) => {
+    expect(on("--ink-muted", surface)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(SURFACES)("subtle 文本在 %s 上对比度 ≥ 3:1", (surface) => {
-    expect(alphaContrast(tokenColor(theme, "--color-ink"), tokenAlpha(theme, "--ink-subtle"), tokenColor(theme, surface))).toBeGreaterThanOrEqual(3);
+  it.each(SURFACES)("ink-subtle 在 %s 上 ≥ 3:1", (surface) => {
+    expect(on("--ink-subtle", surface)).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(SURFACES)("品牌色文字在 %s 上对比度 ≥ 4.5:1", (surface) => {
-    expect(contrast(tokenColor(theme, "--primary-ink"), tokenColor(theme, surface))).toBeGreaterThanOrEqual(4.5);
+  it.each(["--color-paper-100", "--color-paper-200", "--color-surface"])("primary 作文字在 %s 上 ≥ 4.5:1", (surface) => {
+    expect(on("--color-primary", surface)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("error 文字在 paper-100 上对比度 ≥ 4.5:1", () => {
-    expect(contrast(tokenColor(theme, "--color-error"), tokenColor(theme, "--color-paper-100"))).toBeGreaterThanOrEqual(4.5);
+  it.each(STATUS.flatMap((key) => ["--color-paper-100", "--color-paper-200", "--color-surface"].map((surface) => [key, surface])))(
+    "%s-fg 在 %s 上 ≥ 4.5:1",
+    (key, surface) => {
+      expect(on(`--color-${key}`, surface)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it.each(["--color-paper-100", "--color-surface"])("border-strong 在 %s 上 ≥ 3:1（WCAG 1.4.11）", (surface) => {
+    expect(on("--color-border-strong", surface)).toBeGreaterThanOrEqual(3);
   });
 });

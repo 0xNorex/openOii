@@ -35,15 +35,10 @@ describe('Card', () => {
   });
 
   it('applies variant styles', () => {
-    const { container, rerender } = render(<Card variant="primary">Primary</Card>);
-    let card = container.firstChild as HTMLElement;
+    const { container } = render(<Card variant="primary">Primary</Card>);
+    const card = container.firstChild as HTMLElement;
     expect(card).toHaveClass('bg-primary/10');
     expect(card).toHaveClass('border-primary');
-
-    rerender(<Card variant="secondary">Secondary</Card>);
-    card = container.firstChild as HTMLElement;
-    expect(card).toHaveClass('bg-secondary/10');
-    expect(card).toHaveClass('border-secondary');
   });
 
   it('uses default variant when none is provided', () => {

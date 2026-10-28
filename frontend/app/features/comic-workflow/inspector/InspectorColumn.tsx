@@ -53,7 +53,7 @@ export function InspectorColumn({
 				<span className="text-ink/25">
 					<SvgIcon name="layers" size={16} />
 				</span>
-				<span className="font-mono text-2xs uppercase text-ink-muted [writing-mode:vertical-rl]">
+				<span className="font-mono text-xs uppercase text-ink-muted [writing-mode:vertical-rl]">
 					无内容
 				</span>
 			</aside>
@@ -71,7 +71,7 @@ export function InspectorColumn({
 			data-inspector-open={open ? "true" : "false"}
 		>
 			<div className="flex items-center justify-between gap-1 border-b border-ink/10 px-1.5 py-1">
-				<span className="min-w-0 truncate font-mono text-2xs uppercase text-ink-muted">
+				<span className="min-w-0 truncate font-mono text-xs uppercase text-ink-muted">
 					{open ? (selectedNode ? "inspector" : "project brief") : ""}
 				</span>
 				<button

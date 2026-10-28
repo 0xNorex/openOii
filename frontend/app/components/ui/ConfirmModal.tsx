@@ -30,17 +30,17 @@ export function ConfirmModal({
 
   const variantStyles = {
     danger: {
-      icon: "text-error",
+      icon: "text-error-fg",
       iconBg: "bg-error/10",
       button: "bg-error text-error-content",
     },
     warning: {
-      icon: "text-warning",
+      icon: "text-warning-fg",
       iconBg: "bg-warning/10",
       button: "bg-warning text-warning-content",
     },
     info: {
-      icon: "text-info",
+      icon: "text-info-fg",
       iconBg: "bg-info/10",
       button: "bg-info text-info-content",
     },

@@ -75,7 +75,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 
 			{open && (
 				<div
-					className="absolute left-0 top-full z-dropdown mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border-2 border-ink/15 bg-paper-200 py-1 shadow-comic"
+					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border-2 border-ink/15 bg-paper-200 py-1 shadow-comic"
 					role="listbox"
 					aria-label="项目列表"
 				>
@@ -99,13 +99,13 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 								aria-selected={p.id === currentId}
 								className={`flex items-center justify-between px-3 py-1.5 text-xs transition-colors duration-fast hover:bg-paper-300 ${
 									p.id === currentId
-										? "bg-primary/10 font-bold text-primary-ink"
+										? "bg-primary/10 font-bold text-primary"
 										: ""
 								}`}
 							>
 								<span className="min-w-0 flex-1 truncate">{p.title}</span>
 								<span
-									className={`ml-1.5 flex-shrink-0 font-mono text-2xs tabular-nums ${st.textCls}`}
+									className={`ml-1.5 flex-shrink-0 font-mono text-xs tabular-nums ${st.textCls}`}
 								>
 									{st.label}
 								</span>
@@ -116,7 +116,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 					<Link
 						to="/"
 						onClick={() => setOpen(false)}
-						className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary-ink transition-colors duration-fast hover:bg-paper-300"
+						className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary transition-colors duration-fast hover:bg-paper-300"
 					>
 						<PlusIcon className="h-3 w-3" aria-hidden="true" />
 						新建项目
@@ -154,7 +154,7 @@ function UniverseChip({ projectId }: { projectId: number }) {
 	return (
 		<Link
 			to={`/universes/${universeId}`}
-			className="touch-target-dense hidden max-w-[11rem] items-center gap-1 truncate rounded-full border border-primary/25 bg-primary/10 px-2 text-2xs font-bold text-primary-ink transition-colors duration-fast hover:bg-primary/15 sm:inline-flex"
+			className="touch-target-dense hidden max-w-[11rem] items-center gap-1 truncate rounded-full border border-primary/25 bg-primary/10 px-2 text-xs font-bold text-primary transition-colors duration-fast hover:bg-primary/15 sm:inline-flex"
 			title={chapterTitle || universe?.name || "IP 宇宙"}
 		>
 			<SparklesIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -181,8 +181,8 @@ function NavLink({
 			className={clsx(
 				"touch-target-dense inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-bold transition-colors duration-fast",
 				active
-					? // 文字用 primary-ink 保证可读，底部内阴影提供颜色之外的第二视觉通道
-						"bg-primary/10 text-primary-ink shadow-[inset_0_-3px_0_0_rgb(var(--color-primary))]"
+					? // 文字用 primary（作为文字 ≥4.5:1）保证可读，底部内阴影提供颜色之外的第二视觉通道
+						"bg-primary/10 text-primary shadow-[inset_0_-3px_0_0_rgb(var(--color-primary))]"
 					: "text-ink-muted hover:bg-paper-200 hover:text-ink",
 			)}
 		>
@@ -194,7 +194,7 @@ function NavLink({
 
 export function TopBar({ projectId }: TopBarProps) {
 	const { theme, toggleTheme } = useThemeStore();
-	const isDark = theme.endsWith("dark");
+	const isDark = theme === "dark";
 	const { openModal: openSettingsModal } = useSettingsStore();
 	const { pathname } = useLocation();
 
@@ -208,7 +208,7 @@ export function TopBar({ projectId }: TopBarProps) {
 
 	return (
 		<header
-			className="chrome-row z-fixed gap-1.5 border-b border-ink/10 bg-paper-100 px-2 sm:gap-2 sm:px-3"
+			className="chrome-row z-popover gap-1.5 border-b border-ink/10 bg-paper-100 px-2 sm:gap-2 sm:px-3"
 			data-shell="topbar"
 		>
 			<div className="flex min-w-0 items-center gap-1.5">

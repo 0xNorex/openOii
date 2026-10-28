@@ -157,7 +157,7 @@ export function ComicWorkflowCanvas({
 		(editor: Editor) => {
 			editorRef.current = editor;
 			editor.user.updateUserPreferences({
-				colorScheme: useThemeStore.getState().theme.endsWith("dark") ? "dark" : "light",
+				colorScheme: useThemeStore.getState().theme === "dark" ? "dark" : "light",
 			});
 			if (graph && layout) {
 				syncTldrawProjection({ editor, graph, layout, interactionMode });
@@ -174,7 +174,7 @@ export function ComicWorkflowCanvas({
 	const theme = useThemeStore((s) => s.theme);
 	useEffect(() => {
 		editorRef.current?.user.updateUserPreferences({
-			colorScheme: theme.endsWith("dark") ? "dark" : "light",
+			colorScheme: theme === "dark" ? "dark" : "light",
 		});
 	}, [theme]);
 

@@ -6,7 +6,7 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
-  variant?: "default" | "primary" | "secondary" | "accent";
+  variant?: "default" | "primary";
 }
 
 export function Card({
@@ -19,8 +19,6 @@ export function Card({
   const variantStyles = {
     default: "bg-paper-100",
     primary: "bg-primary/10 border-primary",
-    secondary: "bg-secondary/10 border-secondary",
-    accent: "bg-accent/10 border-accent",
   };
 
   return (

@@ -43,7 +43,7 @@ export function DeskSection({
 						{title}
 					</h2>
 					{meta ? (
-						<span className="font-mono text-2xs tabular-nums text-ink-muted">
+						<span className="font-mono text-xs tabular-nums text-ink-muted">
 							{meta}
 						</span>
 					) : null}

@@ -40,7 +40,7 @@ export function PageHeader({
 		>
 			<div className="min-w-0">
 				{eyebrow ? (
-					<p className="m-0 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+					<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 						{eyebrow}
 					</p>
 				) : null}
@@ -49,7 +49,7 @@ export function PageHeader({
 						{title}
 					</h1>
 					{meta ? (
-						<div className="pb-0.5 font-mono text-2xs tabular-nums text-ink-muted">
+						<div className="pb-0.5 font-mono text-xs tabular-nums text-ink-muted">
 							{meta}
 						</div>
 					) : null}

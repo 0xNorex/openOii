@@ -175,7 +175,7 @@ export function ProjectsPage() {
 							<span>全选</span>
 						</label>
 						<div className="flex flex-wrap items-center gap-1.5">
-							<span className="border border-ink/15 bg-paper-100 px-2 py-0.5 text-2xs font-semibold tabular-nums text-ink-muted">
+							<span className="border border-ink/15 bg-paper-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-muted">
 								{selectedCount > 0
 									? `已选 ${selectedCount}`
 									: "未选择"}
@@ -203,7 +203,7 @@ export function ProjectsPage() {
 					) : (
 						<div className="overflow-hidden border-y-2 border-ink/15 bg-paper-100 shadow-brutal-sm">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
-							<div className="hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-2xs uppercase text-ink-muted sm:grid sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem] sm:gap-3 sm:px-3">
+							<div className="hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem] sm:gap-3 sm:px-3">
 								<span />
 								<span>项目</span>
 								<span>状态</span>
@@ -247,7 +247,7 @@ export function ProjectsPage() {
 function Metric({ label, value }: { label: string; value: number }) {
 	return (
 		<div className="border-l-2 border-primary bg-paper-200 px-2 py-1.5">
-			<p className="m-0 font-mono text-2xs uppercase text-ink-muted">
+			<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 				{label}
 			</p>
 			<p className="m-0 font-heading text-md font-bold leading-none tabular-nums">
@@ -301,7 +301,7 @@ function ProjectRow({
 				<p className="m-0 mt-0.5 truncate text-xs text-ink-muted">
 					{story || "尚未填写故事内容"}
 				</p>
-				<div className="mt-1 flex flex-wrap gap-1.5 text-2xs font-semibold text-ink-muted">
+				<div className="mt-1 flex flex-wrap gap-1.5 text-xs font-semibold text-ink-muted">
 					<span>{project.style || "未设风格"}</span>
 					<span className="tabular-nums">
 						计划 {project.target_shot_count ?? "自动"} 镜头
@@ -315,19 +315,19 @@ function ProjectRow({
 			{/* <sm 状态胶囊+时间戳合并为一行小字；sm+ 用 contents 还原为两个独立网格单元 */}
 			<div className="col-start-2 row-start-2 flex flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
 				<span
-					className={`inline-flex min-h-7 items-center justify-center rounded-full border px-2 text-2xs font-bold ${status.badgeCls}`}
+					className={`inline-flex min-h-7 items-center justify-center rounded-full border px-2 text-xs font-bold ${status.badgeCls}`}
 				>
 					{status.label}
 				</span>
 
-				<span className="font-mono text-2xs tabular-nums text-ink-muted">
+				<span className="font-mono text-xs tabular-nums text-ink-muted">
 					{formatDate(project.updated_at)}
 				</span>
 			</div>
 
 			<button
 				type="button"
-				className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm touch-target-dense col-start-3 row-start-1 h-8 min-h-8 w-8 justify-self-end p-0 text-error hover:bg-error/10 sm:col-auto sm:row-auto"
+				className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm touch-target-dense col-start-3 row-start-1 h-8 min-h-8 w-8 justify-self-end p-0 text-error-fg hover:bg-error/10 sm:col-auto sm:row-auto"
 				onClick={onDelete}
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"
@@ -355,9 +355,9 @@ function LoadingState() {
 function ErrorState() {
 	return (
 		<div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-error/25 bg-error/5 px-3 text-center">
-			<FaceFrownIcon className="h-6 w-6 text-error" aria-hidden="true" />
+			<FaceFrownIcon className="h-6 w-6 text-error-fg" aria-hidden="true" />
 			<div>
-				<p className="m-0 font-heading text-md font-bold text-error">
+				<p className="m-0 font-heading text-md font-bold text-error-fg">
 					加载失败，请重试
 				</p>
 				<p className="m-0 mt-0.5 text-xs text-ink-muted">

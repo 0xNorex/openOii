@@ -29,9 +29,9 @@ function statusLabel(status: string) {
 function statusCls(status: string) {
 	const map: Record<string, string> = {
 		draft: "bg-paper-100/80 text-ink-muted border-ink/15",
-		processing: "bg-warning/15 text-warning border-warning/30",
-		completed: "bg-success/15 text-success border-success/30",
-		error: "bg-error/15 text-error border-error/30",
+		processing: "bg-warning/15 text-warning-fg border-warning/30",
+		completed: "bg-success/15 text-success-fg border-success/30",
+		error: "bg-error/15 text-error-fg border-error/30",
 		ready: "bg-paper-100/80 text-ink-muted border-ink/15",
 	};
 	return map[status] || "bg-paper-100/80 text-ink-muted border-ink/15";
@@ -108,7 +108,7 @@ function ProjectRow({
 					>
 						<div className="flex items-center gap-1.5 mb-0.5">
 							<span className="text-sm font-bold truncate flex-1">{project.title || "未命名项目"}</span>
-							<span className={`badge-doodle text-2xs px-1.5 py-0.5 ${statusCls(project.status)}`}>
+							<span className={`badge-doodle text-xs px-1.5 py-0.5 ${statusCls(project.status)}`}>
 								{statusLabel(project.status)}
 							</span>
 						</div>
@@ -233,7 +233,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 						<h3 id="history-drawer-title" className="m-0 font-heading text-sm font-bold">
 							项目历史
 						</h3>
-						<span className="badge-doodle text-2xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
+						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
 							{projects?.length ?? 0}
 						</span>
 					</div>
@@ -249,7 +249,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 				</div>
 
 				{projects && projects.length > 0 && (
-					<div className="flex items-center gap-2 border-b border-ink/10 px-2.5 py-1.5 text-2xs">
+					<div className="flex items-center gap-2 border-b border-ink/10 px-2.5 py-1.5 text-xs">
 						<label className="flex cursor-pointer select-none items-center gap-1">
 							<input
 								type="checkbox"
@@ -263,7 +263,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 							<Button
 								variant="ghost"
 								size="sm"
-								className="flex !h-6 !min-h-6 items-center gap-1 whitespace-nowrap !px-1.5 text-2xs text-error"
+								className="flex !h-6 !min-h-6 items-center gap-1 whitespace-nowrap !px-1.5 text-xs text-error-fg"
 								onClick={handleBatchDelete}
 							>
 								<SvgIcon name="trash-2" size={12} />

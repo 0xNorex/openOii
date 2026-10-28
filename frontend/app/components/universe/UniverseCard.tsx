@@ -37,14 +37,14 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 							/>
 						</div>
 					) : (
-						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-ink/10 bg-paper-200 p-2 halftone-bg-accent">
-							<SparklesIcon className="h-6 w-6 text-primary-ink" aria-hidden="true" />
-							<span className="font-mono text-2xs uppercase tracking-widest text-ink-muted">universe / {universe.id}</span>
+						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-ink/10 bg-paper-200 p-2 halftone-bg-info">
+							<SparklesIcon className="h-6 w-6 text-primary" aria-hidden="true" />
+							<span className="font-mono text-xs uppercase tracking-widest text-ink-muted">universe / {universe.id}</span>
 						</div>
 					)}
 
 					{/* 更新时间留作轻量元信息，封面统一承接宇宙识别。 */}
-					<p className="m-0 font-mono text-2xs tracking-wide text-ink-muted">
+					<p className="m-0 font-mono text-xs tracking-wide text-ink-muted">
 						更新 {formatDate(universe.updated_at)}
 					</p>
 					<h2 className="m-0 mt-0.5 font-heading text-md font-bold leading-snug">
@@ -56,12 +56,12 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 							{universe.description}
 						</p>
 					) : (
-						<p className="m-0 mt-1 text-2xs text-ink-muted">
+						<p className="m-0 mt-1 text-xs text-ink-muted">
 							尚未填写简介
 						</p>
 					)}
 
-					<div className="mt-2 flex flex-wrap items-center gap-1.5 text-2xs font-semibold text-ink-muted">
+					<div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-ink-muted">
 						<span className="inline-flex items-center gap-1 rounded-full border border-ink/10 bg-paper-200 px-1.5 py-0.5 tabular-nums">
 							<SparklesIcon className="h-3 w-3" aria-hidden="true" />
 							{universe.projects_count} 章节
@@ -76,7 +76,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 
 			<button
 				type="button"
-				className="absolute right-1.5 top-1.5 rounded-full border border-ink/10 bg-paper-100/95 p-1.5 text-ink-muted opacity-0 transition-[opacity,color,background-color] duration-fast hover:bg-error/15 hover:text-error group-hover:opacity-100 focus-visible:opacity-100"
+				className="absolute right-1.5 top-1.5 rounded-full border border-ink/10 bg-paper-100/95 p-1.5 text-ink-muted opacity-0 transition-[opacity,color,background-color] duration-fast hover:bg-error/15 hover:text-error-fg group-hover:opacity-100 focus-visible:opacity-100"
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();

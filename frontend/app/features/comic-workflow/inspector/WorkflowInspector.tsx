@@ -97,13 +97,13 @@ export function WorkflowInspector({
 	return (
 		<div className="flex h-full min-h-0 flex-col bg-paper-100" data-shell="inspector">
 			<div className="border-b border-ink/10 px-2 py-1.5">
-				<p className="m-0 font-mono text-2xs uppercase text-ink-muted">
+				<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 					{selectedNode.kind}
 				</p>
 				<h2 className="m-0 truncate font-heading text-sm font-bold">
 					{selectedNode.title}
 				</h2>
-				<p className="m-0 truncate text-2xs text-ink-muted">
+				<p className="m-0 truncate text-xs text-ink-muted">
 					{selectedNode.subtitle}
 				</p>
 			</div>
@@ -113,7 +113,7 @@ export function WorkflowInspector({
 					<button
 						key={tab}
 						type="button"
-						className={`touch-target-dense flex-1 rounded-sm text-2xs font-semibold transition-colors duration-fast ${
+						className={`touch-target-dense flex-1 rounded-sm text-xs font-semibold transition-colors duration-fast ${
 							activeTab === tab
 								? "bg-primary text-primary-content"
 								: "text-ink-muted hover:bg-paper-200"
@@ -215,7 +215,7 @@ function FieldList({ items }: { items: Array<[string, string | number]> }) {
 					key={label}
 					className="flex items-start justify-between gap-3 border-b border-ink/10 pb-1.5 text-sm"
 				>
-					<span className="font-mono text-2xs uppercase text-ink-muted">
+					<span className="font-mono text-xs uppercase text-ink-muted">
 						{label}
 					</span>
 					<span className="min-w-0 text-right text-ink/75">{value}</span>
@@ -255,7 +255,7 @@ function ContentTab({
 		<div className="space-y-3 text-sm text-ink-muted">
 			<p className="m-0">输出节点不直接编辑内容。</p>
 			{node.blockingClips.length > 0 ? (
-				<div className="rounded-lg border border-warning/25 bg-warning/10 p-3 text-warning">
+				<div className="rounded-lg border border-warning/25 bg-warning/10 p-3 text-warning-fg">
 					{node.blockingClips.map((clip) => (
 						<p key={clip.order} className="m-0">
 							镜头 {clip.order}: {clip.reason}
@@ -547,18 +547,18 @@ function MultiShotActions({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col bg-paper-100 p-2" data-shell="inspector-multi">
-			<p className="m-0 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+			<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 				multi-shot
 			</p>
 			<h2 className="m-0 font-heading text-sm font-bold">
 				已选 {shotIds.length} 格
 			</h2>
-			<p className="m-0 mt-1 text-2xs text-ink-muted">
+			<p className="m-0 mt-1 text-xs text-ink-muted">
 				批量只动选中格 · 不改其他分镜
 			</p>
 			<div className="mt-2 space-y-1.5">
 				{structureLocked ? (
-					<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-2xs text-warning">
+					<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
 						生成运行中，批量操作已锁定。
 					</div>
 				) : null}
@@ -750,13 +750,13 @@ function ActionsTab({
 	return (
 		<ActionStack>
 			{structureLocked ? (
-				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-2xs text-warning">
+				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
 					生成运行中，结构写入操作已锁定。
 				</div>
 			) : null}
 			{shotCellLabel ? (
-				<div className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1.5 text-2xs leading-relaxed text-ink-muted">
-					<strong className="text-accent">{shotCellLabel}</strong>
+				<div className="rounded-md border border-info/30 bg-info/10 px-2 py-1.5 text-xs leading-relaxed text-ink-muted">
+					<strong className="text-info-fg">{shotCellLabel}</strong>
 					{" · "}
 					重做只刷新这一格，不影响其他分镜与角色资产。也可在对话里绑定本格发反馈；可多选多格批量重做。
 				</div>
@@ -878,7 +878,7 @@ function ActionButton({
 		<Button
 			variant={danger ? "error" : primary ? "primary" : "ghost"}
 			size="sm"
-			className={`w-full justify-start gap-1.5 !h-8 !min-h-8 text-xs ${danger ? "text-error" : ""}`}
+			className={`w-full justify-start gap-1.5 !h-8 !min-h-8 text-xs ${danger ? "text-error-fg" : ""}`}
 			disabled={disabled}
 			loading={loading}
 			onClick={onClick}
@@ -899,7 +899,7 @@ function FormShell({
 	return (
 		<fieldset className="space-y-3" disabled={disabled}>
 			{disabled ? (
-				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-2xs text-warning">
+				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
 					生成运行中，保存操作已锁定。
 				</div>
 			) : null}

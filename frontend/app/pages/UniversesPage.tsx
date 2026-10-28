@@ -116,7 +116,7 @@ export function UniversesPage() {
 					{!isLoading && isError && (
 						<div className="flex min-h-[10rem] flex-col items-center justify-center gap-3 rounded-lg border-2 border-error/25 bg-error/5 px-3 text-center">
 							<div>
-								<p className="m-0 font-heading text-md font-bold text-error">
+								<p className="m-0 font-heading text-md font-bold text-error-fg">
 									宇宙列表加载失败
 								</p>
 								<p className="m-0 mt-0.5 text-xs text-ink-muted">

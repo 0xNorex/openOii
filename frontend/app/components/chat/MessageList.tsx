@@ -19,12 +19,12 @@ interface MessageListProps {
 
 const agentColors: Record<string, string> = {
   plan: "text-primary",
-  render: "text-info",
-  compose: "text-warning",
-  review: "text-accent",
+  render: "text-info-fg",
+  compose: "text-warning-fg",
+  review: "text-info-fg",
   system: "text-ink-subtle",
   user: "text-primary",
-  audio: "text-secondary",
+  audio: "text-primary",
 };
 
 const agentIcons: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
@@ -56,9 +56,9 @@ function ThinkingMessage({ msg }: { msg: AgentMessage }) {
 		<div className="flex items-center gap-2 rounded-md border border-info/15 bg-info/5 px-2 py-1.5" data-activity="thinking">
 			<div className="flex shrink-0 items-center gap-1">
 				<AgentIcon className={`w-3 h-3 ${agentColors[msg.agent] || "text-ink/30"}`} aria-hidden="true" />
-				<span className="text-2xs font-semibold text-ink-muted">{agentNameMap[msg.agent] || msg.agent}</span>
+				<span className="text-xs font-semibold text-ink-muted">{agentNameMap[msg.agent] || msg.agent}</span>
 			</div>
-			<LightBulbIcon className="h-3.5 w-3.5 shrink-0 text-info/70" aria-hidden="true" />
+			<LightBulbIcon className="h-3.5 w-3.5 shrink-0 text-info-fg" aria-hidden="true" />
 			<span className="min-w-0 truncate text-xs text-ink-muted">{phaseLabel}</span>
 		</div>
 	);
@@ -189,7 +189,7 @@ export function MessageList({ messages }: MessageListProps) {
 					className="rounded-md border border-ink/10 bg-paper-200/70 px-2 py-1.5 text-xs"
 					data-activity={msg.role.startsWith("step") ? "step" : msg.role === "result" ? "result" : "tool"}
 				>
-					<div className="mb-0.5 flex items-center justify-between gap-2 font-mono text-2xs font-semibold text-ink-muted">
+					<div className="mb-0.5 flex items-center justify-between gap-2 font-mono text-xs font-semibold text-ink-muted">
 						<span>{activityLabel} · {agentNameMap[msg.agent] || msg.agent}</span>
 						{msg.summary && <span className="shrink-0 tabular-nums">{msg.summary}</span>}
 					</div>
@@ -216,7 +216,7 @@ export function MessageList({ messages }: MessageListProps) {
             <div
               className={`${isUserMessage ? "speech-bubble-user ml-3" : "speech-bubble mr-3"} select-text text-sm leading-relaxed ${
                 msg.role === "error"
-                  ? "!bg-error/10 !text-error rounded-lg"
+                  ? "!bg-error/10 !text-error-fg rounded-lg"
                   : ""
               }`}
             >
@@ -260,7 +260,7 @@ export function MessageList({ messages }: MessageListProps) {
                 </div>
               )}
               {msg.role === "error" && msg.details ? (
-                <p className="m-0 mt-1 font-mono text-2xs text-ink-muted">{msg.details}</p>
+                <p className="m-0 mt-1 font-mono text-xs text-ink-muted">{msg.details}</p>
               ) : null}
             </div>
           </>

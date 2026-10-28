@@ -5,7 +5,7 @@
  * 因此代码里**不许**再出现绕过映射的写法：
  *   text-[length:var(--text-sm)]  →  text-sm
  *   rounded-[var(--radius-md)]    →  rounded-md
- *   z-[var(--z-modal)]            →  z-modal
+ *   z-[var(--z-toast)]            →  z-toast
  *   duration-[var(--duration-fast)] → duration-fast
  * 以及不许脱离尺子：text-[11px]、z-9999、rounded-2xl、裸 hex 颜色。
  *
@@ -29,14 +29,14 @@ const extend = config.theme.extend;
 
 /** 禁止的写法 → 替换建议 */
 const BANNED: Array<[RegExp, string]> = [
-	[/\[(?:length:)?var\(--text-/, "用裸类 text-sm / text-2xs（已在 tailwind.config.ts 映射）"],
+	[/\[(?:length:)?var\(--text-/, "用裸类 text-sm / text-xs（已在 tailwind.config.ts 映射）"],
 	[/\[var\(--radius-/, "用裸类 rounded-md / rounded-lg（已在 tailwind.config.ts 映射）"],
-	[/z-\[var\(--z-/, "用裸类 z-modal / z-dropdown（已在 tailwind.config.ts 映射）"],
+	[/z-\[var\(--z-/, "用裸类 z-toast / z-popover（已在 tailwind.config.ts 映射）"],
 	[/duration-\[var\(--duration-/, "用裸类 duration-fast（已在 tailwind.config.ts 映射）"],
 	[/leading-\[var\(--leading-/, "用裸类 leading-tight / leading-normal（已在 tailwind.config.ts 映射）"],
-	[/\btext-\[\d+px\]/, "脱离 type scale：用 text-2xs(10) / text-xs(12)"],
+	[/\btext-\[\d+px\]/, "脱离 type scale：用 text-xs(10) / text-xs(12)"],
 	[/\bz-\[\d{3,}\]/, "脱离 z scale：tokens.css 的 --z-* 才是唯一分层来源"],
-	[/\bz-[1-9]\d\b/, "脱离 z scale：用 z-dropdown / z-sticky / z-modal 等命名层"],
+	[/\bz-[1-9]\d\b/, "脱离 z scale：用 z-popover / z-panel / z-toast 等命名层"],
 	[/\brounded-(?:2xl|3xl|none)\b/, "超出 --radius-* 四档：用 rounded-sm/md/lg/xl"],
 	[/#[0-9a-fA-F]{6}\b/, "裸 hex：颜色只能来自 tokens.css 的语义令牌"],
 	[/gap-\[var\(--rhythm-/, "用裸类 gap-2/3/5（= --rhythm-item/block/zone）"],
@@ -113,7 +113,7 @@ describe("Design Contract: tailwind 映射与 tokens.css 一致", () => {
 
 	/** tokens.css 里 --name 的值（第一个匹配，即 :root 块） */
 	function token(name: string): string {
-		const m = tokens.slice(0, tokens.indexOf('[data-theme="doodle-dark"]')).match(
+		const m = tokens.slice(0, tokens.indexOf('[data-theme="dark"]')).match(
 			new RegExp(`\\${name}:\\s*([^;]+);`),
 		);
 		if (!m) throw new Error(`tokens.css 缺 ${name}`);
@@ -129,9 +129,26 @@ describe("Design Contract: tailwind 映射与 tokens.css 一致", () => {
 
 	it("type scale 全部映射到 --text-*", () => {
 		const scale = extend.fontSize as Record<string, string>;
-		for (const key of ["2xs", "xs", "sm", "base", "md", "lg", "xl"] as const) {
+		for (const key of ["xs", "sm", "base", "md", "lg", "xl", "2xl"] as const) {
 			expect(scale[key], `fontSize.${key}`).toBe(`var(--text-${key})`);
 		}
+	});
+
+	it("字号下限 12px：--text-2xs 与 text-2xs 不再存在", () => {
+		expect(tokens).not.toContain("--text-2xs");
+		expect(extend.fontSize).not.toHaveProperty("2xs");
+		const hits = sources.filter(({ text }) => /\btext-2xs\b/.test(text)).map(({ file }) => file);
+		expect(hits).toEqual([]);
+	});
+
+	it("状态色作文字只用 *-fg；secondary / accent / primary-ink 已删除", () => {
+		const hits = sources
+			.filter(({ text }) =>
+				/(?<![\w-])text-(?:success|warning|error|info)(?![\w-])|\b(?:bg|text|border)-(?:secondary|accent)\b|primary-ink/.test(text),
+			)
+			.map(({ file }) => file);
+		expect(hits).toEqual([]);
+		expect(tokens).not.toMatch(/--color-(?:secondary|accent)|--primary-ink/);
 	});
 
 	it("spacing 档位与 --space-* 同名同值（8px 栅格）", () => {

@@ -2,7 +2,7 @@ import { clsx } from "clsx";
 import { type ButtonHTMLAttributes, type ReactNode } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "accent" | "ghost" | "error";
+  variant?: "primary" | "secondary" | "ghost" | "error";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
   children: ReactNode;
@@ -24,8 +24,7 @@ export function Button({
 
   const variantStyles = {
     primary: "bg-primary text-primary-content hover:bg-primary/90",
-    secondary: "bg-secondary text-secondary-content hover:bg-secondary/90",
-    accent: "bg-accent text-accent-content hover:bg-accent/90",
+    secondary: "bg-surface text-ink border-border-strong hover:bg-paper-200",
     ghost:
       "bg-transparent border-transparent shadow-none hover:bg-paper-200 hover:shadow-brutal-sm",
     error: "bg-error text-error-content hover:bg-error/90",

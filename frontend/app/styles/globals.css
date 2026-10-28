@@ -11,17 +11,6 @@
     opacity: 1;
   }
 
-  *,
-  *::before,
-  *::after {
-    border-radius: 0 !important;
-  }
-
-  svg rect {
-    rx: 0 !important;
-    ry: 0 !important;
-  }
-
   /* App shell: lock document scroll; pages own internal scroll panes */
   html {
     height: 100%;
@@ -131,13 +120,13 @@
     @apply -translate-x-0.5 -translate-y-0.5;
     box-shadow: 5px 5px 0px 0px oklch(var(--cmyk-cyan) / 0.8), 9px 9px 0px 0px oklch(var(--cmyk-magenta) / 0.6);
   }
-  [data-theme="doodle-dark"] .card-comic:hover {
+  [data-theme="dark"] .card-comic:hover {
     border-color: rgb(var(--color-ink) / 0.5);
     box-shadow: 5px 5px 0px 0px oklch(var(--cmyk-cyan) / 0.7), 9px 9px 0px 0px oklch(var(--cmyk-magenta) / 0.5);
   }
 
   .btn-doodle {
-    @apply border-3 border-ink/30 rounded-lg font-bold uppercase tracking-wide duration-fast flex items-center whitespace-nowrap gap-1;
+    @apply border-3 border-ink/30 rounded-md font-bold uppercase tracking-wide duration-fast flex items-center whitespace-nowrap gap-1;
     transition-property: background-color, border-color, color, box-shadow, transform;
     transition-timing-function: ease-in-out;
     box-shadow: 4px 4px 0px 0px rgb(var(--color-ink) / 0.3);
@@ -155,7 +144,7 @@
   }
 
   .input-doodle {
-    @apply border-3 border-ink/30 rounded-lg bg-paper-100 outline-none focus:border-primary transition-colors duration-fast;
+    @apply border-3 border-ink/30 rounded-md bg-paper-100 outline-none focus:border-primary transition-colors duration-fast;
   }
 
   .badge-doodle {
@@ -230,15 +219,15 @@
     background-size: 7px 7px;
   }
 
-  .halftone-bg-accent {
+  .halftone-bg-info {
     background-image: radial-gradient(circle, rgb(var(--color-primary) / 0.16) 1.2px, transparent 1.2px);
     background-size: 7px 7px;
   }
 
-  [data-theme="doodle-dark"] .halftone-bg {
+  [data-theme="dark"] .halftone-bg {
     background-image: radial-gradient(circle, rgb(var(--color-ink) / 0.2) 1.2px, transparent 1.2px);
   }
-  [data-theme="doodle-dark"] .halftone-bg-accent {
+  [data-theme="dark"] .halftone-bg-info {
     background-image: radial-gradient(circle, rgb(var(--color-primary) / 0.3) 1.2px, transparent 1.2px);
   }
 
@@ -250,7 +239,7 @@
       linear-gradient(180deg, rgb(var(--color-paper-200) / 0.35) 0%, transparent 28%);
     background-size: 7px 7px, 100% 100%;
   }
-  [data-theme="doodle-dark"] .workbench-surface {
+  [data-theme="dark"] .workbench-surface {
     background-image:
       radial-gradient(circle, rgb(var(--color-primary) / 0.22) 1.1px, transparent 1.1px),
       linear-gradient(180deg, rgb(var(--color-paper-200) / 0.45) 0%, transparent 32%);
@@ -272,7 +261,7 @@
     transform: rotate(180deg);
   }
 
-  [data-theme="doodle-dark"] .workbench-canvas-frame {
+  [data-theme="dark"] .workbench-canvas-frame {
     background-image: radial-gradient(circle, rgb(var(--color-ink) / 0.15) 1.2px, transparent 1.2px);
   }
 
@@ -289,7 +278,7 @@
     border-bottom: 5px solid transparent;
     border-right: 6px solid rgb(var(--color-paper-300) / 0.5);
   }
-  [data-theme="doodle-dark"] .speech-bubble::after {
+  [data-theme="dark"] .speech-bubble::after {
     border-right: 6px solid rgb(var(--color-paper-300) / 0.7);
   }
 
@@ -305,7 +294,7 @@
     border-bottom: 5px solid transparent;
     border-left: 6px solid rgb(var(--color-primary) / 0.1);
   }
-  [data-theme="doodle-dark"] .speech-bubble-user::after {
+  [data-theme="dark"] .speech-bubble-user::after {
     border-left: 6px solid rgb(var(--color-primary) / 0.3);
   }
 

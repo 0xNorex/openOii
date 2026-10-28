@@ -2,31 +2,36 @@
 name: openOii
 description: "AI 漫剧生成平台：故事创意 → 3 Agent 协作 → 可视化漫剧成片"
 colors:
-  inkwell-gold: "#E8B730"
-  inkwell-gold-content: "#1a1a1a"
-  press-magenta: "#D45E8B"
-  press-magenta-content: "#ffffff"
-  ink-cyan: "#2AA8B8"
-  ink-cyan-content: "#ffffff"
-  inkwell-dark: "#1E1E2E"
-  inkwell-dark-content: "#E6EDF3"
-  workshop-cream: "#FAFAF5"
-  workshop-linen: "#F0EFE6"
-  workshop-ecru: "#E2E0D4"
-  workshop-text: "#2C2C3A"
-  pressroom-base: "#16161E"
-  pressroom-surface: "#1E1E28"
-  pressroom-elevated: "#28283A"
-  pressroom-text: "#D8D8E8"
-  dark-inkwell-gold: "#F0C050"
-  dark-press-magenta: "#E06898"
-  dark-ink-cyan: "#40C0D0"
-  dark-inkwell: "#2A2A3A"
-  dark-inkwell-content: "#D0D0E0"
-  semantic-success: "#4CAF7D"
-  semantic-warning: "#E8943A"
-  semantic-error: "#C03A3A"
-  semantic-info: "#2AA8B8"
+  # light（:root）
+  primary: "#B0215F"
+  primary-content: "#FFFFFF"
+  neutral: "#1C1C22"
+  neutral-content: "#ECECF1"
+  surface: "#FFFFFF"
+  paper-100: "#F7F7F4"
+  paper-200: "#EFEEE9"
+  paper-300: "#DEDDD6"
+  border-strong: "#8A8A94"
+  ink: "#1C1C22"
+  ink-muted: "#5B5B66"
+  info: "#0B6E7F"
+  success: "#1F7A4D"
+  warning: "#9A5B00"
+  error: "#B42318"
+  # dark（[data-theme="dark"]）
+  dark-primary: "#F27AAE"
+  dark-primary-content: "#121216"
+  dark-surface: "#1B1B21"
+  dark-paper-100: "#121216"
+  dark-paper-200: "#24242C"
+  dark-paper-300: "#33333D"
+  dark-border-strong: "#6E6E7A"
+  dark-ink: "#ECECF1"
+  dark-ink-muted: "#A3A3AF"
+  dark-info: "#5FCFE0"
+  dark-success: "#6FD3A0"
+  dark-warning: "#F2B35A"
+  dark-error: "#FF8A80"
 typography:
   display:
     fontFamily: "Bangers, Impact, sans-serif"
@@ -60,10 +65,10 @@ typography:
     fontWeight: 400
     lineHeight: 1.4
 rounded:
-  sm: "6px"
-  md: "8px"
-  lg: "12px"
-  xl: "16px"
+  sm: "4px"
+  md: "6px"
+  lg: "10px"
+  xl: "10px"
 spacing:
   "1": "4px"
   "2": "8px"
@@ -79,33 +84,24 @@ alpha:
   common: "5 10 15 20 30 40 50 70 90"
 components:
   button-primary:
-    backgroundColor: "{colors.inkwell-gold}"
-    textColor: "{colors.inkwell-gold-content}"
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-content}"
     rounded: "{rounded.md}"
-    padding: "6px 14px"
-  button-primary-hover:
-    backgroundColor: "oklch(78% 0.14 85)"
   button-secondary:
-    backgroundColor: "{colors.press-magenta}"
-    textColor: "{colors.press-magenta-content}"
-    rounded: "{rounded.md}"
-  button-accent:
-    backgroundColor: "{colors.ink-cyan}"
-    textColor: "{colors.ink-cyan-content}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    borderColor: "{colors.border-strong}"
     rounded: "{rounded.md}"
   button-ghost:
     backgroundColor: "transparent"
-    textColor: "{colors.workshop-text}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.md}"
-  card-doodle:
-    backgroundColor: "{colors.workshop-cream}"
-    rounded: "{rounded.xl}"
-  card-comic:
-    backgroundColor: "{colors.workshop-cream}"
+  card:
+    backgroundColor: "{colors.paper-100}"
     rounded: "{rounded.lg}"
-  input-doodle:
-    backgroundColor: "{colors.workshop-cream}"
-    rounded: "{rounded.lg}"
+  input:
+    backgroundColor: "{colors.paper-100}"
+    rounded: "{rounded.md}"
 ---
 
 # Design System: openOii
@@ -163,7 +159,7 @@ px 数值，tokens.css 不保留 rem 副本（避免两套数字漂移）。
 |-------|------|--------|
 | `--text-sm` | `text-sm` | ~~`text-[length:var(--text-sm)]`~~ |
 | `--radius-md` | `rounded-md` | ~~`rounded-[var(--radius-md)]`~~ |
-| `--z-modal` | `z-modal` | ~~`z-[var(--z-modal)]`~~、~~`z-50`~~ |
+| `--z-popover` | `z-popover` | ~~`z-[var(--z-popover)]`~~、~~`z-50`~~ |
 | `--duration-fast` | `duration-fast` | ~~`duration-[var(--duration-fast)]`~~、~~`duration-150`~~ |
 | `--leading-tight` | `leading-tight` | ~~`leading-4`~~ |
 | `--rhythm-zone` | `gap-5` | ~~`gap-[var(--rhythm-zone)]`~~ |
@@ -203,32 +199,22 @@ This system explicitly rejects three aesthetics: the grey SaaS panel (Notion/Jir
 
 ## 2. Colors
 
-The palette is a CMYK printing system translated to a UI: Cyan for structural elements, Magenta for emphasis and interaction, Yellow (Gold) for primary action and warmth. Neutrals are warm cream paper (light) or pressroom ink-black (dark), both tinted toward the yellow axis.
+One brand hue (magenta-rose) on calm warm-grey neutrals. Light and dark themes; the first visit follows `prefers-color-scheme`, the toggle persists (`data-theme="light" | "dark"`).
 
-### Primary
-- **Inkwell Gold** (#E8B730): Primary action buttons, active states, stage progress dots. The warm anchor that says "this is where you act." Light theme only; dark theme uses Dark Inkwell Gold (#F0C050) with increased chroma to maintain punch against the dark surface.
+- **Primary** `#B0215F` (dark `#F27AAE`): primary actions, selection, focus ring, links. Also legal as text on every surface (≥ 4.5:1).
+- **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` hairline borders, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
+- **Text**: `ink` (≥ 7:1), `ink-muted` (hex, ≥ 4.5:1 on every surface), `ink-subtle` (alpha, ≥ 3:1, placeholders/meta only).
+- **Status**: `info` / `success` / `warning` / `error`. Text uses `text-{k}-fg`; tinted backgrounds use `bg-{k}-bg` (alpha from `--status-bg-alpha`); filled badges use `bg-{k} text-{k}-content`.
+- **Removed**: `secondary`, `accent`, `primary-ink`, `text-2xs`. The contract test fails if they come back.
 
-### Secondary
-- **Press Magenta** (#D45E8B): Secondary interactions, accent highlights, speech-bubble user messages. The spot-color that registers attention without competing with primary actions. Dark theme shifts to #E06898 for contrast.
+### Scales
 
-### Tertiary
-- **Ink Cyan** (#2AA8B8): Tertiary accent, card-comic first shadow layer, info semantic state. The cyan plate in CMYK, used structurally in offset shadows and as a registration-mark accent. Dark theme shifts to #40C0D0.
+- **Type**: xs 12 / sm 14 / base 16 / md / lg / xl / 2xl 24. 12px is the floor.
+- **Radius**: sm 4 (chips), md 6 (controls), lg 10 (cards, panels, dialogs).
+- **Elevation**: `shadow-panel` (floating panels, popovers), `shadow-dialog` (dialogs).
+- **Z**: `z-panel` 20 → `z-popover` 40 → `z-toast` 60 → `z-tooltip` 70.
 
-### Neutral
-- **Workshop Cream** (#FAFAF5): Paper-100 surface in light theme. Warm paper white, tinted yellow to avoid clinical sterility.
-- **Workshop Linen** (#F0EFE6): Paper-200 in light theme. Sidebar and panel backgrounds. Slightly cooler cream.
-- **Workshop Ecru** (#E2E0D4): Paper-300 in light theme. Elevated surfaces, input backgrounds, speech-bubble fills.
-- **Workshop Text** (#2C2C3A): Primary text in light theme. Near-black with blue undertone for depth.
-- **Pressroom Base** (#16161E): Paper-100 surface in dark theme. Deep ink-black with blue undertone.
-- **Pressroom Surface** (#1E1E28): Paper-200 in dark theme. Sidebar and panel layer.
-- **Pressroom Elevated** (#28283A): Paper-300 in dark theme. Input backgrounds, elevated cards.
-- **Pressroom Text** (#D8D8E8): Primary text in dark theme. Warm white with blue cast.
-
-### Named Rules
-
-**The CMYK Registration Rule.** The three accent colors (Inkwell Gold, Press Magenta, Ink Cyan) are the Cyan, Magenta, and Yellow plates. They are always used in their printing-register role: Gold for primary action, Magenta for emphasis, Cyan for structural accent. No plate swaps, no "use magenta because it looks nice here." The registration is the system.
-
-**The Warm Neutral Rule.** Every neutral is tinted toward the yellow axis (hue ~85 in OKLCH). Pure grey or blue-grey neutrals are prohibited. If a neutral could be mistaken for a SaaS palette, it needs more warmth.
+Executable checks: `themeContrast.test.ts` (both themes) and `designContract.test.ts`.
 
 ## 3. Typography
 
@@ -281,8 +267,7 @@ The Comic Workbench uses CMYK offset shadows as structural elevation. Shadows ar
 ### Buttons
 - **Shape:** Rounded (8px), bold 3px border, uppercase tracking
 - **Primary (Inkwell Gold):** `btn-doodle` with `bg-primary text-primary-content`. 3px border in `ink/30`, brutal shadow, font-heading bold. Padding: md (20px 10px), lg (28px 12px).
-- **Secondary (Press Magenta):** `bg-secondary text-secondary-content`. Same shadow model.
-- **Accent (Ink Cyan):** `bg-accent text-accent-content`. Same shadow model.
+- **Secondary:** `bg-surface text-ink border-border-strong`, hover `bg-paper-200`.
 - **Ghost:** Transparent background, no border, no shadow. Hover adds `bg-paper-200` and `shadow-brutal-sm`.
 - **Error:** `bg-error text-error-content`. Same shadow model.
 - **Hover:** Translate -0.5px, shadow expands from brutal to brutal-lg (or comic to comic-pop for comic variants).
@@ -301,8 +286,8 @@ The Comic Workbench uses CMYK offset shadows as structural elevation. Shadows ar
 - **Label:** font-heading medium weight, sitting above the input.
 
 ### Chips / Tags
-- **Style:** Rounded-full, thin border, paper-200 surface. Selected state uses the accent color (Ink Cyan) as background tint.
-- **State:** Unselected: paper-200 background, ink text. Selected: accent/10 background, accent text with accent border.
+- **Style:** Rounded-full, thin border, paper-200 surface. Selected state uses a primary tint.
+- **State:** Unselected: paper-200 background, ink text. Selected: primary/10 background, primary text and border.
 
 ### Navigation
 - **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), Pressroom Surface / Workshop Linen background. Active project: left border highlight in Inkwell Gold (3px). Project names in font-heading, compact row layout. Delete button revealed on hover only.

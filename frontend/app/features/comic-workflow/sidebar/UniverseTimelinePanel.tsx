@@ -80,7 +80,7 @@ export function UniverseTimelinePanel({
 	return (
 		<div className="flex h-full min-h-0 flex-col" data-shell="universe-timeline">
 			<div className="shrink-0 border-b border-ink/10 px-2 py-1.5">
-				<p className="m-0 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+				<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 					universe
 				</p>
 				<div className="mt-0.5 flex items-center gap-1.5">
@@ -89,11 +89,11 @@ export function UniverseTimelinePanel({
 						{data.universe_name}
 					</h3>
 				</div>
-				<p className="m-0 mt-0.5 text-2xs text-ink-muted">
+				<p className="m-0 mt-0.5 text-xs text-ink-muted">
 					跨章节时间线 · {data.shared_character_count} 共享角色
 				</p>
 				{data.world_setting ? (
-					<p className="m-0 mt-1 line-clamp-2 text-2xs text-ink-muted">
+					<p className="m-0 mt-1 line-clamp-2 text-xs text-ink-muted">
 						{data.world_setting}
 					</p>
 				) : null}
@@ -124,17 +124,17 @@ export function UniverseTimelinePanel({
 							}`}
 						>
 							<div className="flex items-center justify-between gap-1">
-								<span className="inline-flex items-center gap-1 font-mono text-2xs font-bold text-primary-ink">
+								<span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-primary">
 									{ch.chapter_number != null ? (
 										`第${ch.chapter_number}章`
 									) : (
-											<span className="inline-flex rounded-full border border-ink/15 bg-paper-200 px-1.5 py-0.5 text-2xs font-normal text-ink-muted">
+											<span className="inline-flex rounded-full border border-ink/15 bg-paper-200 px-1.5 py-0.5 text-xs font-normal text-ink-muted">
 											未编号
 										</span>
 									)}
 									{ch.is_current ? " · 当前" : ""}
 								</span>
-								<span className="font-mono text-2xs text-ink-muted">
+								<span className="font-mono text-xs text-ink-muted">
 									{ch.shot_count}格 · {ch.character_count}角
 									{ch.has_video ? " · 成片" : ""}
 								</span>
@@ -143,11 +143,11 @@ export function UniverseTimelinePanel({
 								{ch.chapter_title || ch.title}
 							</p>
 							{ch.summary ? (
-								<p className="m-0 mt-0.5 line-clamp-2 text-2xs text-ink-muted">
+								<p className="m-0 mt-0.5 line-clamp-2 text-xs text-ink-muted">
 									{ch.summary}
 								</p>
 							) : (
-								<p className="m-0 mt-0.5 text-2xs text-ink-muted">
+								<p className="m-0 mt-0.5 text-xs text-ink-muted">
 									{ch.status}
 								</p>
 							)}

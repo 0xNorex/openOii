@@ -83,7 +83,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 	return (
 		<div
 			// <lg 不渲染：画布本身在移动端不挂载，工具条不能悬浮压住抽屉/聊天
-			className="absolute bottom-4 left-1/2 z-dropdown hidden -translate-x-1/2 items-center justify-center gap-0.5 rounded-lg border-2 border-ink/15 bg-paper-100 p-1 text-ink shadow-brutal-sm lg:flex"
+			className="absolute bottom-4 left-1/2 z-panel hidden -translate-x-1/2 items-center justify-center gap-0.5 rounded-lg border-2 border-ink/15 bg-paper-100 p-1 text-ink shadow-brutal-sm lg:flex"
 			role="toolbar"
 			aria-label="画布工具栏"
 		>
@@ -110,7 +110,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 			<Button
 				variant="ghost"
 				size="sm"
-				className="touch-target-dense h-8 min-h-8 min-w-[3.25rem] font-mono text-2xs"
+				className="touch-target-dense h-8 min-h-8 min-w-[3.25rem] font-mono text-xs"
 				onClick={handleZoomReset}
 				aria-label={`${zoomPercent}%，重置缩放`}
 				title="重置缩放"
@@ -138,7 +138,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 					labelText={sortMode ? "完成排序" : "排序"}
 					onClick={onToggleSortMode}
 				>
-					<span className="font-mono text-2xs font-bold">3×N</span>
+					<span className="font-mono text-xs font-bold">3×N</span>
 				</ToolButton>
 			) : null}
 			<ToolButton
@@ -148,7 +148,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 				labelText={filling ? "补齐中" : "补首帧"}
 				onClick={() => handleFillEmpty("image")}
 			>
-				<span className="font-mono text-2xs font-bold">图</span>
+				<span className="font-mono text-xs font-bold">图</span>
 			</ToolButton>
 			<ToolButton
 				disabled={fillDisabled || filling}
@@ -157,7 +157,7 @@ export const ComicCanvasToolbar = track(function ComicCanvasToolbar({
 				labelText={filling ? "补齐中" : "补视频"}
 				onClick={() => handleFillEmpty("video")}
 			>
-				<span className="font-mono text-2xs font-bold">视</span>
+				<span className="font-mono text-xs font-bold">视</span>
 			</ToolButton>
 
 		</div>
@@ -197,7 +197,7 @@ function ToolButton({
 		>
 				{children}
 				{showLabel ? (
-					<span className="whitespace-nowrap font-heading text-2xs font-semibold">
+					<span className="whitespace-nowrap font-heading text-xs font-semibold">
 						{labelText ?? label}
 					</span>
 				) : null}

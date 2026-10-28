@@ -6,7 +6,7 @@ export default {
     extend: {
       // —— Design Contract tokens ——
       // SSOT: app/styles/tokens.css。裸类直接解析到 token，
-      // 因此禁止再写 text-[length:var(--text-sm)] / rounded-[var(--radius-md)] / z-[var(--z-modal)]。
+      // 因此禁止再写 text-[length:var(--text-sm)] / rounded-[var(--radius-md)] / z-[var(--z-popover)]。
       borderRadius: {
         DEFAULT: "var(--radius-sm)",
         sm: "var(--radius-sm)",
@@ -15,13 +15,13 @@ export default {
         xl: "var(--radius-xl)",
       },
       fontSize: {
-        "2xs": "var(--text-2xs)",
         xs: "var(--text-xs)",
         sm: "var(--text-sm)",
         base: "var(--text-base)",
         md: "var(--text-md)",
         lg: "var(--text-lg)",
         xl: "var(--text-xl)",
+        "2xl": "var(--text-2xl)",
       },
       lineHeight: {
         tight: "var(--leading-tight)",
@@ -41,13 +41,10 @@ export default {
         12: "var(--space-12)",
       },
       zIndex: {
-        dropdown: "var(--z-dropdown)",
-        sticky: "var(--z-sticky)",
-        fixed: "var(--z-fixed)",
-        modal: "var(--z-modal)",
-        popover: "var(--z-popover)",
-        tooltip: "var(--z-tooltip)",
         panel: "var(--z-panel)",
+        popover: "var(--z-popover)",
+        toast: "var(--z-toast)",
+        tooltip: "var(--z-tooltip)",
       },
       transitionDuration: {
         fast: "var(--duration-fast)",
@@ -64,28 +61,37 @@ export default {
         // Owned semantic palette; values live in styles/tokens.css.
         primary: "rgb(var(--color-primary) / <alpha-value>)",
         "primary-content": "rgb(var(--color-primary-content) / <alpha-value>)",
-        secondary: "rgb(var(--color-secondary) / <alpha-value>)",
-        "secondary-content": "rgb(var(--color-secondary-content) / <alpha-value>)",
-        accent: "rgb(var(--color-accent) / <alpha-value>)",
-        "accent-content": "rgb(var(--color-accent-content) / <alpha-value>)",
         neutral: "rgb(var(--color-neutral) / <alpha-value>)",
         "neutral-content": "rgb(var(--color-neutral-content) / <alpha-value>)",
         "paper-100": "rgb(var(--color-paper-100) / <alpha-value>)",
         "paper-200": "rgb(var(--color-paper-200) / <alpha-value>)",
         "paper-300": "rgb(var(--color-paper-300) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        "border-strong": "rgb(var(--color-border-strong) / <alpha-value>)",
         ink: "rgb(var(--color-ink) / <alpha-value>)",
         info: "rgb(var(--color-info) / <alpha-value>)",
         "info-content": "rgb(var(--color-info-content) / <alpha-value>)",
+        // 状态文字只用 *-fg；*-bg 是同色低透明度底
+        "info-fg": "rgb(var(--color-info) / <alpha-value>)",
+        "info-bg": "rgb(var(--color-info) / var(--status-bg-alpha))",
         success: "rgb(var(--color-success) / <alpha-value>)",
         "success-content": "rgb(var(--color-success-content) / <alpha-value>)",
+        // 状态文字只用 *-fg；*-bg 是同色低透明度底
+        "success-fg": "rgb(var(--color-success) / <alpha-value>)",
+        "success-bg": "rgb(var(--color-success) / var(--status-bg-alpha))",
         warning: "rgb(var(--color-warning) / <alpha-value>)",
         "warning-content": "rgb(var(--color-warning-content) / <alpha-value>)",
+        // 状态文字只用 *-fg；*-bg 是同色低透明度底
+        "warning-fg": "rgb(var(--color-warning) / <alpha-value>)",
+        "warning-bg": "rgb(var(--color-warning) / var(--status-bg-alpha))",
         error: "rgb(var(--color-error) / <alpha-value>)",
         "error-content": "rgb(var(--color-error-content) / <alpha-value>)",
+        // 状态文字只用 *-fg；*-bg 是同色低透明度底
+        "error-fg": "rgb(var(--color-error) / <alpha-value>)",
+        "error-bg": "rgb(var(--color-error) / var(--status-bg-alpha))",
         // 语义对比度令牌，按主题在 tokens.css 中取值（见 ADR 0002 注释）
         "ink-muted": "var(--ink-muted)",
         "ink-subtle": "var(--ink-subtle)",
-        "primary-ink": "var(--primary-ink)",
       },
       fontFamily: {
         heading: ["Fredoka", "Comic Neue", "sans-serif"],
@@ -94,6 +100,8 @@ export default {
         comic: ["Bangers", "Impact", "sans-serif"],
       },
       boxShadow: {
+        panel: "var(--shadow-panel)",
+        dialog: "var(--shadow-dialog)",
         'brutal': '4px 4px 0px 0px rgb(var(--color-ink) / 0.3)',
         'brutal-sm': '2px 2px 0px 0px rgb(var(--color-ink) / 0.3)',
         'brutal-lg': '6px 6px 0px 0px rgb(var(--color-ink) / 0.3)',

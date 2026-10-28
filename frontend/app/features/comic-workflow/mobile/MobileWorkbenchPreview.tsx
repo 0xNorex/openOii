@@ -45,7 +45,7 @@ export function MobileWorkbenchPreview({
 			aria-label="项目预览"
 			data-shell="mobile-workbench-preview"
 		>
-			<p className="m-0 text-2xs text-ink-muted">
+			<p className="m-0 text-xs text-ink-muted">
 				完整画布编辑请用桌面端打开
 			</p>
 
@@ -88,7 +88,7 @@ export function MobileWorkbenchPreview({
 						data-testid="mobile-final-video"
 					/>
 					<div className="flex items-center justify-between gap-2 p-2">
-						<span className="font-mono text-2xs uppercase tracking-wide text-ink-muted">
+						<span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
 							final cut
 						</span>
 						<a
@@ -106,7 +106,7 @@ export function MobileWorkbenchPreview({
 			<div>
 				<h2 className="m-0 mb-1.5 font-heading text-sm font-bold">
 					分镜
-					<span className="ml-1 font-mono text-2xs font-normal tabular-nums text-ink-muted">
+					<span className="ml-1 font-mono text-xs font-normal tabular-nums text-ink-muted">
 						{orderedShots.length}
 					</span>
 				</h2>
@@ -131,12 +131,12 @@ export function MobileWorkbenchPreview({
 											loading="lazy"
 										/>
 									) : (
-										<span className="flex h-full items-center justify-center text-2xs text-ink-muted">
+										<span className="flex h-full items-center justify-center text-xs text-ink-muted">
 											待生成
 										</span>
 									)}
 									<span
-										className="absolute left-1 top-1 rounded-full bg-neutral/80 px-1.5 font-mono text-2xs font-bold tabular-nums text-neutral-content"
+										className="absolute left-1 top-1 rounded-full bg-neutral/80 px-1.5 font-mono text-xs font-bold tabular-nums text-neutral-content"
 										aria-hidden="true"
 									>
 										{shot.order}
@@ -180,7 +180,7 @@ export function MobileWorkbenchPreview({
 											</span>
 										)}
 									</span>
-									<span className="max-w-full truncate text-2xs font-semibold">
+									<span className="max-w-full truncate text-xs font-semibold">
 										{character.name}
 									</span>
 								</li>

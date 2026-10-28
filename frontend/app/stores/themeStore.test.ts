@@ -5,30 +5,27 @@ vi.mock("zustand/middleware", () => ({
 }));
 
 // Import after mock so persist is a no-op (no localStorage needed)
-const { useThemeStore } = await import("./themeStore");
+const { useThemeStore, migrateTheme } = await import("./themeStore");
 
 describe("themeStore", () => {
-  it("defaults to doodle theme", () => {
-    expect(useThemeStore.getState().theme).toBe("doodle");
+  it("defaults to the system scheme (light in jsdom)", () => {
+    expect(useThemeStore.getState().theme).toBe("light");
   });
 
-  it("toggleTheme switches to doodle-dark", () => {
-    useThemeStore.getState().setTheme("doodle");
+  it("toggleTheme switches between light and dark", () => {
+    useThemeStore.getState().setTheme("light");
     useThemeStore.getState().toggleTheme();
-    expect(useThemeStore.getState().theme).toBe("doodle-dark");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("doodle-dark");
-  });
-
-  it("toggleTheme toggles back to doodle", () => {
-    useThemeStore.getState().setTheme("doodle-dark");
+    expect(useThemeStore.getState().theme).toBe("dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     useThemeStore.getState().toggleTheme();
-    expect(useThemeStore.getState().theme).toBe("doodle");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("doodle");
+    expect(useThemeStore.getState().theme).toBe("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 
-  it("setTheme sets specific theme", () => {
-    useThemeStore.getState().setTheme("doodle-dark");
-    expect(useThemeStore.getState().theme).toBe("doodle-dark");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("doodle-dark");
+  it("migrates the old doodle theme names", () => {
+    expect(migrateTheme("doodle")).toBe("light");
+    expect(migrateTheme("doodle-dark")).toBe("dark");
+    expect(migrateTheme("dark")).toBe("dark");
+    expect(migrateTheme(undefined)).toBe("light");
   });
 });

@@ -14,7 +14,7 @@ describe('Button', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-primary');
 
     rerender(<Button variant="secondary">Secondary</Button>);
-    expect(screen.getByRole('button')).toHaveClass('bg-secondary');
+    expect(screen.getByRole('button')).toHaveClass('bg-surface', 'border-border-strong');
   });
 
   it('applies size styles', () => {

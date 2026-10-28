@@ -167,7 +167,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 					<div className="flex flex-col">
 						<label className="block py-1">
 							<span className="font-heading text-xs font-medium text-xs font-medium">
-								名称 <span className="text-error">*</span>
+								名称 <span className="text-error-fg">*</span>
 							</span>
 						</label>
 						<input
@@ -184,7 +184,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 					<div className="flex flex-col">
 						<label className="block py-1">
 							<span className="font-heading text-xs font-medium text-xs font-medium">
-								类型 <span className="text-error">*</span>
+								类型 <span className="text-error-fg">*</span>
 							</span>
 						</label>
 						<div className="flex gap-2">
@@ -285,7 +285,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 
 					{/* Error */}
 					{error && (
-						<div className="text-xs text-error flex items-center gap-1">
+						<div className="text-xs text-error-fg flex items-center gap-1">
 							<SvgIcon name="triangle-alert" size={12} />
 							{error}
 						</div>
@@ -351,7 +351,7 @@ function AssetCard({
 			</figure>
 			<div className="flex flex-col gap-2 p-4 p-2 gap-1">
 				<div className="flex items-center gap-1">
-					<span className="badge-doodle text-2xs px-1.5 py-0.5 bg-transparent text-ink border-ink/20 shrink-0">
+					<span className="badge-doodle text-xs px-1.5 py-0.5 bg-transparent text-ink border-ink/20 shrink-0">
 						{asset.asset_type === "character"
 							? "角色"
 							: asset.asset_type === "scene"
@@ -372,7 +372,7 @@ function AssetCard({
 							<Button
 								variant="ghost"
 								size="sm"
-								className="!px-1.5 !py-0 !min-h-0 !h-5 text-xs text-primary-ink hover:opacity-80"
+								className="!px-1.5 !py-0 !min-h-0 !h-5 text-xs text-primary hover:opacity-80"
 								onClick={() => onUse(asset)}
 								disabled={isUsing}
 								title="添加到当前项目"
@@ -384,7 +384,7 @@ function AssetCard({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="!px-1 !py-0 !min-h-0 !h-5 text-xs text-error/60 hover:text-error"
+						className="!px-1 !py-0 !min-h-0 !h-5 text-xs text-error-fg hover:text-error-fg"
 						onClick={() => onDelete(asset)}
 						aria-label={`删除资产 ${asset.name}`}
 						title="删除资产"
@@ -460,7 +460,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 						<h3 id="asset-drawer-title" className="m-0 font-heading text-sm font-bold">
 							资产库
 						</h3>
-						<span className="badge-doodle text-2xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
+						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
 							{data?.total ?? 0}
 						</span>
 					</div>
@@ -468,7 +468,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 						<Button
 							variant="ghost"
 							size="sm"
-							className="!h-7 !min-h-7 !px-1 text-primary-ink hover:opacity-80"
+							className="!h-7 !min-h-7 !px-1 text-primary hover:opacity-80"
 							onClick={() => setShowCreateForm(true)}
 							title="新建资产"
 							aria-label="新建资产"
@@ -493,7 +493,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 							key={tab.key}
 							className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium transition-colors duration-fast border-b-2 -mb-[2px] ${
 								activeTab === tab.key
-									? "border-primary text-primary-ink"
+									? "border-primary text-primary"
 									: "border-transparent text-ink-muted hover:text-ink/80"
 							}`}
 							onClick={() => setActiveTab(tab.key)}

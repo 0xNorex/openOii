@@ -43,7 +43,7 @@ const META: Record<string, ProjectStatusMeta> = {
 	failed: {
 		label: "生成失败",
 		badgeCls: "border-error/35 bg-error/10 text-ink",
-		textCls: "text-error",
+		textCls: "text-error-fg",
 	},
 };
 

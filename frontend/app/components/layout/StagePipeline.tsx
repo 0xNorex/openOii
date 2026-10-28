@@ -84,7 +84,7 @@ export function StagePipeline({
 
 	return (
 		<div
-			className="chrome-toolbar z-sticky gap-2 border-b border-ink/10 bg-paper-200/80 px-2 sm:gap-3 sm:px-3"
+			className="chrome-toolbar z-panel gap-2 border-b border-ink/10 bg-paper-200/80 px-2 sm:gap-3 sm:px-3"
 			data-shell="stage-pipeline"
 		>
 			<span className="sr-only" aria-live="polite">
@@ -100,7 +100,7 @@ export function StagePipeline({
 					aria-hidden="true"
 				/>
 				{/* 状态文案在所有视口可见：<sm 只剩色点时色盲无法区分状态 */}
-				<span className="inline-block max-w-[4.5rem] truncate font-mono text-2xs font-semibold tabular-nums text-ink-muted sm:max-w-[5.5rem]">
+				<span className="inline-block max-w-[4.5rem] truncate font-mono text-xs font-semibold tabular-nums text-ink-muted sm:max-w-[5.5rem]">
 					{studioStatus.label}
 				</span>
 				{progressPercent === null ? null : (
@@ -118,7 +118,7 @@ export function StagePipeline({
 								style={{ width: `${progressPercent}%` }}
 							/>
 						</div>
-						<span className="w-8 font-mono text-2xs tabular-nums text-ink-muted">
+						<span className="w-8 font-mono text-xs tabular-nums text-ink-muted">
 							{progressPercent}%
 						</span>
 					</>
@@ -136,7 +136,7 @@ export function StagePipeline({
 					return (
 						<div key={stage.key} className="flex shrink-0 items-center">
 							<span
-								className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-2xs font-bold uppercase tracking-wide ${
+								className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-bold uppercase tracking-wide ${
 									current
 										? "bg-primary text-primary-content"
 										: past
@@ -187,7 +187,7 @@ export function StagePipeline({
 							tabIndex={0}
 							role="menu"
 							aria-label="工作台工具菜单"
-							className="absolute right-0 top-full z-dropdown mt-1 w-44 list-none border-2 border-ink/10 bg-paper-100 p-1 shadow-brutal-sm"
+							className="absolute right-0 top-full z-popover mt-1 w-44 list-none border-2 border-ink/10 bg-paper-100 p-1 shadow-brutal-sm"
 						>
 							{onOpenVersions ? (
 								<li role="none">
@@ -248,7 +248,7 @@ export function StagePipeline({
 					<Button
 						variant="ghost"
 						size="sm"
-						className={`${chromeBtn} text-error`}
+						className={`${chromeBtn} text-error-fg`}
 						onClick={onCancel}
 					>
 						<StopIcon className="h-3.5 w-3.5" aria-hidden="true" />
