@@ -34,8 +34,8 @@ export default defineConfig({
           if (!packageName) return;
 
           // Keep ReactDOM client in the React chunk. With object-form chunks,
-          // Rollup can place this module behind tldraw and force the home page
-          // to preload the full canvas runtime just to call createRoot().
+          // Rollup can place this module behind the canvas chunk and force the
+          // home page to preload the canvas runtime just to call createRoot().
           if (
             [
               "react",
@@ -53,17 +53,16 @@ export default defineConfig({
             return "react-vendor";
           }
 
-          if (packageName === "tldraw" || packageName.startsWith("@tldraw/")) {
-            return "tldraw-vendor";
+          if (packageName === "@xyflow/react" || packageName === "@xyflow/system") {
+            return "flow-vendor";
           }
         },
       },
     },
     // 启用 CSS 代码分割
     cssCodeSplit: true,
-    // tldraw is intentionally isolated in its own vendor chunk; keep the warning
-    // threshold above the current isolated payload so builds only warn on growth.
-    chunkSizeWarningLimit: 1700,
+    // Gzip budgets are enforced by scripts/check-bundle-budget.mjs.
+    chunkSizeWarningLimit: 600,
     // 启用压缩
     minify: 'esbuild',
     // 启用源码映射（仅用于错误追踪）

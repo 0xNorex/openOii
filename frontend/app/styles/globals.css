@@ -253,54 +253,24 @@
   }
 }
 
-/* ========== tldraw 无限画布样式覆盖 ========== */
+/* ========== React Flow 画布：跟随主题 token ========== */
 
-/* 画布容器 */
 .infinite-canvas-container {
   @apply w-full h-full;
 }
 
-.infinite-canvas-container .tl-container {
-  --tl-font-family: var(--font-sans);
-  background: transparent !important;
+.infinite-canvas-container .react-flow {
+  --xy-background-color: rgb(var(--color-paper-100));
+  --xy-background-pattern-color: rgb(var(--color-ink) / 0.12);
+  --xy-selection-background-color: rgb(var(--color-primary) / 0.08);
+  --xy-selection-border: 1px dashed rgb(var(--color-primary));
+  font-family: var(--font-sans);
 }
 
-/* tldraw 背景层 - 使用主题色 */
-.infinite-canvas-container .tl-background {
-  background: rgb(var(--color-paper-100)) !important;
-}
-
-/* 隐藏 tldraw 默认 UI */
-.infinite-canvas-container .tlui-layout__top,
-.infinite-canvas-container .tlui-layout__bottom,
-.infinite-canvas-container .tlui-navigation-panel,
-.infinite-canvas-container .tlui-help-menu,
-.infinite-canvas-container .tlui-debug-panel,
-.infinite-canvas-container .tlui-menu-panel,
-.infinite-canvas-container .tlui-style-panel {
-  display: none !important;
-}
-
-/* 隐藏 tldraw 水印 */
-.infinite-canvas-container .tlui-watermark,
-.infinite-canvas-container [class*="watermark"],
-.infinite-canvas-container .tl-watermark,
-.infinite-canvas-container .tlui-watermark__inner {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-/* Shape 容器样式 - 允许内容溢出显示 */
-.infinite-canvas-container .tl-shape-container,
-.infinite-canvas-container .tl-shape {
-  overflow: visible !important;
-}
-
-/* 隐藏选中状态指示器（自定义 shapes 已通过 hideSelectionBoundsFg/Bg 禁用） */
-.infinite-canvas-container .tl-selection__fg,
-.infinite-canvas-container .tl-selection__bg {
-  display: none !important;
+/* 选中态由卡片自身的 ring 表达，去掉 React Flow 默认的节点轮廓 */
+.infinite-canvas-container .react-flow__node:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 4px;
+  border-radius: 0.5rem;
 }
 

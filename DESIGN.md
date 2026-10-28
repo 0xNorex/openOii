@@ -125,7 +125,7 @@ components:
    - 画布工具条叠在 PromptBar 上方；窄于 1400px 时工具条只显示图标，放得进两块面板之间。
 
 画布几何（卡片尺寸、九宫格列数、frame 内距 gap）的 SSOT 是
-`app/features/comic-workflow/graph/layoutComicWorkflow.ts`——tldraw 消费的是
+`app/features/comic-workflow/graph/layoutComicWorkflow.ts`——React Flow 消费的是
 px 数值，tokens.css 不保留 rem 副本（避免两套数字漂移）。
 
 **Token → Utility 映射（强制）：**
@@ -217,7 +217,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Secondary:** `bg-surface text-ink border-border-strong`, hover `bg-paper-200`.
 - **Ghost:** transparent, no border; hover `bg-paper-200`.
 - **Danger:** `bg-error text-error-content`.
-- **Components:** `ui/Button` (variant `primary/secondary/ghost/danger`, size `sm/md/lg`), `ui/IconButton` (required `aria-label`), `ui/PlainButton` (unstyled, for tabs, menu items, selectable cards and rows). Native `<button` is only allowed in `components/ui` and the tldraw canvas; the contract test enforces it.
+- **Components:** `ui/Button` (variant `primary/secondary/ghost/danger`, size `sm/md/lg`), `ui/IconButton` (required `aria-label`), `ui/PlainButton` (unstyled, for tabs, menu items, selectable cards and rows). Native `<button` is only allowed in `components/ui` and the canvas cards; the contract test enforces it.
 - **Disabled:** 50% opacity, `cursor-not-allowed`.
 
 ### Cards / Containers

@@ -1,6 +1,4 @@
-import { fitStoryboard } from "../fitStoryboard";
 import { useCallback, useState, type ReactNode } from "react";
-import { track, useEditor } from "tldraw";
 import {
 	ArchiveBoxIcon,
 	ArrowsPointingOutIcon,
@@ -12,7 +10,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { projectsApi } from "~/services/api";
 import { toast } from "~/utils/toast";
-import { motionDuration } from "~/utils/motion";
 import { Button } from "~/components/ui/Button";
 
 interface ComicCanvasToolbarProps {
@@ -26,7 +23,7 @@ interface ComicCanvasToolbarProps {
 	onOpenAssets?: () => void;
 }
 
-/** 渲染器无关的视图控制（tldraw 与 React Flow 各自实现）。 */
+/** 视图控制由画布实现（React Flow）。 */
 export interface CanvasViewControls {
 	tool: "select" | "hand";
 	setTool: (tool: "select" | "hand") => void;
@@ -37,25 +34,7 @@ export interface CanvasViewControls {
 	fit: () => void;
 }
 
-export const ComicCanvasToolbar = track(function ComicCanvasToolbar(
-	props: ComicCanvasToolbarProps,
-) {
-	const editor = useEditor();
-	const center = () => editor.getViewportScreenCenter();
-	const animation = { duration: motionDuration("fast") };
-	const controls: CanvasViewControls = {
-		tool: editor.getCurrentToolId() === "hand" ? "hand" : "select",
-		setTool: (tool) => editor.setCurrentTool(tool),
-		zoomPercent: Math.round(editor.getZoomLevel() * 100),
-		zoomIn: () => editor.zoomIn(center(), { animation }),
-		zoomOut: () => editor.zoomOut(center(), { animation }),
-		zoomReset: () => editor.resetZoom(center(), { animation }),
-		fit: () => fitStoryboard(editor, motionDuration("normal")),
-	};
-	return <ComicCanvasToolbarView {...props} controls={controls} />;
-});
-
-export function ComicCanvasToolbarView({
+export function ComicCanvasToolbar({
 	projectId,
 	onResetLayout,
 	sortMode = false,

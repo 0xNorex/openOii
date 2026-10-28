@@ -4,21 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { projectsApi } from "~/services/api";
 import { ComicCanvasToolbar } from "./ComicCanvasToolbar";
 
-const editorMock = {
-	getCurrentToolId: vi.fn(() => "select"),
-	getZoomLevel: vi.fn(() => 1),
-	getViewportScreenCenter: vi.fn(() => ({ x: 0, y: 0 })),
-	setCurrentTool: vi.fn(),
+const controls = {
+	tool: "select" as const,
+	setTool: vi.fn(),
+	zoomPercent: 100,
 	zoomIn: vi.fn(),
 	zoomOut: vi.fn(),
-	resetZoom: vi.fn(),
-	zoomToFit: vi.fn(),
+	zoomReset: vi.fn(),
+	fit: vi.fn(),
 };
-
-vi.mock("tldraw", () => ({
-	track: (component: unknown) => component,
-	useEditor: () => editorMock,
-}));
 
 vi.mock("~/services/api", () => ({
 	projectsApi: {
@@ -39,6 +33,7 @@ function renderToolbar(overrides = {}) {
 		<ComicCanvasToolbar
 			projectId={15}
 			onResetLayout={vi.fn()}
+			controls={controls}
 			{...overrides}
 		/>,
 	);

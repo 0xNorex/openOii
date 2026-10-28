@@ -16,7 +16,7 @@ The conversation / task-binding side of the Director Desk (currently left). Sele
 _Avoid_: Sidebar (overloaded), chat drawer (implies temporary only)
 
 **Canvas**:
-The infinite visual stage (tldraw projection of workflow nodes: brief, characters, shot grid, output).
+The infinite visual stage (React Flow projection of workflow nodes: brief, characters, shot grid, output).
 _Avoid_: Board, whiteboard
 
 **Shot Grid**:

@@ -774,7 +774,7 @@ describe('ProjectPage live hydration', () => {
     try {
       renderWithProviders(<ProjectPage />);
 
-      // <lg：不挂载 tldraw 画布，改为只读预览 + 侧栏上下分栏
+      // <lg：不挂载画布，改为只读预览 + 侧栏上下分栏
       expect(screen.queryByTestId('stage-view')).not.toBeInTheDocument();
       expect(screen.getByTestId('mobile-workbench-preview')).toBeInTheDocument();
       expect(screen.getByText('完整画布编辑请用桌面端打开')).toBeInTheDocument();

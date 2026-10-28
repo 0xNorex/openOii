@@ -8,7 +8,7 @@
 | 原语 | OiiOii 2.0（公开） | openOii 现状 | 目标 |
 |------|-------------------|--------------|------|
 | Agent 团队流水线 | ~7 类专家接力 | Outline/Plan/Render/Compose/Critic | 保留并扩展场景/艺术总监角色 |
-| 无限画布 | 智能画布，素材可点选唤 Agent | tldraw comic-workflow | 选中绑定对话 + 局部重做 |
+| 无限画布 | 智能画布，素材可点选唤 Agent | React Flow comic-workflow | 选中绑定对话 + 局部重做 |
 | Skill 库 | 行业工作流可挂载 | 6 个简单 Skill + 厚 directives | 只做简单可跑通工作流 |
 | 拉片复刻 | 上传视频 → 约 18 维拉片 | **不做**（产品面已移除） | 近端明确非目标 |
 | 托管 / 对话 | 两种模式 | review / quick | 产品化文案与入口 |
@@ -62,7 +62,7 @@ Home
 Project（导演台）
   TopBar + StagePipeline
   ┌ Agent Rail │ Canvas │ Workspace Sidebar ┐
-  │ 任务/阶段   │ tldraw │ Chat / Inspector  │
+  │ 任务/阶段   │ canvas │ Chat / Inspector  │
   │ 选中上下文  │        │ Assets            │
   └────────────┴────────┴───────────────────┘
 ```

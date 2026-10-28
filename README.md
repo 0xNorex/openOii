@@ -56,7 +56,7 @@ openOii 把故事创意串成 **规划、角色/分镜生成、视频生成与�
 - 多阶段 AI 生成链路
 - WebSocket 实时进度
 - 可恢复 / 可取消 / 可反馈的 run 流程
-- tldraw 无限画布审阅角色、分镜与结果
+- React Flow 无限画布审阅角色、分镜与结果
 - 前端环境变量配置面板
 
 ## 界面预览
@@ -85,7 +85,7 @@ openOii 把故事创意串成 **规划、角色/分镜生成、视频生成与�
 
 ## 技术栈
 
-- Frontend: React 18 + TypeScript + tldraw
+- Frontend: React 18 + TypeScript + React Flow
 - Backend: FastAPI + SQLModel（HTTP/WS/静态/配置/导出）
 - Engine: pi-agent-core sidecar（Node/TS，loopback 18766，拥有 17 阶段状态机与 6 闸门）
 - Infra: 单文件 SQLite（WAL）+ `/static`

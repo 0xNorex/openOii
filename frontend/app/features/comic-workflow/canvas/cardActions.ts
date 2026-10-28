@@ -11,7 +11,7 @@ import type { Character, Shot, ShotUpdatePayload } from "~/types";
 /**
  * 画布卡片的业务动作。
  *
- * 画布 shape 组件渲染在 tldraw 内部，不依赖 react-query context——
+ * 画布卡片在 React Flow 节点里渲染，不直接用 react-query hooks——
  * 这里直接调 API 并写回应用级 QueryClient，让 graph 投影自然重建。
  * WS 事件到达时 applyServerEvent 会以同样的方式覆盖为服务端权威态。
  */

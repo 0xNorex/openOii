@@ -22,7 +22,7 @@ import type { ComicWorkflowGraph } from "../../graph/types";
 import type { ComicWorkflowLayout } from "../../graph/layoutComicWorkflow";
 import { WorkflowCardView, WorkflowFrameView } from "../WorkflowCards";
 import {
-	ComicCanvasToolbarView,
+	ComicCanvasToolbar,
 	type CanvasViewControls,
 } from "../toolbar/ComicCanvasToolbar";
 import {
@@ -64,14 +64,13 @@ export function storyboardViewport(
 
 const nodeTypes: NodeTypes = {
 	frame: ({ data }: NodeProps<FrameFlowNode>) => (
-		<WorkflowFrameView {...data} isolatePointer={false} />
+		<WorkflowFrameView {...data} />
 	),
 	card: ({ data, selected }: NodeProps<CardFlowNode>) => (
 		<WorkflowCardView
 			node={data.node}
 			draggable={data.draggable}
 			selected={selected}
-			isolatePointer={false}
 		/>
 	),
 };
@@ -275,7 +274,7 @@ function FlowInner({
 			>
 				<Background gap={24} size={1} />
 			</ReactFlow>
-			<ComicCanvasToolbarView
+			<ComicCanvasToolbar
 				projectId={projectId}
 				onResetLayout={handleResetLayout}
 				sortMode={sortMode}

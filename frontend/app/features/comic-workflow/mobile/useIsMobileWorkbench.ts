@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-// 与 Tailwind lg 断点对齐：<1024px 视为移动工作台（不挂载 tldraw）
+// 与 Tailwind lg 断点对齐：<1024px 视为移动工作台（不挂载画布）
 const MOBILE_QUERY = "(max-width: 1023.98px)";
 
 function canMatchMedia(): boolean {

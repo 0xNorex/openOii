@@ -93,7 +93,7 @@
      * 画布占满 TopBar 以下的全部空间；Agent 面板与检查器都浮在画布上。 */
     --workbench-header: 2.75rem; /* TopBar */
     /* 画布几何（卡片/九宫格/frame 内距）的 SSOT 是 layoutComicWorkflow.ts：
-     * tldraw 消费 px 数值，这里不保留 rem 副本以免两套数字漂移。 */
+     * 画布消费 px 数值，这里不保留 rem 副本以免两套数字漂移。 */
 
     /* —— Z-Index：一套刻度（spec §7.5）。画布 0；Dialog/Drawer 走浏览器
      * top layer，不占 z 档。 */
