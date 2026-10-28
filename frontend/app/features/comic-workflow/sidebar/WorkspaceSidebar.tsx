@@ -2,12 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { useRef, useState, type KeyboardEvent } from "react";
 import { ChatPanel } from "~/components/chat/ChatPanel";
-import { CreationInterviewPanel } from "~/components/chat/CreationInterviewPanel";
 import { Button } from "~/components/ui/Button";
 import { EmptyState } from "~/components/ui/EmptyState";
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import { assetsApi, getStaticUrl } from "~/services/api";
-import type { Asset, Project } from "~/types";
+import type { Asset } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
@@ -29,10 +28,6 @@ interface WorkspaceSidebarProps {
 	onConfirm: (feedback?: string) => void;
 	onCancel: () => void;
 	isGenerating: boolean;
-	project?: Project;
-	creationInterview?: boolean;
-	creationBusy?: boolean;
-	onCreationInterviewStart?: () => void;
 	onSendFeedback?: (content: string) => void;
 	collapsed?: boolean;
 	onCollapsedChange?: (collapsed: boolean) => void;
@@ -68,23 +63,17 @@ export function WorkspaceSidebar({
 	onConfirm,
 	onCancel,
 	isGenerating,
-	project,
-	creationInterview = false,
-	creationBusy = false,
-	onCreationInterviewStart,
 	collapsed = false,
 	onCollapsedChange,
 	universeId = null,
 }: WorkspaceSidebarProps) {
-	const TABS = creationInterview
-		? [{ ...ACTIVITY_TAB, label: "访谈" }]
-		: [
-				ACTIVITY_TAB,
-				ASSETS_TAB,
-				...(universeId
-					? [{ key: "universe" as const, label: "宇宙", icon: "star" as IconName }]
-					: []),
-			];
+	const TABS = [
+		ACTIVITY_TAB,
+		ASSETS_TAB,
+		...(universeId
+			? [{ key: "universe" as const, label: "宇宙", icon: "star" as IconName }]
+			: []),
+	];
 
 	const tabRefs = useRef<Record<WorkspaceSidebarTab, HTMLButtonElement | null>>({
 		chat: null,
@@ -211,21 +200,12 @@ export function WorkspaceSidebar({
 				{activeTab === "chat" ? (
 					<div className="flex h-full min-h-0 flex-col">
 						<div className="min-h-0 flex-1 overflow-hidden overscroll-contain">
-							{creationInterview && project ? (
-								<CreationInterviewPanel
-									key={project.id}
-									project={project}
-									onStart={onCreationInterviewStart ?? (() => {})}
-									busy={creationBusy}
-								/>
-							) : (
-								<ChatPanel
-									projectId={projectId}
-									onConfirm={onConfirm}
-									onCancel={onCancel}
-									isGenerating={isGenerating}
-								/>
-							)}
+							<ChatPanel
+								projectId={projectId}
+								onConfirm={onConfirm}
+								onCancel={onCancel}
+								isGenerating={isGenerating}
+							/>
 						</div>
 					</div>
 				) : null}

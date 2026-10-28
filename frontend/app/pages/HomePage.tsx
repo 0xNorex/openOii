@@ -9,6 +9,9 @@ import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
 import { DeskSection } from "~/components/layout/DeskSection";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { CreationSettings, type CreationSettingsValue } from "~/features/projects/CreationSettings";
+import { toast } from "~/utils/toast";
+import type { CreateProjectPayload } from "~/types";
 
 const AssetDrawer = lazy(() =>
 	import("~/components/panels/AssetDrawer").then((module) => ({ default: module.AssetDrawer })),
@@ -28,16 +31,21 @@ export function HomePage() {
 	const requestedChapterNumber = Number(searchParams.get("chapterNumber"));
 	const [story, setStory] = useState("");
 	const [creationMode, setCreationMode] = useState<"review" | "quick">("review");
-	const [selectedUniverseId, setSelectedUniverseId] = useState<number | null>(
-		Number.isFinite(requestedUniverseId) && requestedUniverseId > 0 ? requestedUniverseId : null,
-	);
+	const [settings, setSettings] = useState<CreationSettingsValue>(() => ({
+		style: DEFAULT_STYLE,
+		universeId: Number.isFinite(requestedUniverseId) && requestedUniverseId > 0 ? requestedUniverseId : null,
+		characterHints: "",
+		referenceFiles: [],
+	}));
+	const selectedUniverseId = settings.universeId;
 	const [assetsOpen, setAssetsOpen] = useState(false);
 	const [historyOpen, setHistoryOpen] = useState(false);
 
 	useEffect(() => {
-		setSelectedUniverseId(
-			Number.isFinite(requestedUniverseId) && requestedUniverseId > 0 ? requestedUniverseId : null,
-		);
+		setSettings((current) => ({
+			...current,
+			universeId: Number.isFinite(requestedUniverseId) && requestedUniverseId > 0 ? requestedUniverseId : null,
+		}));
 	}, [requestedUniverseId]);
 
 	const { data: universes = [] } = useQuery({
@@ -52,10 +60,24 @@ export function HomePage() {
 			: (selectedUniverse?.projects_count ?? 0) + 1;
 
 	const createMutation = useMutation({
-		mutationFn: projectsApi.create,
+		mutationFn: async (payload: CreateProjectPayload) => {
+			const project = await projectsApi.create(payload);
+			try {
+				for (const file of settings.referenceFiles) {
+					await projectsApi.uploadReference(project.id, file);
+				}
+			} catch (cause) {
+				// The project exists; don't fail the whole creation over a reference image.
+				toast.error({
+					title: "参考图上传失败",
+					message: cause instanceof Error ? cause.message : "可稍后在项目中重新上传。",
+				});
+			}
+			return project;
+		},
 		onSuccess: (project) => {
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
-			navigate("/project/" + project.id + "?preflight=true&skill=" + DEFAULT_SKILL_ID);
+			navigate("/project/" + project.id + "?autoStart=true&skill=" + DEFAULT_SKILL_ID);
 		},
 	});
 
@@ -66,7 +88,9 @@ export function HomePage() {
 		createMutation.mutate({
 			title,
 			story: trimmed,
-			style: DEFAULT_STYLE,
+			style: settings.style,
+			target_shot_count: settings.shotCount,
+			character_hints: settings.characterHints.split("\n").map((hint) => hint.trim()).filter(Boolean),
 			creation_mode: creationMode,
 			universe_id: selectedUniverseId,
 			chapter_number: chapterNumber,
@@ -91,7 +115,7 @@ export function HomePage() {
 						<PageHeader
 							eyebrow="openoii / create"
 							title="把一句想法，变成一部漫剧。"
-							description="选择创作模式并写下故事，进入画布后与 AI 逐题梳理，再确认画面设置。"
+							description="写下故事、选择创作模式，进入画布后 AI 按阶段生成。"
 							actionsAlign="title"
 							actions={
 							<div className="flex flex-wrap gap-1" aria-label="创作台工具">
@@ -136,8 +160,8 @@ export function HomePage() {
 										<span className="font-mono text-2xs uppercase text-ink-muted">选择创作模式</span>
 										<div className="grid grid-cols-2 gap-2">
 											{[
-												{ value: "review", label: "交互模式", description: "AI 逐题访谈，分阶段确认", icon: "check" },
-												{ value: "quick", label: "YOLO 模式", description: "AI 逐题访谈后自动创作", icon: "zap" },
+												{ value: "review", label: "交互模式", description: "每个阶段由你确认", icon: "check" },
+												{ value: "quick", label: "YOLO 模式", description: "自动确认，一口气生成", icon: "zap" },
 											].map((mode) => {
 												const active = creationMode === mode.value;
 												return (
@@ -164,9 +188,15 @@ export function HomePage() {
 										loading={createMutation.isPending}
 									>
 										{!createMutation.isPending ? <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" /> : null}
-										进入画布，与 AI 开始访谈
+										开始创作
 									</Button>
 								</div>
+								<CreationSettings
+									value={settings}
+									onChange={setSettings}
+									universes={universes}
+									disabled={createMutation.isPending}
+								/>
 								{selectedUniverse ? <p className="m-0 text-2xs text-ink-muted">将加入「{selectedUniverse.name}」宇宙 · 第 {chapterNumber} 章</p> : null}
 								{createMutation.error ? <p className="m-0 border-l-2 border-error bg-error/10 px-3 py-2 text-xs text-error" role="alert">{createMutation.error.message || "创建项目失败，请重试。"}</p> : null}
 							</DeskSection>

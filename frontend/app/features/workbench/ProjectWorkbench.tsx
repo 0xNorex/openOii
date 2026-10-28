@@ -8,7 +8,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { TopBar } from "~/components/layout/TopBar";
 import { StagePipeline } from "~/components/layout/StagePipeline";
 import { StageView } from "~/components/layout/StageView";
@@ -36,7 +36,6 @@ import { readRunState as readRunStateSnapshot } from "~/query/runState";
 import type { VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
-import { hasSavedCreationInterview } from "~/utils/creationInterview";
 
 const VersionCompareDrawer = lazy(() =>
 	import("~/components/panels/VersionCompareDrawer").then((m) => ({
@@ -46,8 +45,6 @@ const VersionCompareDrawer = lazy(() =>
 
 export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const queryClient = useQueryClient();
-	const [searchParams, setSearchParams] = useSearchParams();
-	const requestedInterview = searchParams.get("preflight") === "true";
 	const runState = useRunState(projectId);
 	const {
 		isGenerating: runIsGenerating,
@@ -89,13 +86,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		editor.setHighlightedMessage(null);
 	}, [projectId]);
 
-	const creationInterview = requestedInterview || Boolean(
-		project?.status === "draft" &&
-		!hasActiveRun &&
-		!hasRecovery &&
-		hasSavedCreationInterview(project.story),
-	);
-
 	const {
 		handleGenerate,
 		handleFeedback,
@@ -133,12 +123,6 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			setWorkspaceCollapsed(false);
 		}
 	}, [runAwaitingConfirm, runModePreference]);
-
-	useEffect(() => {
-		if (!creationInterview) return;
-		setSidebarTab("chat");
-		setWorkspaceCollapsed(false);
-	}, [creationInterview]);
 
 	const selectedWorkflowNode = useMemo(() => {
 		if (!project || !selectedNodeId) return null;
@@ -338,41 +322,37 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				跳到工作台
 			</a>
 			<TopBar projectId={projectId} />
-			{creationInterview ? null : (
-				<StagePipeline
-					currentStage={runCurrentStage}
-					isGenerating={hasActiveRun}
-					progress={runProgress}
-					workbenchStatus={workbenchStatus}
-					awaitingConfirm={runAwaitingConfirm}
-					hasRecovery={hasRecovery}
-					onGenerate={handleGenerate}
-					onResume={handleResume}
-					onCancel={handleCancel}
-					onToggleChat={() => {
-						setSidebarTab("chat");
-						setWorkspaceCollapsed(false);
-					}}
-					generateDisabled={generatePending || hasActiveRun}
-					onOpenVersions={handleOpenVersions}
-					onExport={handleExportWebtoon}
-					exportBusy={exporting}
-				/>
-			)}
+			<StagePipeline
+				currentStage={runCurrentStage}
+				isGenerating={hasActiveRun}
+				progress={runProgress}
+				workbenchStatus={workbenchStatus}
+				awaitingConfirm={runAwaitingConfirm}
+				hasRecovery={hasRecovery}
+				onGenerate={handleGenerate}
+				onResume={handleResume}
+				onCancel={handleCancel}
+				onToggleChat={() => {
+					setSidebarTab("chat");
+					setWorkspaceCollapsed(false);
+				}}
+				generateDisabled={generatePending || hasActiveRun}
+				onOpenVersions={handleOpenVersions}
+				onExport={handleExportWebtoon}
+				exportBusy={exporting}
+			/>
 
 			{/* Keep setup focused; the empty workflow canvas appears after a run starts. */}
 			<main
 				id="workbench-main"
 				className={
-					creationInterview
-						? "relative flex min-h-0 flex-1 overflow-hidden bg-paper-100"
-						: isMobileWorkbench
-							? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
-							: "relative flex min-h-0 flex-1 overflow-hidden"
+					isMobileWorkbench
+						? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+						: "relative flex min-h-0 flex-1 overflow-hidden"
 				}
-				aria-label={creationInterview ? "创作访谈" : "漫剧工作台"}
+				aria-label="漫剧工作台"
 			>
-				{!creationInterview && isMobileWorkbench ? (
+				{isMobileWorkbench ? (
 					<MobileWorkbenchPreview
 						projectId={projectId}
 						workbenchStatus={workbenchStatus}
@@ -390,23 +370,15 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					activeTab={sidebarTab}
 					onTabChange={setSidebarTab}
 					projectId={projectId}
-					project={project}
 					onConfirm={handleConfirm}
 					onCancel={handleCancel}
-					creationInterview={creationInterview}
-					creationBusy={generatePending || hasActiveRun || hasRecovery}
-					onCreationInterviewStart={() => {
-						const next = new URLSearchParams(searchParams);
-						next.set("autoStart", "true");
-						setSearchParams(next, { replace: true });
-					}}
 					onSendFeedback={handleFeedback}
 					isGenerating={hasActiveRun}
-					collapsed={creationInterview || isMobileWorkbench ? false : workspaceCollapsed}
+					collapsed={isMobileWorkbench ? false : workspaceCollapsed}
 					onCollapsedChange={setWorkspaceCollapsed}
 					universeId={project?.universe_id ?? null}
 				/>
-				{!creationInterview && !isMobileWorkbench ? (
+				{!isMobileWorkbench ? (
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<div className="relative min-h-0 flex-1 overflow-hidden workbench-canvas-frame">
 							<StageView
@@ -428,7 +400,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					</div>
 				) : null}
 
-				{!creationInterview && !isMobileWorkbench ? (
+				{!isMobileWorkbench ? (
 					<InspectorColumn
 						projectId={projectId}
 						selectedNode={selectedWorkflowNode}
@@ -440,7 +412,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				) : null}
 			</main>
 
-			{!creationInterview && isMobileWorkbench ? (
+			{isMobileWorkbench ? (
 				<PromptBar
 					selectionLabel={selectionLabel}
 					awaitingConfirm={runAwaitingConfirm}

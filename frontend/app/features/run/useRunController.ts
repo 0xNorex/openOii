@@ -114,13 +114,6 @@ export function useRunController(args: {
 		onSuccess: ({ run, requestToken }) => {
 			if (requestToken !== requestTokenRef.current) return;
 			syncRunStateWithActiveRun(run);
-			if (searchParams.get("preflight") === "true") {
-				const next = new URLSearchParams(searchParams);
-				next.delete("preflight");
-				next.delete("skill");
-				next.delete("autoStart");
-				setSearchParams(next, { replace: true });
-			}
 		},
 		onError: (error: Error | ApiError, variables) => {
 			if (variables?.requestToken !== requestTokenRef.current) return;
@@ -427,13 +420,7 @@ export function useRunController(args: {
 		const skillId = searchParams.get("skill") || project?.skill_id || null;
 		if (!autoStartTriggered.current && autoStart === "true" && project && !hasActiveRun) {
 			autoStartTriggered.current = true;
-			if (searchParams.get("preflight") === "true") {
-				const next = new URLSearchParams(searchParams);
-				next.delete("autoStart");
-				setSearchParams(next, { replace: true });
-			} else {
-				setSearchParams({}, { replace: true });
-			}
+			setSearchParams({}, { replace: true });
 			const requestToken = requestTokenRef.current + 1;
 			requestTokenRef.current = requestToken;
 			setLastRunStatus(null);

@@ -7,7 +7,7 @@ test("homepage exposes the story bootstrap flow", async ({ page }) => {
 	await expect(page.getByRole("heading", { name: "把一句想法，变成一部漫剧。" })).toBeVisible();
 
 	const storyInput = page.getByLabel("输入你的故事创意");
-	const startButton = page.getByRole("button", { name: "进入画布，与 AI 开始访谈" });
+	const startButton = page.getByRole("button", { name: "开始创作" });
 
 	await expect(storyInput).toBeVisible();
 	await expect(startButton).toBeDisabled();

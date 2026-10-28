@@ -529,20 +529,6 @@ export const skillsApi = {
 	list: () => fetchApi<SkillApiRow[]>("/api/v1/skills"),
 };
 
-export const textApi = {
-	nextInterviewQuestion: (data: {
-		story: string;
-		answers: Array<{ question: string; answer: string }>;
-	}) =>
-		fetchApi<{
-			ready: boolean;
-			question: { label: string; question: string; placeholder: string; suggestions: string[] } | null;
-		}>("/api/v1/text/interview/next", {
-			method: "POST",
-			body: JSON.stringify(data),
-		}),
-};
-
 export const configApi = {
 	get: () => fetchApi<import("~/types").ConfigItem[]>("/api/v1/config"),
 	update: (config: Record<string, import("~/types").ConfigValue>) => {

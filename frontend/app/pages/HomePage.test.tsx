@@ -1,15 +1,16 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HomePage } from "./HomePage";
-
-const mockMutate = vi.fn();
-let mockIsPending = false;
+import { projectsApi } from "~/services/api";
 
 vi.mock("~/services/api", () => ({
-	projectsApi: { create: vi.fn() },
+	projectsApi: {
+		create: vi.fn(() => Promise.resolve({ id: 7 })),
+		uploadReference: vi.fn(() => Promise.resolve({ url: "/r.png", reference_images: ["/r.png"] })),
+	},
 	universesApi: {
 		list: vi.fn(() =>
 			Promise.resolve([
@@ -30,15 +31,6 @@ vi.mock("~/services/api", () => ({
 	},
 }));
 
-vi.mock("@tanstack/react-query", async (importOriginal) => {
-	const actual = await importOriginal<any>();
-	return {
-		...actual,
-		useMutation: vi.fn(() => ({ mutate: mockMutate, isPending: mockIsPending })),
-		useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
-	};
-});
-
 vi.mock("~/stores/themeStore", () => ({
 	useThemeStore: vi.fn(() => ({ theme: "light", toggleTheme: vi.fn() })),
 }));
@@ -47,12 +39,23 @@ vi.mock("~/stores/settingsStore", () => ({
 	useSettingsStore: vi.fn(() => ({ openModal: vi.fn() })),
 }));
 
+function ProjectLocation() {
+	const location = useLocation();
+	return <p data-testid="location">{location.pathname + location.search}</p>;
+}
+
+const create = vi.mocked(projectsApi.create);
+const uploadReference = vi.mocked(projectsApi.uploadReference);
+
 function renderHomePage(initialEntry = "/") {
 	const queryClient = new QueryClient();
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter initialEntries={[initialEntry]}>
-				<HomePage />
+				<Routes>
+					<Route path="/" element={<HomePage />} />
+					<Route path="/project/:id" element={<ProjectLocation />} />
+				</Routes>
 			</MemoryRouter>
 		</QueryClientProvider>,
 	);
@@ -60,8 +63,7 @@ function renderHomePage(initialEntry = "/") {
 
 describe("HomePage", () => {
 	beforeEach(() => {
-		mockMutate.mockClear();
-		mockIsPending = false;
+		vi.clearAllMocks();
 	});
 
 	it("starts with one story field and no workflow preset section", () => {
@@ -84,26 +86,55 @@ describe("HomePage", () => {
 		expect(yolo).toHaveAttribute("aria-pressed", "true");
 	});
 
-	it("creates an interactive project from the story", () => {
+	it("creates an interactive project and starts it on the workbench", async () => {
 		renderHomePage();
 		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {
 			target: { value: "My story" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "进入画布，与 AI 开始访谈" }));
-		expect(mockMutate).toHaveBeenCalledWith(
-			expect.objectContaining({ story: "My story", creation_mode: "review" }),
+		fireEvent.click(screen.getByRole("button", { name: "开始创作" }));
+		expect(await screen.findByTestId("location")).toHaveTextContent(
+			"/project/7?autoStart=true&skill=story-anime",
 		);
+		expect(create).toHaveBeenCalledWith(
+			expect.objectContaining({ story: "My story", creation_mode: "review", style: "anime" }),
+		);
+		expect(uploadReference).not.toHaveBeenCalled();
 	});
 
-	it("creates a YOLO project when that mode is selected", async () => {
+	it("sends the optional settings and uploads reference images after creating", async () => {
+		const user = userEvent.setup();
+		renderHomePage();
+		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {
+			target: { value: "灯塔" },
+		});
+		await user.click(screen.getByText(/画面设置（可选）/));
+		await user.selectOptions(screen.getByLabelText("画面风格"), "watercolor");
+		await user.type(screen.getByLabelText("镜头数"), "6");
+		await user.type(screen.getByLabelText("角色提示（每行一个）"), "灯塔管理员{enter}{enter}黑猫");
+		const file = new File(["x"], "ref.png", { type: "image/png" });
+		await user.upload(screen.getByLabelText("选择参考图"), file);
+		await user.click(screen.getByRole("button", { name: "开始创作" }));
+		await screen.findByTestId("location");
+		expect(create).toHaveBeenCalledWith(
+			expect.objectContaining({
+				style: "watercolor",
+				target_shot_count: 6,
+				character_hints: ["灯塔管理员", "黑猫"],
+			}),
+		);
+		expect(uploadReference).toHaveBeenCalledWith(7, file);
+	});
+
+	it("creates a YOLO project and starts it on the workbench", async () => {
 		const user = userEvent.setup();
 		renderHomePage();
 		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {
 			target: { value: "A quick story" },
 		});
 		await user.click(screen.getByRole("button", { name: /YOLO 模式/ }));
-		await user.click(screen.getByRole("button", { name: "进入画布，与 AI 开始访谈" }));
-		expect(mockMutate).toHaveBeenCalledWith(
+		await user.click(screen.getByRole("button", { name: "开始创作" }));
+		expect(await screen.findByTestId("location")).toHaveTextContent("/project/7?autoStart=true");
+		expect(create).toHaveBeenCalledWith(
 			expect.objectContaining({ story: "A quick story", creation_mode: "quick" }),
 		);
 	});
@@ -114,9 +145,9 @@ describe("HomePage", () => {
 		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {
 			target: { value: "月台信号灯异常" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "进入画布，与 AI 开始访谈" }));
+		fireEvent.click(screen.getByRole("button", { name: "开始创作" }));
 		await waitFor(() =>
-			expect(mockMutate).toHaveBeenCalledWith(
+			expect(create).toHaveBeenCalledWith(
 				expect.objectContaining({
 					universe_id: 12,
 					chapter_number: 5,
@@ -128,7 +159,7 @@ describe("HomePage", () => {
 
 	it("keeps the start button disabled until story text is entered", () => {
 		renderHomePage();
-		expect(screen.getByRole("button", { name: "进入画布，与 AI 开始访谈" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "开始创作" })).toBeDisabled();
 	});
 
 	it("shows remaining characters near the limit", () => {
