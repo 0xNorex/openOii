@@ -244,7 +244,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	});
 
 	await page.goto("/project/7");
-	await page.waitForSelector('[data-shape-id="shape:workflow-card-shot-1"]');
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
 
 	// Brief 不在画布上：它是右栏 Inspector 的项目级上下文
 	await expect(page.getByRole("region", { name: "Elements" })).toBeAttached();
@@ -257,7 +257,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(page.getByRole("button", { name: "展开活动面板" })).toBeVisible();
 
 	await page.getByRole("button", { name: "适应视图" }).click();
-	const card = page.locator('[data-shape-id="shape:workflow-card-shot-1"]');
+	const card = page.locator('.react-flow__node[data-id="shot:1"]');
 	// 适配后卡片标题的屏幕字号 ≥ 12px（缩放下限）
 	await expect
 		.poll(() =>
@@ -275,7 +275,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 
 	await page.getByRole("button", { name: "排序九宫格" }).click();
 	await expect(page.getByRole("button", { name: "完成分镜排序" })).toBeVisible();
-	// 排序模式切换后 tldraw 解锁分镜是异步的：拖不动就再拖一次
+	// 排序模式切换后分镜才可拖：拖不动就再拖一次
 	await expect(async () => {
 		const start = await card.boundingBox();
 		if (!start) throw new Error("card not visible");

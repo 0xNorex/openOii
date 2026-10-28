@@ -90,15 +90,14 @@ export function shotReadingOrder(
 			id: n.data.node.entityId as number,
 			order: n.data.node.kind === "shot" ? n.data.node.shot.order : 0,
 			x: n.position.x,
-			y: n.position.y,
+			// 行号按卡片高度取整：拖动时上下偏一点不会换行
+			row: Math.round(n.position.y / ((n.height ?? 390) + 14)),
 		}))
 		.filter((s) => Number.isFinite(s.id));
 	if (shots.length < 2) return null;
-	const byPosition = [...shots].sort((a, b) => {
-		const rowA = Math.round(a.y / 48);
-		const rowB = Math.round(b.y / 48);
-		return rowA !== rowB ? rowA - rowB : a.x - b.x;
-	});
+	const byPosition = [...shots].sort((a, b) =>
+		a.row !== b.row ? a.row - b.row : a.x - b.x,
+	);
 	const byOrder = [...shots].sort((a, b) => a.order - b.order);
 	if (byOrder.every((s, i) => s.id === byPosition[i].id)) return null;
 	return byPosition.map((s, i) => ({ shot_id: s.id, order: i + 1 }));

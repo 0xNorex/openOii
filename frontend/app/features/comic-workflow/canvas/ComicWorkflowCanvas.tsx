@@ -32,13 +32,13 @@ import {
 } from "./syncTldrawProjection";
 import { FlowWorkflowView } from "./flow/FlowWorkflowView";
 
-/** 过渡期开关：localStorage['openoii.canvas'] === 'flow' 时用 React Flow 渲染。 */
+/** 默认 React Flow；过渡期 localStorage['openoii.canvas'] === 'tldraw' 可切回旧画布。 */
 function useFlowRenderer() {
 	return useState(() => {
 		try {
-			return localStorage.getItem("openoii.canvas") === "flow";
+			return localStorage.getItem("openoii.canvas") !== "tldraw";
 		} catch {
-			return false;
+			return true;
 		}
 	})[0];
 }
