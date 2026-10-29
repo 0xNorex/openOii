@@ -277,7 +277,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ### Navigation
 - **Sidebar:** 288px overlay panel (18rem, `--workbench-sidebar`), `bg-paper-100`. Active project uses a primary tint. Delete button revealed on hover only.
-- **TopBar:** 44px (2.75rem, `--workbench-header`), 1px bottom border. On the workbench the centre holds the status pill (stage, progress, elapsed time) and 生成 / 停止.
+- **TopBar:** 44px (2.75rem, `--workbench-header`), 1px bottom border. Nav items have no fill: inactive is `ink-muted`, hover and active go to `ink`, and the active item (`aria-current="page"`) adds a 1px `primary` underline at 70% opacity. Focus uses the global focus ring. On the workbench the centre holds the status pill (stage, progress, elapsed time) and 生成 / 停止.
 
 ### Activity timeline
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.

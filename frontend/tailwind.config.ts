@@ -99,7 +99,6 @@ export default {
       boxShadow: {
         panel: "var(--shadow-panel)",
         dialog: "var(--shadow-dialog)",
-        "tab-active": "inset 0 -3px 0 0 rgb(var(--color-primary))",
       },
       transitionTimingFunction: {
         standard: "var(--ease-standard)",

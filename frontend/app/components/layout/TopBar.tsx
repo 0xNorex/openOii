@@ -165,11 +165,10 @@ function NavLink({
 			to={to}
 			aria-current={active ? "page" : undefined}
 			className={clsx(
-				"touch-target-dense inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-bold transition-colors duration-fast",
-				active
-					? // 文字用 primary（作为文字 ≥4.5:1）保证可读，底部内阴影提供颜色之外的第二视觉通道
-						"bg-primary/10 text-primary shadow-tab-active"
-					: "text-ink-muted hover:bg-paper-200 hover:text-ink",
+				"touch-target-dense relative inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-bold transition-colors duration-fast",
+				// 选中态不铺底：文字转为 ink，下方一条 1px 群青细线作颜色之外的第二通道
+				"after:pointer-events-none after:absolute after:inset-x-2 after:bottom-0 after:h-px after:rounded-full after:bg-primary after:transition-opacity after:duration-fast",
+				active ? "text-ink after:opacity-70" : "text-ink-muted after:opacity-0 hover:text-ink",
 			)}
 		>
 			{icon}
