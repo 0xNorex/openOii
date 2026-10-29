@@ -198,7 +198,7 @@ export function HomePage() {
 												return (
 													<PlainButton
 														key={mode.value}
-														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgb(var(--color-primary))]" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
+														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary/10 text-primary ring-1 ring-inset ring-primary" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
