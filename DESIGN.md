@@ -126,7 +126,10 @@ components:
    - 左侧是 `逐步确认 / 自动确认` 开关；后面是上下文 chip：每个选中对象一个（可移除，画布选区同步），
      无选区时 `整个项目`，处于审批门时 `规划 · 待确认`。
    - Enter 发送，Shift+Enter 换行；占位文字随上下文变化。
-   - 画布工具条叠在 PromptBar 上方；窄于 1400px 时工具条只显示图标，放得进两块面板之间。
+   - 画布工具条叠在 PromptBar 上方，固定 9 个常驻按钮：`[选择 V · 抓手 H] | [− 缩放% + 适应] | [整理 · 资产] [⋯]`。
+     视图控件只用图标；「整理」「资产」两个常用动作永远带文字；排序分镜、补齐缺失首帧/视频收进 `⋯`（向上展开）。
+     排序是模式：进入后「完成排序」顶替「整理」常驻可见，退出才回来。不许用文字假装图标（如 `3×N`/`图`/`视`）。
+     守卫：`ComicCanvasToolbar.test.tsx`（≤9 个、每个有 SVG、无重复入口）。
 
 **画布（React Flow，`@xyflow/react`）：** `canvas/flow/FlowWorkflowView.tsx` 渲染，
 `toFlowNodes.ts` 把工作流图转成节点：每个 section 是一个 frame 父节点，卡片相对 frame 定位并限制在其内。
@@ -284,6 +287,11 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
 - Follows the newest entry; scrolling up stops following and shows "跳到最新".
 - The detail disclosure uses `.collapse-rows`, a `grid-template-rows` 0fr→1fr transition (from transitions.dev). It is `inert` while closed and instant under reduced motion.
+
+### Overflow menus
+- 只有一个实现：`components/ui/Menu.tsx`（`MenuButton` + `MenuItem` / `MenuLink`），顶栏「工作台工具」和画布「更多画布操作」共用。
+- 打开即聚焦第一项；↑↓/Home/End 移动（跳过禁用项）；Esc 或点外面收起，焦点回到触发按钮；选中一项自动收起。
+- 外观：`rounded-md border-line bg-surface shadow-panel p-1`，项 `text-xs` + 14px 图标，hover/focus 同为 `bg-paper-200`。不另起菜单样式。
 
 ### Dialogs
 - Native `<dialog>` via `showModal()`, so the top layer sits above every floating panel. `.dialog-panel` with `shadow-dialog`.

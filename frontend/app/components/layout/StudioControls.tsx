@@ -1,11 +1,11 @@
-import { IconButton } from "~/components/ui/IconButton";
+import { MenuButton, MenuItem, MenuLink } from "~/components/ui/Menu";
 import { BUTTON_BASE, BUTTON_VARIANTS, Button } from "~/components/ui/Button";
 import {
 	type StudioStatus,
 	studioStatusDotClass,
 	studioStatusText,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 
@@ -60,14 +60,6 @@ interface StudioControlsProps {
 const chromeBtn =
 	"gap-1 !px-2 text-xs";
 
-// 执行动作后收起 focus 展开的菜单。
-function runMenuAction(action: () => void) {
-	if (document.activeElement instanceof HTMLElement) {
-		document.activeElement.blur();
-	}
-	action();
-}
-
 /**
  * Top-bar centre for the workbench: one status pill (opens the inbox) and the
  * run actions. The old stage row is gone; the pill names the stage instead.
@@ -91,17 +83,7 @@ export function StudioControls({
 	restoreBusy = false,
 	previousDownloadUrl = null,
 }: StudioControlsProps) {
-	const [toolsOpen, setToolsOpen] = useState(false);
 	const pendingSeconds = usePendingSeconds(Boolean(generatePending));
-	const toolsRef = useRef<HTMLDivElement>(null);
-	useEffect(() => {
-		if (!toolsOpen) return;
-		const closeOnOutsideClick = (event: PointerEvent) => {
-			if (!toolsRef.current?.contains(event.target as Node)) setToolsOpen(false);
-		};
-		document.addEventListener("pointerdown", closeOnOutsideClick);
-		return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
-	}, [toolsOpen]);
 	// “从失败阶段重试”只在收件箱；这里只有开始 / 重新生成
 	const idle = studioStatus.state === "idle";
 	const generateLabel = idle ? "开始生成" : "重新生成";
@@ -155,95 +137,48 @@ export function StudioControls({
 			<div className="flex shrink-0 items-center gap-1">
 				{hasTools ? (
 					// 版本/一致性/导出收进溢出菜单：所有视口可达（<sm 原先整组消失，导出无入口）
-					<div ref={toolsRef} className="relative" onKeyDown={(event) => event.key === "Escape" && setToolsOpen(false)}>
-						<IconButton
-							aria-label="工作台工具"
-							aria-haspopup="menu"
-							aria-expanded={toolsOpen}
-							title="版本 / 一致性 / 导出"
-							onClick={() => setToolsOpen((open) => !open)}
-						>
-							<SvgIcon name="more-horiz" size={16} />
-						</IconButton>
-						{toolsOpen ? <ul
-							tabIndex={0}
-							role="menu"
-							aria-label="工作台工具菜单"
-							className="animate-enter absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-line bg-surface p-1 shadow-panel"
-						>
-							{regenerateInMenu && onRegenerate ? (
-								<li role="none">
-									<PlainButton
-										role="menuitem"
-										className="gap-2 text-xs"
-										onClick={() => { setToolsOpen(false); runMenuAction(onRegenerate); }}
-										disabled={!canStart || generatePending || generateDisabled}
-										aria-label="重新生成（先确认）"
-									>
-										<SvgIcon name="sparks" size={14} />
-										重新生成…
-									</PlainButton>
-								</li>
-							) : null}
-							{onRestorePrevious ? (
-								<li role="none">
-									<PlainButton
-										role="menuitem"
-										className="gap-2 text-xs"
-										onClick={() => { setToolsOpen(false); runMenuAction(onRestorePrevious); }}
-										disabled={restoreBusy || isGenerating}
-										aria-label="恢复上一版"
-									>
-										<SvgIcon name="refresh-cw" size={14} />
-										{restoreBusy ? "恢复中…" : "恢复上一版"}
-									</PlainButton>
-								</li>
-							) : null}
-							{previousDownloadUrl ? (
-								<li role="none">
-									<a
-										role="menuitem"
-										href={previousDownloadUrl}
-										download
-										target="_blank"
-										rel="noopener"
-										className="flex w-full touch-target-dense items-center gap-2 rounded-md px-2 text-xs text-ink hover:bg-paper-200"
-										onClick={() => setToolsOpen(false)}
-									>
-										<SvgIcon name="download" size={14} />
-										下载上一版成片
-									</a>
-								</li>
-							) : null}
-							{onOpenVersions ? (
-								<li role="none">
-									<PlainButton
-										role="menuitem"
-										className="gap-2 text-xs"
-										onClick={() => { setToolsOpen(false); runMenuAction(onOpenVersions); }}
-										aria-label="打开版本对比"
-									>
-										<SvgIcon name="clock-3" size={14} />
-										版本对比
-									</PlainButton>
-								</li>
-							) : null}
-							{onExport ? (
-								<li role="none">
-									<PlainButton
-										role="menuitem"
-										className="gap-2 text-xs"
-										onClick={() => { setToolsOpen(false); runMenuAction(onExport); }}
-										disabled={exportBusy || isGenerating}
-										aria-label="导出 Webtoon 长图"
-									>
-										<SvgIcon name="download" size={14} />
-										{exportBusy ? "导出中…" : "导出 Webtoon"}
-									</PlainButton>
-								</li>
-							) : null}
-						</ul> : null}
-					</div>
+					<MenuButton label="工作台工具" menuLabel="工作台工具菜单" title="版本 / 一致性 / 导出">
+						{regenerateInMenu && onRegenerate ? (
+							<MenuItem
+								icon="sparks"
+								onClick={onRegenerate}
+								disabled={!canStart || generatePending || generateDisabled}
+								aria-label="重新生成（先确认）"
+							>
+								重新生成…
+							</MenuItem>
+						) : null}
+						{onRestorePrevious ? (
+							<MenuItem
+								icon="refresh-cw"
+								onClick={onRestorePrevious}
+								disabled={restoreBusy || isGenerating}
+								aria-label="恢复上一版"
+							>
+								{restoreBusy ? "恢复中…" : "恢复上一版"}
+							</MenuItem>
+						) : null}
+						{previousDownloadUrl ? (
+							<MenuLink icon="download" href={previousDownloadUrl} download target="_blank" rel="noopener">
+								下载上一版成片
+							</MenuLink>
+						) : null}
+						{onOpenVersions ? (
+							<MenuItem icon="clock-3" onClick={onOpenVersions} aria-label="打开版本对比">
+								版本对比
+							</MenuItem>
+						) : null}
+						{onExport ? (
+							<MenuItem
+								icon="download"
+								onClick={onExport}
+								disabled={exportBusy || isGenerating}
+								aria-label="导出 Webtoon 长图"
+							>
+								{exportBusy ? "导出中…" : "导出 Webtoon"}
+							</MenuItem>
+						) : null}
+					</MenuButton>
 				) : null}
 
 				{/* 恢复 / 取消只在收件箱；这里只放生成和停止 */}

@@ -28,6 +28,7 @@ import {
 	ComicCanvasToolbar,
 	type CanvasViewControls,
 } from "../toolbar/ComicCanvasToolbar";
+import { toolForKey } from "../toolbar/toolShortcut";
 import {
 	frameNodeId,
 	shotReadingOrder,
@@ -148,6 +149,14 @@ function FlowInner({
 	);
 	const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowFlowNode>([]);
 	const [tool, setTool] = useState<"select" | "hand">("select");
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const next = toolForKey(event);
+			if (next) setTool(next);
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
 	const selectedRef = useRef<string[]>([]);
 	const fittedRef = useRef(false);
 	// 用户自己平移/缩放之后，面板开合不再挪动画板

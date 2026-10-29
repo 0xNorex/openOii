@@ -3,6 +3,7 @@ import { projectsApi } from "~/services/api";
 import { toast } from "~/utils/toast";
 import { Button } from "~/components/ui/Button";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { MenuButton, MenuItem } from "~/components/ui/Menu";
 
 interface ComicCanvasToolbarProps {
 	projectId: number;
@@ -60,6 +61,8 @@ export function ComicCanvasToolbar({
 		[fillDisabled, filling, projectId],
 	);
 
+	const fillBusy = fillDisabled || filling;
+
 	return (
 		<div
 			// <lg 不渲染：画布本身在移动端不挂载，工具条不能悬浮压住抽屉/聊天
@@ -67,18 +70,11 @@ export function ComicCanvasToolbar({
 			role="toolbar"
 			aria-label="画布工具栏"
 		>
-			<ToolButton
-				active={controls.tool === "select"}
-				label="选择工具"
-				onClick={() => controls.setTool("select")}
-			>
+			{/* 视图：工具 + 缩放，全是图标 */}
+			<ToolButton active={controls.tool === "select"} label="选择工具" shortcut="V" onClick={() => controls.setTool("select")}>
 				<SvgIcon name="cursor" size={16} />
 			</ToolButton>
-			<ToolButton
-				active={controls.tool === "hand"}
-				label="抓手工具"
-				onClick={() => controls.setTool("hand")}
-			>
+			<ToolButton active={controls.tool === "hand"} label="抓手工具" shortcut="H" onClick={() => controls.setTool("hand")}>
 				<SvgIcon name="hand" size={16} />
 			</ToolButton>
 
@@ -90,7 +86,7 @@ export function ComicCanvasToolbar({
 			<Button
 				variant="ghost"
 				size="sm"
-				className="touch-target-dense h-8 min-h-8 min-w-[3.25rem] font-mono text-xs"
+				className="touch-target-dense h-8 min-h-8 min-w-[3.25rem] px-1 font-mono text-xs tabular-nums"
 				onClick={controls.zoomReset}
 				aria-label={`${controls.zoomPercent}%，重置缩放`}
 				title="重置缩放"
@@ -101,53 +97,40 @@ export function ComicCanvasToolbar({
 				<SvgIcon name="zoom-in" size={16} />
 			</ToolButton>
 			<ToolButton label="适应视图" onClick={controls.fit}>
-				<SvgIcon name="crop" size={16} />
+				<SvgIcon name="expand" size={16} />
 			</ToolButton>
 
 			<Divider />
 
-			<ToolButton label="整理画布" showLabel labelText="整理" onClick={onResetLayout}>
-				<SvgIcon name="view-grid" size={16} />
-			</ToolButton>
-			{onToggleSortMode ? (
-				<ToolButton
-					active={sortMode}
-					disabled={sortDisabled}
-					label={sortMode ? "完成分镜排序" : "排序九宫格"}
-					showLabel
-					labelText={sortMode ? "完成排序" : "排序"}
-					onClick={onToggleSortMode}
-				>
-					<span className="font-mono text-xs font-bold">3×N</span>
+			{/* 画布动作：常用的两个带文字，少用的收进「更多」 */}
+			{sortMode && onToggleSortMode ? (
+				// 排序是一个模式：进入后「完成排序」必须一直看得见
+				<ToolButton active label="完成分镜排序" labelText="完成排序" onClick={onToggleSortMode}>
+					<SvgIcon name="check" size={16} />
+				</ToolButton>
+			) : (
+				<ToolButton label="整理画布" labelText="整理" onClick={onResetLayout}>
+					<SvgIcon name="view-grid" size={16} />
+				</ToolButton>
+			)}
+			{onOpenAssets ? (
+				<ToolButton label="打开资产库" labelText="资产" onClick={onOpenAssets}>
+					<SvgIcon name="archive" size={16} />
 				</ToolButton>
 			) : null}
-			<ToolButton
-				disabled={fillDisabled || filling}
-				label="补齐空格 · 首帧"
-				showLabel
-				labelText={filling ? "补齐中" : "补首帧"}
-				onClick={() => handleFillEmpty("image")}
-			>
-				<span className="text-xs font-bold">图</span>
-			</ToolButton>
-			<ToolButton
-				disabled={fillDisabled || filling}
-				label="补齐空格 · 视频"
-				showLabel
-				labelText={filling ? "补齐中" : "补视频"}
-				onClick={() => handleFillEmpty("video")}
-			>
-				<span className="text-xs font-bold">视</span>
-			</ToolButton>
-			{onOpenAssets ? (
-				<>
-					<Divider />
-					<ToolButton label="打开资产库" showLabel labelText="资产" onClick={onOpenAssets}>
-						<SvgIcon name="archive" size={16} />
-					</ToolButton>
-				</>
-			) : null}
-
+			<MenuButton label="更多画布操作" menuLabel="更多画布操作" placement="top" width="w-48">
+				{onToggleSortMode && !sortMode ? (
+					<MenuItem icon="layers" onClick={onToggleSortMode} disabled={sortDisabled} aria-label="排序九宫格">
+						排序分镜
+					</MenuItem>
+				) : null}
+				<MenuItem icon="image" onClick={() => void handleFillEmpty("image")} disabled={fillBusy} aria-label="补齐空格 · 首帧">
+					{filling ? "补齐中…" : "补齐缺失首帧"}
+				</MenuItem>
+				<MenuItem icon="video-camera" onClick={() => void handleFillEmpty("video")} disabled={fillBusy} aria-label="补齐空格 · 视频">
+					{filling ? "补齐中…" : "补齐缺失视频"}
+				</MenuItem>
+			</MenuButton>
 		</div>
 	);
 }
@@ -161,34 +144,33 @@ function ToolButton({
 	disabled,
 	label,
 	labelText,
+	shortcut,
 	onClick,
-	showLabel,
 	children,
 }: {
 	active?: boolean;
 	disabled?: boolean;
 	label: string;
+	/** 有文字的按钮永远显示文字；纯图标按钮靠 aria-label + title */
 	labelText?: string;
+	shortcut?: string;
 	onClick: () => void;
-	showLabel?: boolean;
 	children: ReactNode;
 }) {
 	return (
 		<Button
 			variant={active ? "primary" : "ghost"}
 			size="sm"
-			className={`touch-target-dense h-8 min-h-8 ${showLabel ? "min-w-8 gap-1 px-2" : "w-8 px-0"}`}
+			className={`touch-target-dense h-8 min-h-8 ${labelText ? "gap-1.5 px-2" : "w-8 px-0"}`}
 			disabled={disabled}
 			onClick={onClick}
 			aria-label={label}
-			title={label}
+			aria-pressed={active === undefined ? undefined : active}
+			aria-keyshortcuts={shortcut}
+			title={shortcut ? `${label}（${shortcut}）` : label}
 		>
-				{children}
-				{showLabel ? (
-					<span className="hidden whitespace-nowrap text-xs font-semibold min-[1400px]:inline">
-						{labelText ?? label}
-					</span>
-				) : null}
+			{children}
+			{labelText ? <span className="whitespace-nowrap text-xs font-semibold">{labelText}</span> : null}
 		</Button>
 	);
 }

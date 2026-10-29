@@ -1,4 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+// 排序 / 补齐收进了画布工具条的「更多」菜单
+async function openSortMode(page: Page) {
+	await page.getByRole("button", { name: "更多画布操作" }).click();
+	await page.getByRole("menuitem", { name: "排序九宫格" }).click();
+}
 
 const providerSettings = {
 	text: {
@@ -309,7 +315,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	expect(before).not.toBeNull();
 	if (!before) return;
 
-	await page.getByRole("button", { name: "排序九宫格" }).click();
+	await openSortMode(page);
 	await expect(page.getByRole("button", { name: "完成分镜排序" })).toBeVisible();
 	// 排序模式切换后分镜才可拖：拖不动就再拖一次
 	await expect(async () => {
@@ -413,7 +419,7 @@ test("shots reorder from the keyboard with a live announcement", async ({ page }
 		await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
 	});
 	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
-	await page.getByRole("button", { name: "排序九宫格" }).click();
+	await openSortMode(page);
 	const live = page.locator("[aria-live='polite']", { hasText: "排序模式" });
 	await expect(live).toBeVisible();
 
@@ -437,3 +443,39 @@ test("right-clicking a card opens its actions until Escape", async ({ page }) =>
 	await page.keyboard.press("Escape");
 	await expect(menu).toHaveCount(0);
 });
+
+test("canvas toolbar keeps primary actions visible and rare ones in a keyboard menu", async ({ page }) => {
+	await page.goto("/project/7");
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
+	const toolbar = page.getByRole("toolbar", { name: "画布工具栏" });
+	await expect(toolbar.getByRole("button")).toHaveCount(9);
+	await expect(toolbar.getByRole("button", { name: "整理画布" })).toHaveText("整理");
+	await expect(toolbar.getByRole("button", { name: "排序九宫格" })).toHaveCount(0);
+
+	// V / H 切换工具（输入框里不抢）
+	await page.keyboard.press("h");
+	await expect(toolbar.getByRole("button", { name: "抓手工具" })).toHaveAttribute("aria-pressed", "true");
+	await page.keyboard.press("v");
+	await expect(toolbar.getByRole("button", { name: "选择工具" })).toHaveAttribute("aria-pressed", "true");
+
+	const more = toolbar.getByRole("button", { name: "更多画布操作" });
+	await more.click();
+	const menu = page.getByRole("menu", { name: "更多画布操作" });
+	await expect(menu).toBeVisible();
+	await expect(page.getByRole("menuitem", { name: "排序九宫格" })).toBeFocused();
+	await page.keyboard.press("ArrowDown");
+	await expect(page.getByRole("menuitem", { name: "补齐空格 · 首帧" })).toBeFocused();
+	await page.keyboard.press("Escape");
+	await expect(menu).toHaveCount(0);
+	await expect(more).toBeFocused();
+	// 菜单向上展开，不被画布底边裁掉
+	await more.click();
+	const barBox = await toolbar.boundingBox();
+	await expect
+		.poll(async () => {
+			const box = await menu.boundingBox();
+			return box && barBox ? Math.round(box.y + box.height - barBox.y) : 999;
+		})
+		.toBeLessThanOrEqual(2);
+});
+

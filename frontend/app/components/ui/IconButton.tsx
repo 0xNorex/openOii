@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { BUTTON_BASE, BUTTON_VARIANTS, type ButtonVariant } from "./Button";
 
 interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label" | "children"> {
@@ -16,16 +16,13 @@ const SIZES = {
   md: "h-9 w-9 touch-target-dense p-0",
 };
 
-export function IconButton({
-  variant = "ghost",
-  size = "sm",
-  className,
-  type = "button",
-  children,
-  ...props
-}: IconButtonProps) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { variant = "ghost", size = "sm", className, type = "button", children, ...props },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       className={clsx(BUTTON_BASE, BUTTON_VARIANTS[variant], SIZES[size], className)}
       {...props}
@@ -33,4 +30,4 @@ export function IconButton({
       {children}
     </button>
   );
-}
+});
