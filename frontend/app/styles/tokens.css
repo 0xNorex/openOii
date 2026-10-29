@@ -79,9 +79,9 @@
     /* 状态色 = 状态文字色（*-fg）；饱和填充只用于状态点、细描边和实心徽标 */
     --color-info: 11 110 127; /* #0B6E7F */
     --color-info-content: 255 255 255;
-    --color-success: 31 122 77; /* #1F7A4D */
+    --color-success: 27 111 69; /* #1B6F45 */
     --color-success-content: 255 255 255;
-    --color-warning: 154 91 0; /* #9A5B00 */
+    --color-warning: 138 82 0; /* #8A5200 */
     --color-warning-content: 255 255 255;
     --color-error: 180 35 24; /* #B42318 */
     --color-error-content: 255 255 255;

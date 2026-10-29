@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { getStaticUrl } from "~/services/api";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
+import { NodeStatusBadge } from "./nodeStatus";
 import {
 	addCharacterReference,
 	computeCharacterEmbedding,
@@ -30,24 +31,7 @@ const SECTION_STYLE = {
 	},
 } as const;
 
-const STATUS_COPY: Record<WorkflowNodeStatus, { label: string; cls: string }> = {
-	draft: { label: "待生成", cls: "bg-paper-200 text-ink-muted" },
-	generating: { label: "生成中", cls: "bg-info-bg text-info-fg" },
-	// 审查只是在看：中性色，不催用户
-	reviewing: { label: "审查中", cls: "bg-paper-200 text-ink" },
-	// 待确认是要你动手的事：用品牌色，和「生成中」（信息色）、「需重合成」（警告色）分开
-	review: { label: "待确认", cls: "bg-primary/10 text-primary" },
-	unconfirmed: { label: "未确认", cls: "bg-paper-200 text-ink-muted" },
-	approved: { label: "已批准", cls: "bg-success/15 text-success-fg" },
-	blocked: { label: "阻塞", cls: "bg-error/15 text-error-fg" },
-	superseded: { label: "需重合成", cls: "bg-warning/15 text-warning-fg" },
-	ready: { label: "可用", cls: "bg-success/15 text-success-fg" },
-};
-
-/** 卡片、Inspector 共用的状态词：同一张卡在两处叫法一致 */
-export function nodeStatusLabel(status: WorkflowNodeStatus): string {
-	return STATUS_COPY[status].label;
-}
+export { nodeStatusLabel } from "./nodeStatus";
 
 function stopCanvasPointer(e: React.PointerEvent<HTMLElement>) {
 	e.stopPropagation();
@@ -149,13 +133,7 @@ function InlineEditableText({
 function statusBadge(status: WorkflowNodeStatus) {
 	// 空闲时的草稿不再挂「未确认」：审批门过了之后它只是噪音，待确认 / 已批准才需要提示
 	if (status === "unconfirmed") return null;
-	const copy = STATUS_COPY[status] ?? STATUS_COPY.draft;
-	return (
-		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs font-medium ${copy.cls}`}>
-			<span className={`h-2 w-2 rounded-full bg-current ${status === "generating" ? "animate-pulse" : "opacity-60"}`} />
-			{copy.label}
-		</span>
-	);
+	return <NodeStatusBadge status={status} />;
 }
 
 function MediaPreviewButton({

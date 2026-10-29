@@ -15,6 +15,10 @@ const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then(m => ({ defa
 const ProjectPage = lazy(() => import("./pages/ProjectPage").then(m => ({ default: m.ProjectPage })));
 const UniversesPage = lazy(() => import("./pages/UniversesPage").then(m => ({ default: m.UniversesPage })));
 const UniverseDetailPage = lazy(() => import("./pages/UniverseDetailPage").then(m => ({ default: m.UniverseDetailPage })));
+// 开发用色板：卡片六态 × 明暗 × 色盲模拟，生产构建不打包
+const StateColorsSheet = import.meta.env.DEV
+  ? lazy(() => import("./pages/StateColorsSheet").then(m => ({ default: m.StateColorsSheet })))
+  : null;
 const SettingsModal = lazy(() => import("./components/settings/SettingsModal").then(m => ({ default: m.SettingsModal })));
 
 function SettingsModalHost() {
@@ -52,6 +56,7 @@ export function App() {
                 <Route path="/projects/:id" element={<ProjectPage />} />
                 <Route path="/universes" element={<UniversesPage />} />
                 <Route path="/universes/:universeId" element={<UniverseDetailPage />} />
+                {StateColorsSheet ? <Route path="/dev/state-colors" element={<StateColorsSheet />} /> : null}
               </Routes>
             </Suspense>
           </div>

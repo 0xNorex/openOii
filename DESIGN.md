@@ -17,8 +17,8 @@ colors:
   ink: "#1C1C22"
   ink-muted: "#5B5B66"
   info: "#0B6E7F"
-  success: "#1F7A4D"
-  warning: "#9A5B00"
+  success: "#1B6F45"
+  warning: "#8A5200"
   error: "#B42318"
   # dark（[data-theme="dark"]）
   dark-primary: "#96ACFE"
@@ -196,6 +196,7 @@ One brand hue (ultramarine, 群青) on calm warm-grey neutrals. Light and dark t
 - **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` sunken-on-sunken fills, `line` (ink 12%) hairline borders and dividers, `line-strong` (ink 22%) dashed drop zones, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
 - **Text**: `ink` (≥ 7:1), `ink-muted` (hex, ≥ 4.5:1 on every surface), `ink-subtle` (alpha, ≥ 3:1, placeholders/meta only).
 - **Status**: `info` / `success` / `warning` / `error`. Text uses `text-{k}-fg`; tinted backgrounds use `bg-{k}-bg` (alpha from `--status-bg-alpha`); filled badges use `bg-{k} text-{k}-content`.
+- **Card states** (`canvas/nodeStatus.tsx`, one source for canvas cards and the inspector): 生成中 `info` · 待确认 `primary` · 审查中 neutral (`paper-200` + `ink`) · 需重合成 `warning` · 失败/阻塞 `error` · 完成/可用 `success`, each tinted with `bg-{k}-bg` (待确认 uses `primary/10`). Colour is never the only cue: every state has its own shape (pulsing dot, `approve-gate`, `eye`, `refresh-cw`, `warning-circle`, `check`). Under colour-blind simulation (Machado 2009), 需重合成 vs 失败 (red-green) and 生成中 vs 完成 (blue-yellow) move close in hue, and the shape carries the difference. `stateColors.test.ts` checks badge text ≥ 4.5:1 on its tint over `surface` and `paper-100` in both themes, ΔE ≥ 20 between states for typical vision, and that any pair closer than ΔE 12 under protan/deutan/tritan simulation has different shapes. The sheet renders at `/dev/state-colors` (dev builds only).
 - **Removed**: `secondary`, `accent`, `primary-ink`, `text-2xs`. The contract test fails if they come back.
 
 ### Scales
