@@ -94,3 +94,14 @@ async def test_disconnect_is_noop_for_unknown_project() -> None:
     await manager.disconnect(404, ws)  # should not raise
 
     assert 404 not in manager._conns
+
+
+def test_project_updated_keeps_only_sent_fields() -> None:
+    """A partial project_updated must not turn unsent fields into null."""
+    payload = ConnectionManager._validated_payload(
+        {
+            "type": "project_updated",
+            "data": {"project": {"id": 7, "status": "planning", "video_url": None}},
+        }
+    )
+    assert payload["data"]["project"] == {"id": 7, "status": "planning", "video_url": None}

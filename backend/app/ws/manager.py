@@ -95,7 +95,12 @@ class ConnectionManager:
         data_model = _EVENT_DATA_MODELS.get(event.type)
         if data_model is not None:
             validated_data = data_model.model_validate(event.data)
-            event = WsEvent(type=event.type, data=validated_data.model_dump(mode="json"))
+            # project_updated 是局部补丁：只发送真正带上的字段，免得默认的 None 覆盖前端缓存
+            partial = event.type == "project_updated"
+            event = WsEvent(
+                type=event.type,
+                data=validated_data.model_dump(mode="json", exclude_unset=partial),
+            )
         return event.model_dump()
 
     async def send_event_to(self, websocket: WebSocket, event: dict[str, Any] | WsEvent) -> None:
