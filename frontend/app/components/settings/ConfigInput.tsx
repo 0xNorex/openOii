@@ -4,6 +4,7 @@ import { configApi } from "~/services/api";
 import type { ConfigItem } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { IconButton } from "../../components/ui/IconButton";
+import { PlainButton } from "../../components/ui/PlainButton";
 
 interface ConfigInputProps {
 	item: ConfigItem;
@@ -49,9 +50,8 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 	if (!isSensitive && (lowered === "true" || lowered === "false")) {
 		const on = lowered === "true";
 		return (
-			<button
+			<PlainButton
 				id={item.key}
-				type="button"
 				role="switch"
 				aria-checked={on}
 				onClick={() =>
@@ -63,18 +63,18 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 			>
 				<span
 					aria-hidden
-					className={`relative inline-block h-5 w-9 rounded-full border transition-colors duration-fast ${
+					className={`relative inline-block h-5 w-8 rounded-full border transition-colors duration-fast ${
 						on ? "border-primary bg-primary" : "border-line-strong bg-paper-300"
 					}`}
 				>
 					<span
 						className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-paper-100 shadow-sm transition-transform duration-fast ${
-							on ? "translate-x-[1.125rem]" : "translate-x-0.5"
+							on ? "translate-x-4" : "translate-x-0.5"
 						}`}
 					/>
 				</span>
 				{on ? "开启" : "关闭"}
-			</button>
+			</PlainButton>
 		);
 	}
 
