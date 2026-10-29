@@ -479,3 +479,62 @@ test("canvas toolbar keeps primary actions visible and rare ones in a keyboard m
 		.toBeLessThanOrEqual(2);
 });
 
+
+test("the board paints only between the side panels, nothing under or beside them", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/project/7");
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
+	const box = (selector: string) =>
+		page.locator(selector).first().evaluate((el) => {
+			const r = el.getBoundingClientRect();
+			return { left: r.left, right: r.right };
+		});
+	const agent = await box('aside:has(button[aria-label="收起活动面板"])');
+	const inspector = await box('aside:has(button[aria-label="收起检查器"])');
+	await expect
+		.poll(async () => {
+			const flow = await box(".react-flow");
+			return [Math.round(flow.left - agent.right), Math.round(inspector.left - flow.right)];
+		})
+		.toEqual([0, 0]);
+
+	// 每段节点文字可见的部分都点得到它自己：没有被面板、工具栏或提示栏压住
+	const covered = await page.evaluate(() => {
+		const flow = document.querySelector(".react-flow")!.getBoundingClientRect();
+		const out: string[] = [];
+		for (const el of document.querySelectorAll<HTMLElement>(".react-flow__node p, .react-flow__node span")) {
+			if (!el.textContent?.trim() || el.children.length > 0) continue;
+			const r = el.getBoundingClientRect();
+			const left = Math.max(r.left, flow.left + 24);
+			const right = Math.min(r.right, flow.right - 24);
+			const top = Math.max(r.top, flow.top);
+			const bottom = Math.min(r.bottom, flow.bottom);
+			if (right <= left || bottom <= top) continue;
+			const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+			if (!hit || !el.closest(".react-flow__node")!.contains(hit)) out.push(el.textContent.trim().slice(0, 20));
+		}
+		return out;
+	});
+	expect(covered).toEqual([]);
+});
+
+test("opening or closing the activity panel after a pan leaves the board where it is", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/project/7");
+	const shot = page.locator('.react-flow__node[data-id="shot:1"]');
+	await shot.waitFor();
+	await page.mouse.move(720, 400);
+	await page.mouse.wheel(0, 120);
+	await page.waitForTimeout(300);
+	const at = async () => {
+		const r = await shot.boundingBox();
+		return r ? [Math.round(r.x), Math.round(r.y)] : null;
+	};
+	const panned = await at();
+	await page.getByRole("button", { name: "收起活动面板" }).click();
+	await page.waitForTimeout(400);
+	expect(await at()).toEqual(panned);
+	await page.getByRole("button", { name: "展开活动面板" }).click();
+	await page.waitForTimeout(400);
+	expect(await at()).toEqual(panned);
+});

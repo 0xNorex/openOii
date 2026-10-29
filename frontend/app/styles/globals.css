@@ -551,6 +551,28 @@
 
 .infinite-canvas-container {
   @apply w-full h-full;
+  background-color: rgb(var(--color-paper-100));
+}
+
+/* 侧栏浮在画布上。画布本身（xyflow 的根）只占两侧栏之间那一栏：
+   节点不会压在面板底下，也不会在面板外沿露出半截；适配、缩放中心、拖拽换算都按这一栏算。
+   宽度由 FlowWorkflowView 按面板开合写进 --canvas-cover-*；xyflow 把 width 写在行内，只能 !important。 */
+.infinite-canvas-container > .react-flow {
+  margin-left: var(--canvas-cover-left, 0px);
+  width: calc(100% - var(--canvas-cover-left, 0px) - var(--canvas-cover-right, 0px)) !important;
+}
+
+/* 靠面板的一侧，节点层（不含点阵）淡入 24px，邻近分区读作「在面板后面接着」，而不是被一刀切开 */
+.infinite-canvas-container .react-flow__renderer {
+  --canvas-fade-left: min(var(--canvas-cover-left, 0px), 24px);
+  --canvas-fade-right: min(var(--canvas-cover-right, 0px), 24px);
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--canvas-fade-left),
+    #000 calc(100% - var(--canvas-fade-right)),
+    transparent
+  );
 }
 
 .infinite-canvas-container .react-flow {
@@ -568,7 +590,7 @@
 
 .infinite-canvas-container .react-flow__attribution a {
   color: var(--ink-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 /* 选中态由卡片自身的 ring 表达；键盘焦点要看得见。

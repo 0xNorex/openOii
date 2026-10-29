@@ -16,6 +16,9 @@ import type {
 	WorkflowNodeStatus,
 } from "../graph/types";
 
+/** 卡片底部的标签：一行，过长省略，完整内容放 title。多行的胶囊会撑破卡片底边。 */
+const TAG_PILL = "inline-block max-w-full truncate rounded-full border px-1.5 py-0.5 text-xs";
+
 const SECTION_STYLE = {
 	brief: {
 		surface: "bg-primary/5",
@@ -325,10 +328,10 @@ function CharacterCard({
 				<CharacterRefStrip node={node} />
 				<div className="mt-auto flex flex-wrap gap-1 pt-1.5">
 					{node.character.has_embedding ? (
-							<span className="inline-flex rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-xs text-primary-content">资产一致性</span>
+							<span className={`${TAG_PILL} border-primary/30 bg-primary text-primary-content`}>资产一致性</span>
 					) : null}
 					{node.character.visual_notes ? (
-							<span className="inline-flex rounded-full border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs text-ink-muted">视觉笔记</span>
+							<span className={`${TAG_PILL} border-line bg-paper-100/80 text-ink-muted`}>视觉笔记</span>
 					) : null}
 				</div>
 			</div>
@@ -415,12 +418,17 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				</div>
 				<div className="mt-auto flex flex-wrap gap-1 pt-1.5">
 					{node.characterNames.length > 0 ? (
-						<span className="inline-flex max-w-full truncate rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-xs text-primary-content">
+						<span
+							className={`${TAG_PILL} border-primary/30 bg-primary text-primary-content`}
+							title={node.characterNames.join("、")}
+						>
 							{node.characterNames.join("、")}
 						</span>
 					) : null}
 					{node.shot.camera ? (
-						<span className="inline-flex rounded-full border border-line bg-paper-100/80 px-1.5 py-0.5 text-xs text-ink-muted">{node.shot.camera}</span>
+						<span className={`${TAG_PILL} border-line bg-paper-100/80 text-ink-muted`} title={node.shot.camera}>
+							{node.shot.camera}
+						</span>
 					) : null}
 				</div>
 			</div>

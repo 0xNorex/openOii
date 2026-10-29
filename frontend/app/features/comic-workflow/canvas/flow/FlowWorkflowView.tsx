@@ -10,7 +10,7 @@ import {
 	type OnSelectionChangeParams,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { projectQueryKeys } from "~/query/queryKeys";
@@ -164,6 +164,13 @@ function FlowInner({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const insetsRef = useRef(fitInsets);
 	insetsRef.current = fitInsets;
+	// 画布只占两侧栏之间那一栏（见 globals.css），适配按这一栏的尺寸算
+	const canvasSize = useCallback(() => {
+		const el = containerRef.current;
+		if (!el) return null;
+		const { left = 0, right = 0 } = insetsRef.current ?? {};
+		return { width: Math.max(1, el.clientWidth - left - right), height: el.clientHeight };
+	}, []);
 
 	useEffect(() => {
 		const selected = new Set(selectedRef.current);
@@ -176,9 +183,9 @@ function FlowInner({
 
 	const fit = useCallback(
 		(duration: number, whole = false) => {
-			const el = containerRef.current;
+			const size = canvasSize();
 			const target = flow.getNodes();
-			if (!el || target.length === 0) return;
+			if (!size || target.length === 0) return;
 			const bounds = flow.getNodesBounds(target);
 			if (bounds.width === 0 || bounds.height === 0) return;
 			const shotline = flow.getNode(frameNodeId("shotline"));
@@ -187,15 +194,15 @@ function FlowInner({
 			void flow.setViewport(
 				boardViewport(
 					bounds,
-					{ width: el.clientWidth, height: el.clientHeight },
-					insetsRef.current,
+					size,
+					undefined,
 					shotline ? flow.getNodesBounds([shotline]) : bounds,
 					whole ? MIN_ZOOM : READABLE_ZOOM,
 				),
 				{ duration },
 			);
 		},
-		[flow],
+		[canvasSize, flow],
 	);
 
 	useEffect(() => {
@@ -206,6 +213,15 @@ function FlowInner({
 
 	const insetLeft = fitInsets?.left ?? 0;
 	const insetRight = fitInsets?.right ?? 0;
+	// 左栏开合会挪动画布这一栏的原点；同一帧把视口反向平移，画上的东西在屏幕上不跳
+	const prevLeftRef = useRef(insetLeft);
+	useLayoutEffect(() => {
+		const delta = insetLeft - prevLeftRef.current;
+		prevLeftRef.current = insetLeft;
+		if (!delta || !fittedRef.current) return;
+		const vp = flow.getViewport();
+		void flow.setViewport({ ...vp, x: vp.x - delta });
+	}, [flow, insetLeft]);
 	useEffect(() => {
 		if (!fittedRef.current || !autoFitRef.current) return;
 		fit(motionDuration("normal"));
@@ -215,23 +231,19 @@ function FlowInner({
 	useEffect(() => {
 		if (!focusSection || !hasNodes) return;
 		const frame = flow.getNode(frameNodeId(focusSection));
-		const el = containerRef.current;
-		if (!frame || !el) return;
+		const size = canvasSize();
+		if (!frame || !size) return;
 		const handle = requestAnimationFrame(() => {
 			// 平移到审批门的分区后，面板开合不再把视口拉回整板
 			autoFitRef.current = false;
 			void flow.setViewport(
-				boardViewport(
-					flow.getNodesBounds([frame]),
-					{ width: el.clientWidth, height: el.clientHeight },
-					insetsRef.current,
-				),
+				boardViewport(flow.getNodesBounds([frame]), size),
 				{ duration: motionDuration("normal") },
 			);
 		});
 		return () => cancelAnimationFrame(handle);
 		// 只在审批门换分区时平移一次，不跟着节点数据变化反复跳
-	}, [flow, focusSection, hasNodes]);
+	}, [canvasSize, flow, focusSection, hasNodes]);
 
 	const applySelection = useCallback(
 		(ids: string[]) => {
@@ -421,6 +433,13 @@ function FlowInner({
 		<div
 			ref={containerRef}
 			className="infinite-canvas-container relative h-full w-full"
+			// 侧栏浮在画布上：节点层在侧栏覆盖的区域淡出，不在面板下面压着、也不在面板边上露半截
+			style={
+				{
+					"--canvas-cover-left": `${insetLeft}px`,
+					"--canvas-cover-right": `${insetRight}px`,
+				} as CSSProperties
+			}
 			onKeyDownCapture={handleKeyDown}
 		>
 			<ReactFlow<WorkflowFlowNode>
@@ -448,6 +467,8 @@ function FlowInner({
 				deleteKeyCode={null}
 				multiSelectionKeyCode={["Shift", "Meta", "Control"]}
 				aria-label="漫画工作流画布"
+				// 底边中间是浮动的提示栏，署名放到画布这一栏的右上角
+				attributionPosition="top-right"
 			>
 				<Background gap={24} size={1} />
 			</ReactFlow>
