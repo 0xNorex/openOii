@@ -98,6 +98,17 @@ describe("InboxPanel", () => {
 		expect(a.onFocusNode).toHaveBeenCalledWith("character:2");
 	});
 
+	it("lists names instead of empty image boxes on a text-only gate", () => {
+		render(
+			<InboxPanel
+				items={[{ ...gate, previews: [{ nodeId: "shot:1", label: "S01", imageUrl: null }] }]}
+				actions={actions()}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "S01" })).toBeInTheDocument();
+		expect(screen.queryByRole("img")).not.toBeInTheDocument();
+	});
+
 	it("offers no second regenerate path inside the outline card", () => {
 		render(
 			<InboxPanel

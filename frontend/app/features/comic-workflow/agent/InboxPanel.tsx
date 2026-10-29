@@ -44,6 +44,24 @@ function Card({
 }
 
 function PreviewStrip({ previews, onFocus }: { previews: GatePreview[]; onFocus?: (nodeId: string) => void }) {
+	// 文字关（角色设定 / 分镜脚本）还没有图：列名字，不摆一排空图框
+	if (!previews.some((preview) => preview.imageUrl)) {
+		return (
+			<ul className="m-0 flex list-none flex-wrap gap-1 p-0" aria-label="本关要审的内容">
+				{previews.map((preview) => (
+					<li key={preview.nodeId}>
+						<PlainButton
+							className="touch-target-dense rounded-full border border-line px-2 text-xs text-ink hover:border-primary"
+							onClick={() => onFocus?.(preview.nodeId)}
+							title={`在画布上查看 ${preview.label}`}
+						>
+							{preview.label}
+						</PlainButton>
+					</li>
+				))}
+			</ul>
+		);
+	}
 	return (
 		<ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label="本关要审的内容">
 			{previews.map((preview) => {
