@@ -271,8 +271,9 @@ test("the stream folds into its running step, moves progress, and hides bare sep
 	await expect(timeline).not.toContainText("进行中");
 	await expect(timeline).not.toContainText("正在生成故事大纲…");
 	await expect(timeline.locator(":scope > li[data-status]")).toHaveCount(1);
-	// The agent's own "progress: 0" no longer pins the run at 0%.
-	await expect(page.getByText(/规划 · 5%/).first()).toBeVisible();
+	// Progress reads as steps, never a percentage that can sit at 0%.
+	await expect(page.getByRole("button", { name: /^状态：/ })).toContainText("生成中");
+	await expect(page.getByRole("button", { name: /^状态：/ })).not.toContainText("%");
 
 	// A new value is typed out without a bare " · " ever at the tail.
 	const tails = await page.evaluate(async (next) => {

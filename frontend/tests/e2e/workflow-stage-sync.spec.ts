@@ -284,14 +284,14 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		.toBeGreaterThan(0);
 
 	await openChatPanel(page);
-	await expect(page.getByText("规划阶段")).toBeVisible();
+	await expect(page.getByText("活动记录", { exact: true })).toBeVisible();
 
 	await push(page, routes, {
 		type: "run_progress",
 		data: {
 			current_agent: "plan",
-			current_stage: "plan",
-			stage: "plan",
+			current_stage: "plan_outline",
+			stage: "plan_outline",
 			progress: 0.33,
 		},
 	});
@@ -319,15 +319,15 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		type: "run_progress",
 		data: {
 			current_agent: "render",
-			current_stage: "render",
-			stage: "render",
+			current_stage: "render_shots",
+			stage: "render_shots",
 			progress: 0.5,
 		},
 	});
 
 	// 审批门把面板切到了收件箱；阶段头在活动流里
 	await page.getByRole("tab", { name: "活动" }).click();
-	await expect(page.getByText("渲染阶段")).toBeVisible();
+	await expect(page.getByText("分镜画面 · 5/6", { exact: true })).toBeVisible();
 
 	await push(page, routes, {
 		type: "run_awaiting_confirm",
@@ -352,14 +352,14 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 		type: "run_progress",
 		data: {
 			current_agent: "compose",
-			current_stage: "compose",
-			stage: "compose",
+			current_stage: "compose_videos",
+			stage: "compose_videos",
 			progress: 0.83,
 		},
 	});
 
 	await page.getByRole("tab", { name: "活动" }).click();
-	await expect(page.getByText("合成阶段")).toBeVisible();
+	await expect(page.getByText("视频与成片 · 6/6", { exact: true })).toBeVisible();
 });
 
 test("recovery card keeps plan_approval checkpoint as resume target", async ({ page }) => {
@@ -492,13 +492,13 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		data: {
 			run_id: 901,
 			current_agent: "plan",
-			current_stage: "plan",
-			stage: "plan",
+			current_stage: "plan_outline",
+			stage: "plan_outline",
 			progress: 0,
 		},
 	});
 
-	await expect(page.getByText("规划阶段")).toBeVisible();
+	await expect(page.getByText("故事大纲 · 1/6", { exact: true })).toBeVisible();
 
 	await push(page, routes, {
 		type: "run_progress",
@@ -536,7 +536,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		data: {
 			agent: "plan",
 			run_id: 901,
-			stage: "render",
+			stage: "render_characters",
 			recovery_summary: {
 				current_stage: "render",
 				next_stage: "compose",
@@ -545,7 +545,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		},
 	});
 
-	await expect(page.getByText("渲染阶段")).toBeVisible();
+	await expect(page.getByText("角色形象 · 4/6", { exact: true })).toBeVisible();
 
 	await push(page, routes, {
 		type: "run_awaiting_confirm",
@@ -572,7 +572,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		data: {
 			agent: "render",
 			run_id: 901,
-			stage: "compose",
+			stage: "compose_videos",
 			recovery_summary: {
 				current_stage: "compose",
 				preserved_stages: ["plan", "render", "compose"],
@@ -580,7 +580,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		},
 	});
 
-	await expect(page.getByText("合成阶段")).toBeVisible();
+	await expect(page.getByText("视频与成片 · 6/6", { exact: true })).toBeVisible();
 
 	await push(page, routes, {
 		type: "run_completed",
@@ -591,7 +591,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		},
 	});
 
-	await expect(page.getByText("合成阶段")).toBeVisible();
+	await expect(page.getByText("活动记录", { exact: true })).toBeVisible();
 });
 
 test("feedback sends with correct feedback_type for plan feedback", async ({ page }) => {
