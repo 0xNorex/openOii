@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryControlRead, RunAwaitingConfirmEventData } from "~/types";
-import { deriveInboxItems, type DeriveInboxInput } from "./inboxItems";
+import { deriveInboxItems, gateSection, type DeriveInboxInput } from "./inboxItems";
 
 const base: DeriveInboxInput = {
 	awaitingConfirm: false,
@@ -29,6 +29,19 @@ describe("deriveInboxItems", () => {
 		expect(items).toEqual([
 			expect.objectContaining({ kind: "gate", title: "规划已完成，等待确认", detail: "大纲可以吗？", gate }),
 		]);
+	});
+
+	it("names the gate after what it produced and points at its canvas section", () => {
+		const gate = { agent: "plan", current_stage: "characters_approval" } as RunAwaitingConfirmEventData;
+		const [item] = deriveInboxItems({ ...base, awaitingConfirm: true, awaitingAgent: "plan", recoveryGate: gate });
+		expect(item.title).toBe("角色设定已完成，等待确认");
+		expect(gateSection(gate)).toBe("elements");
+		const shots = { agent: "plan", current_stage: "shots_approval" } as RunAwaitingConfirmEventData;
+		const [next] = deriveInboxItems({ ...base, awaitingConfirm: true, awaitingAgent: "plan", recoveryGate: shots });
+		expect(next.title).toBe("分镜脚本已完成，等待确认");
+		// 同一个 agent 的两个门也要各自重新提醒
+		expect(next.id).not.toBe(item.id);
+		expect(gateSection(shots)).toBe("shotline");
 	});
 
 	it("gives each gate its own id so a new stage re-opens the inbox", () => {

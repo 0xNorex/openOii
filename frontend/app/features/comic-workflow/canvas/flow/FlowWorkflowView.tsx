@@ -18,7 +18,7 @@ import { projectsApi } from "~/services/api";
 import { useThemeStore } from "~/stores/themeStore";
 import { motionDuration } from "~/utils/motion";
 import { toast } from "~/utils/toast";
-import type { ComicWorkflowGraph } from "../../graph/types";
+import type { ComicWorkflowGraph, ComicWorkflowSection } from "../../graph/types";
 import {
 	SHOT_GRID_COLUMNS,
 	type ComicWorkflowLayout,
@@ -110,6 +110,8 @@ export interface FlowWorkflowViewProps {
 	onSelectedNodeIdsChange?: (nodeIds: string[]) => void;
 	onOpenAssets?: () => void;
 	fitInsets?: { left: number; right: number };
+	/** 停在审批门上时要审的那一块：画布平移过去，让人直接看到产物。 */
+	focusSection?: ComicWorkflowSection | null;
 }
 
 export function FlowWorkflowView(props: FlowWorkflowViewProps) {
@@ -133,6 +135,7 @@ function FlowInner({
 	onSelectedNodeIdsChange,
 	onOpenAssets,
 	fitInsets,
+	focusSection = null,
 }: FlowWorkflowViewProps) {
 	const flow = useReactFlow<WorkflowFlowNode>();
 	const { zoom } = useViewport();
@@ -197,6 +200,28 @@ function FlowInner({
 		if (!fittedRef.current || !autoFitRef.current) return;
 		fit(motionDuration("normal"));
 	}, [fit, insetLeft, insetRight]);
+
+	const hasNodes = nodes.length > 0;
+	useEffect(() => {
+		if (!focusSection || !hasNodes) return;
+		const frame = flow.getNode(frameNodeId(focusSection));
+		const el = containerRef.current;
+		if (!frame || !el) return;
+		const handle = requestAnimationFrame(() => {
+			// 平移到审批门的分区后，面板开合不再把视口拉回整板
+			autoFitRef.current = false;
+			void flow.setViewport(
+				boardViewport(
+					flow.getNodesBounds([frame]),
+					{ width: el.clientWidth, height: el.clientHeight },
+					insetsRef.current,
+				),
+				{ duration: motionDuration("normal") },
+			);
+		});
+		return () => cancelAnimationFrame(handle);
+		// 只在审批门换分区时平移一次，不跟着节点数据变化反复跳
+	}, [flow, focusSection, hasNodes]);
 
 	const applySelection = useCallback(
 		(ids: string[]) => {

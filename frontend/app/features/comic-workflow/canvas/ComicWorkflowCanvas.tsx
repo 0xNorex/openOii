@@ -5,6 +5,7 @@ import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { projectsApi } from "~/services/api";
 import { useRunState } from "~/hooks/useRunState";
+import { gateSection } from "../agent/inboxItems";
 import type { ComicWorkflowGraph } from "../graph/types";
 import { buildComicWorkflow } from "../graph/buildComicWorkflow";
 import { layoutComicWorkflow } from "../graph/layoutComicWorkflow";
@@ -38,7 +39,8 @@ export function ComicWorkflowCanvas({
 		title: string;
 	} | null>(null);
 
-	const { isGenerating, awaitingConfirm, currentRunId } = useRunState(projectId);
+	const { isGenerating, awaitingConfirm, currentRunId, recoveryGate } = useRunState(projectId);
+	const focusSection = awaitingConfirm ? gateSection(recoveryGate) : null;
 
 	const { data: project, isLoading: projectLoading } = useQuery({
 		queryKey: projectQueryKeys.project(projectId),
@@ -128,6 +130,7 @@ export function ComicWorkflowCanvas({
 				onSelectedNodeIdsChange={onSelectedNodeIdsChange}
 				onOpenAssets={onOpenAssets}
 				fitInsets={fitInsets}
+				focusSection={focusSection}
 			/>
 
 			{previewImage ? (

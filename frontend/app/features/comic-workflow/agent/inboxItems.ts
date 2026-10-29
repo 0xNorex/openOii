@@ -4,6 +4,7 @@ import {
 	type RecoveryControlRead,
 	type RunAwaitingConfirmEventData,
 } from "~/types";
+import type { ComicWorkflowSection } from "../graph/types";
 import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
@@ -22,6 +23,21 @@ export interface DeriveInboxInput {
 	blockingClips?: BlockingClip[] | null;
 }
 
+/** 每个审批门审的是什么、在画布哪一块：标题写具体产物，画布平移过去。 */
+export const GATE_COPY: Record<string, { name: string; section: ComicWorkflowSection | null }> = {
+	outline_approval: { name: "故事大纲", section: null },
+	characters_approval: { name: "角色设定", section: "elements" },
+	shots_approval: { name: "分镜脚本", section: "shotline" },
+	character_images_approval: { name: "角色形象图", section: "elements" },
+	shot_images_approval: { name: "分镜画面", section: "shotline" },
+	compose_approval: { name: "成片", section: "output" },
+};
+
+export function gateSection(gate: RunAwaitingConfirmEventData | null | undefined) {
+	const stage = gate?.current_stage ?? gate?.stage ?? null;
+	return (stage && GATE_COPY[stage]?.section) || null;
+}
+
 function stageTitle(stage: string | null | undefined): string | null {
 	const simplified = toSimplifiedStage(stage);
 	return simplified ? getWorkflowStageInfo(simplified).title : null;
@@ -37,11 +53,16 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 
 	if (input.awaitingConfirm) {
 		const agent = input.awaitingAgent ?? input.recoveryGate?.agent ?? null;
-		const name = (agent && AGENT_NAME_MAP[agent]) || stageTitle(input.recoveryGate?.current_stage) || "当前阶段";
+		const gateStage = input.recoveryGate?.current_stage ?? input.recoveryGate?.stage ?? "";
+		const name =
+			GATE_COPY[gateStage]?.name ||
+			(agent && AGENT_NAME_MAP[agent]) ||
+			stageTitle(input.recoveryGate?.current_stage) ||
+			"当前阶段";
 		items.push({
 			kind: "gate",
 			// 每个审批门一个 id，换阶段时重新提醒
-			id: `gate:${agent ?? "unknown"}`,
+			id: `gate:${gateStage || agent || "unknown"}`,
 			title: `${name}已完成，等待确认`,
 			detail: input.recoveryGate?.question || input.recoveryGate?.message || null,
 			gate: input.recoveryGate,
