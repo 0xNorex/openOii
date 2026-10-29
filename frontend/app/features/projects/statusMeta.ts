@@ -15,14 +15,14 @@ export interface ProjectStatusMeta {
 
 const FALLBACK: ProjectStatusMeta = {
 	label: "未知状态",
-	badgeCls: "border-ink/20 bg-paper-200 text-ink",
+	badgeCls: "border-line-strong bg-paper-200 text-ink",
 	textCls: "text-ink-muted",
 };
 
 const META: Record<string, ProjectStatusMeta> = {
 	draft: {
 		label: "草稿",
-		badgeCls: "border-ink/20 bg-paper-200 text-ink",
+		badgeCls: "border-line-strong bg-paper-200 text-ink",
 		textCls: "text-ink-muted",
 	},
 	planning: {

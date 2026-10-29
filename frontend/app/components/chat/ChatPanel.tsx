@@ -75,7 +75,7 @@ export function ChatPanel({
 
 	return (
 		<div className="flex h-full flex-col bg-paper-100" data-shell="activity-feed">
-      <div className="flex items-center justify-between border-b border-ink/10 px-2 py-1">
+      <div className="flex items-center justify-between border-b border-line px-2 py-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <StageIcon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
           <span className="truncate text-xs font-bold">
@@ -86,7 +86,7 @@ export function ChatPanel({
       </div>
 
       {isGenerating && !awaitingConfirm && (
-        <div className="flex items-center justify-between border-b border-ink/10 px-2 py-0.5">
+        <div className="flex items-center justify-between border-b border-line px-2 py-0.5">
           <div className="flex items-center gap-1.5 text-xs text-ink-muted">
 			<span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
             {agentNameMap[currentAgent || ""] || currentAgent || "处理中"}…
@@ -110,7 +110,7 @@ export function ChatPanel({
 
       {entries.length === 0 && !isGenerating ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 text-center">
-          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
             <StageIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           </div>
           <p className="m-0 text-xs text-ink-muted">

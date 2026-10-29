@@ -248,7 +248,7 @@ export function GenerationSection({
 				loading={busy === "asset"}
 				onClick={addToAssets}
 			/>
-			<div className="border-t border-ink/10 pt-3">
+			<div className="border-t border-line pt-3">
 				<ActionButton
 					icon="trash-2"
 					label="删除"

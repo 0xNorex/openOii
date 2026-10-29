@@ -61,7 +61,7 @@ export function UniverseTimelinePanel({
 	if (isLoading) {
 		return (
 			<div className="flex h-full items-center justify-center p-3">
-						<span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent" role="status" aria-label="加载中" />
+						<span className="spinner-doodle h-4 w-4 text-primary" role="status" aria-label="加载中" />
 			</div>
 		);
 	}
@@ -79,7 +79,7 @@ export function UniverseTimelinePanel({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col" data-shell="universe-timeline">
-			<div className="shrink-0 border-b border-ink/10 px-2 py-1.5">
+			<div className="shrink-0 border-b border-line px-2 py-1.5">
 				<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
 					universe
 				</p>
@@ -120,7 +120,7 @@ export function UniverseTimelinePanel({
 							className={`block rounded-md border px-2 py-1.5 transition-colors duration-fast ${
 								ch.is_current
 									? "border-primary/40 bg-primary/10"
-									: "border-ink/10 bg-paper-200/40 hover:border-primary/30"
+									: "border-line bg-paper-200/40 hover:border-primary/30"
 							}`}
 						>
 							<div className="flex items-center justify-between gap-1">
@@ -128,7 +128,7 @@ export function UniverseTimelinePanel({
 									{ch.chapter_number != null ? (
 										`第${ch.chapter_number}章`
 									) : (
-											<span className="inline-flex rounded-full border border-ink/15 bg-paper-200 px-1.5 py-0.5 text-xs font-normal text-ink-muted">
+											<span className="inline-flex rounded-full border border-line bg-paper-200 px-1.5 py-0.5 text-xs font-normal text-ink-muted">
 											未编号
 										</span>
 									)}
@@ -156,7 +156,7 @@ export function UniverseTimelinePanel({
 				))}
 			</ul>
 
-			<div className="shrink-0 border-t border-ink/10 p-2">
+			<div className="shrink-0 border-t border-line p-2">
 				<Link
 					to={`/universes/${universeId}`}
 					className="btn-doodle inline-flex h-7 min-h-7 w-full items-center justify-center bg-transparent px-2 text-xs text-ink-muted shadow-none hover:bg-paper-200"

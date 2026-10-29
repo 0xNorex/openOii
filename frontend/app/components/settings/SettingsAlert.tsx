@@ -39,9 +39,9 @@ export function SettingsAlert({
 					<h3 id="settings-alert-title" className="mb-1 text-md font-bold">
 						{alert.title}
 					</h3>
-					<p className="m-0 text-sm text-ink/80">{alert.message}</p>
+					<p className="m-0 text-sm text-ink-muted">{alert.message}</p>
 					{alert.details && (
-						<div className="mt-2 rounded-md border border-ink/15 bg-paper-200 p-2">
+						<div className="mt-2 rounded-md border border-line bg-paper-200 p-2">
 							<p className="m-0 whitespace-pre-line text-xs">{alert.details}</p>
 						</div>
 					)}

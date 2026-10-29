@@ -186,7 +186,7 @@ and heavy comic everywhere (offset shadows, halftone and display type on every s
 One brand hue (magenta-rose) on calm warm-grey neutrals. Light and dark themes; the first visit follows `prefers-color-scheme`, the toggle persists (`data-theme="light" | "dark"`).
 
 - **Primary** `#B0215F` (dark `#F27AAE`): primary actions, selection, focus ring, links. Also legal as text on every surface (≥ 4.5:1).
-- **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` hairline borders, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
+- **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` sunken-on-sunken fills, `line` (ink 12%) hairline borders and dividers, `line-strong` (ink 22%) dashed drop zones, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
 - **Text**: `ink` (≥ 7:1), `ink-muted` (hex, ≥ 4.5:1 on every surface), `ink-subtle` (alpha, ≥ 3:1, placeholders/meta only).
 - **Status**: `info` / `success` / `warning` / `error`. Text uses `text-{k}-fg`; tinted backgrounds use `bg-{k}-bg` (alpha from `--status-bg-alpha`); filled badges use `bg-{k} text-{k}-content`.
 - **Removed**: `secondary`, `accent`, `primary-ink`, `text-2xs`. The contract test fails if they come back.
@@ -210,7 +210,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ## 4. Elevation
 
-- **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-paper-300`, or `border-border-strong` for controls). No shadow.
+- **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-line`, or `border-border-strong` for controls). 2px is reserved for selection, active-tab underlines and left accent bars. No shadow.
 - **Floating panels, popovers, toasts, the canvas toolbar:** `shadow-panel`.
 - **Dialogs:** `shadow-dialog` on `.dialog-panel`.
 - **Comic accent** (spec §7.6): `.comic-frame` — 2px ink border plus a 3px CMYK cyan/magenta offset. Only on the final-video card. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.

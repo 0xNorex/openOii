@@ -17,7 +17,7 @@ export function HowItWorks({ defaultOpen }: { defaultOpen: boolean }) {
 	return (
 		<details
 			open={defaultOpen}
-			className="group rounded-lg border border-ink/15 bg-surface px-3 py-2 sm:px-4"
+			className="group rounded-lg border border-line bg-surface px-3 py-2 sm:px-4"
 		>
 			<summary className="touch-target-dense flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-ink">
 				<SvgIcon name="lightbulb" size={16} />
@@ -42,7 +42,7 @@ export function HowItWorks({ defaultOpen }: { defaultOpen: boolean }) {
 					</li>
 				))}
 			</ol>
-			<dl className="m-0 mt-3 grid gap-2 border-t border-ink/10 pt-3 pb-1 sm:grid-cols-3">
+			<dl className="m-0 mt-3 grid gap-2 border-t border-line pt-3 pb-1 sm:grid-cols-3">
 				{TERMS.map((item) => (
 					<div key={item.term} className="min-w-0">
 						<dt className="text-xs font-semibold text-ink">{item.term}</dt>

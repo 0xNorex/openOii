@@ -32,7 +32,7 @@ export function DeskSection({
 			)}
 			data-shell="desk-section"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ink/10 pb-1.5">
+			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-1.5">
 				<div className="flex min-w-0 items-center gap-1.5">
 					{icon ? (
 						<span className="shrink-0 text-ink-muted" aria-hidden="true">

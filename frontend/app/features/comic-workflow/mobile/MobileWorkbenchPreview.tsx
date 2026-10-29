@@ -41,7 +41,7 @@ export function MobileWorkbenchPreview({
 			aria-label="项目预览"
 			data-shell="mobile-workbench-preview"
 		>
-			<div className="rounded-lg border-2 border-ink/10 bg-paper-100 p-3">
+			<div className="rounded-lg border border-line bg-paper-100 p-3">
 				<div className="flex items-center gap-2">
 					<span
 						className={`h-2.5 w-2.5 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
@@ -62,7 +62,7 @@ export function MobileWorkbenchPreview({
 			) : null}
 
 			{videoSrc ? (
-				<div className="overflow-hidden rounded-lg border-2 border-ink/10 bg-paper-100">
+				<div className="overflow-hidden rounded-lg border border-line bg-paper-100">
 					{/* eslint-disable-next-line jsx-a11y/media-has-caption -- 成片无字幕轨 */}
 					<video
 						controls
@@ -106,7 +106,7 @@ export function MobileWorkbenchPreview({
 							return (
 								<li
 									key={shot.id}
-									className="relative aspect-square overflow-hidden rounded-md border-2 border-ink/10 bg-paper-200"
+									className="relative aspect-square overflow-hidden rounded-md border border-line bg-paper-200"
 								>
 									{imageUrl ? (
 										<img
@@ -148,7 +148,7 @@ export function MobileWorkbenchPreview({
 									key={character.id}
 									className="flex w-14 shrink-0 flex-col items-center gap-1"
 								>
-									<span className="h-12 w-12 overflow-hidden rounded-full border-2 border-ink/10 bg-paper-200">
+									<span className="h-12 w-12 overflow-hidden rounded-full border border-line bg-paper-200">
 										{avatarUrl ? (
 											<img
 												src={avatarUrl}
@@ -178,7 +178,7 @@ export function MobileWorkbenchPreview({
 			{activity ? (
 				<div>
 					<h2 className="m-0 mb-1.5 text-sm font-bold">最近动态</h2>
-					<div className="overflow-hidden rounded-lg border-2 border-ink/10">
+					<div className="overflow-hidden rounded-lg border border-line">
 						{activity}
 					</div>
 				</div>

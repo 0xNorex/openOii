@@ -55,7 +55,7 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 				<p
 					className={clsx(
 						"m-0 select-text whitespace-pre-wrap break-words text-sm",
-						entry.kind === "error" ? "text-error-fg" : entry.kind === "step" ? "font-medium" : "text-ink/85",
+						entry.kind === "error" ? "text-error-fg" : entry.kind === "step" ? "font-medium" : "text-ink-muted",
 					)}
 				>
 					{entry.title}
@@ -75,7 +75,7 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 							{entry.children.length} 项细节
 						</PlainButton>
 						{expanded ? (
-							<ul className="m-0 mt-0.5 list-none space-y-0.5 border-l border-ink/10 pl-2">
+							<ul className="m-0 mt-0.5 list-none space-y-0.5 border-l border-line pl-2">
 								{entry.children.map((child) => (
 									<li key={child.id} className="text-xs text-ink-muted">
 										<span className="font-semibold">{child.label}</span>

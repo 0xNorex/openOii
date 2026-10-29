@@ -152,7 +152,7 @@ export function HomePage() {
 								icon={<SvgIcon name="pencil" size={16} />}
 								title="故事创意"
 								meta={story.length + "/5000"}
-								className="min-h-[20rem] rounded-lg border border-ink/15 bg-surface p-3 sm:min-h-[24rem] sm:p-4"
+								className="min-h-80 rounded-lg border border-line bg-surface p-3 sm:min-h-96 sm:p-4"
 							>
 								<div className="flex min-h-0 flex-1 flex-col">
 									<textarea
@@ -175,7 +175,7 @@ export function HomePage() {
 											{EXAMPLE_PROMPTS.map((prompt) => (
 												<PlainButton
 													key={prompt}
-													className="touch-target-dense rounded-md border border-ink/15 px-3 py-2 text-left text-sm text-ink-muted transition-colors duration-fast hover:border-primary hover:text-ink"
+													className="touch-target-dense rounded-md border border-line px-3 py-2 text-left text-sm text-ink-muted transition-colors duration-fast hover:border-primary hover:text-ink"
 													onClick={() => setStory(prompt)}
 												>
 													{prompt}
@@ -186,7 +186,7 @@ export function HomePage() {
 									{story.length > 4500 ? <p className="m-0 mt-1 text-xs font-bold text-warning-fg">还可输入 {5000 - story.length} 字</p> : null}
 								</div>
 
-								<div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-3">
+								<div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
 									<div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-label="创作模式">
 										<span className="font-mono text-xs uppercase text-ink-muted">选择创作模式</span>
 										<div className="grid grid-cols-2 gap-2">
@@ -198,7 +198,7 @@ export function HomePage() {
 												return (
 													<PlainButton
 														key={mode.value}
-														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-ink/15 bg-surface text-ink-muted hover:border-primary/40")}
+														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
@@ -212,7 +212,7 @@ export function HomePage() {
 									<Button
 										variant="primary"
 										size="md"
-										className="min-h-[var(--touch-target-min)] w-full shrink-0 justify-center gap-2 sm:w-auto"
+										className="touch-target w-full shrink-0 justify-center gap-2 sm:w-auto"
 										onClick={createProject}
 										disabled={!story.trim() || createMutation.isPending}
 										loading={createMutation.isPending}
@@ -242,7 +242,7 @@ export function HomePage() {
 											const status = getProjectStatusMeta(project.status);
 											return (
 												<li key={project.id}>
-													<Link to={"/project/" + project.id} className="flex min-h-[var(--touch-target-min)] flex-col gap-1 rounded-md border border-ink/15 bg-surface px-3 py-2 transition-colors duration-fast hover:border-primary">
+													<Link to={"/project/" + project.id} className="flex touch-target flex-col gap-1 rounded-md border border-line bg-surface px-3 py-2 transition-colors duration-fast hover:border-primary">
 														<span className="truncate text-sm font-semibold text-ink">{project.title}</span>
 														<span className={"text-xs " + status.textCls}>{status.label}</span>
 													</Link>

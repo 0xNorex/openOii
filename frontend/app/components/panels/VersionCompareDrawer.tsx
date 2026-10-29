@@ -62,9 +62,9 @@ function versionLabel(version: ArtifactVersion): string {
 function VersionColumn({ title, version }: { title: string; version?: ArtifactVersion }) {
 	const imageUrl = getStaticUrl(version?.snapshot.image_url as string | null | undefined);
 	return (
-		<section className="min-w-0 rounded-md border-2 border-ink/15 bg-paper-200/60 p-2.5">
+		<section className="min-w-0 rounded-md border border-line bg-paper-200/60 p-2.5">
 			<h3 className="m-0 text-xs font-bold">{title}</h3>
-			<div className="mt-1.5 aspect-video overflow-hidden rounded-sm border border-ink/10 bg-paper-300">
+			<div className="mt-1.5 aspect-video overflow-hidden rounded-sm border border-line bg-paper-300">
 				{imageUrl ? (
 					<img src={imageUrl} alt={title} className="h-full w-full object-cover" />
 				) : (
@@ -91,14 +91,14 @@ function VersionColumn({ title, version }: { title: string; version?: ArtifactVe
 
 function DiffRow({ diff }: { diff: VersionDiff }) {
 	return (
-		<li className="rounded border border-ink/10 bg-paper-100 p-2 text-xs">
+		<li className="rounded-sm border border-line bg-paper-100 p-2 text-xs">
 			<div className="mb-1 font-semibold">{LABELS[diff.field_name] || diff.field_name}</div>
 			<div className="grid gap-2 md:grid-cols-2">
-				<div className="rounded bg-error/10 p-2">
+				<div className="rounded-sm bg-error/10 p-2">
 					<div className="mb-1 text-error-fg">旧</div>
 					<pre className="whitespace-pre-wrap break-words font-sans">{valueToText(diff.old_value)}</pre>
 				</div>
-				<div className="rounded bg-success/10 p-2">
+				<div className="rounded-sm bg-success/10 p-2">
 					<div className="mb-1 text-success-fg">新</div>
 					<pre className="whitespace-pre-wrap break-words font-sans">{valueToText(diff.new_value)}</pre>
 				</div>
@@ -197,7 +197,7 @@ export function VersionCompareDrawer({
 			labelledBy="version-compare-title"
 			className="w-full max-w-5xl"
 		>
-			<div className="sticky top-0 z-panel flex items-center gap-2 border-b-2 border-ink/10 bg-paper-100 px-3 py-2">
+			<div className="sticky top-0 z-panel flex items-center gap-2 border-b border-line bg-paper-100 px-3 py-2">
 				<SvgIcon name="clock-3" size={16} />
 				<h2 id="version-compare-title" className="m-0 text-md font-bold">版本对比</h2>
 				<IconButton
@@ -240,7 +240,7 @@ export function VersionCompareDrawer({
 
 				{versionsQuery.isLoading && <div className="text-xs text-ink-muted">加载版本中...</div>}
 				{!versionsQuery.isLoading && versions.length === 0 && (
-					<div className="rounded-md border border-ink/10 p-4 text-xs text-ink-muted">
+					<div className="rounded-md border border-line p-4 text-xs text-ink-muted">
 						暂无版本快照。生成或重新生成后会自动记录。
 					</div>
 				)}
@@ -275,7 +275,7 @@ export function VersionCompareDrawer({
 							<VersionColumn title={`新版本 v${effectiveRight ?? "—"}`} version={effectiveRight ? versionByNumber.get(effectiveRight) : undefined} />
 						</div>
 
-						<section className="rounded-md border-2 border-ink/10 bg-paper-200/40 p-2.5">
+						<section className="rounded-md border border-line bg-paper-200/40 p-2.5">
 							<h3 className="mb-1.5 text-xs font-bold">差异</h3>
 							{compareQuery.isLoading && <div className="text-xs text-ink-muted">计算差异中...</div>}
 							{!compareQuery.isLoading && (compareQuery.data?.diffs.length ?? 0) === 0 && (

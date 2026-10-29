@@ -70,7 +70,7 @@ export function WorkflowInspector({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col bg-paper-100" data-shell="inspector">
-			<div className="border-b border-ink/10 px-2 py-1.5">
+			<div className="border-b border-line px-2 py-1.5">
 				<p className="m-0 font-mono text-xs uppercase text-ink-muted">
 					{selectedNode.kind}
 				</p>
@@ -82,7 +82,7 @@ export function WorkflowInspector({
 				</p>
 			</div>
 
-			<div className="flex gap-0.5 border-b border-ink/10 p-0.5">
+			<div className="flex gap-0.5 border-b border-line p-0.5">
 				{(Object.keys(TAB_LABELS) as InspectorTab[]).map((tab) => (
 					<PlainButton
 						key={tab}

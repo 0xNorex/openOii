@@ -50,14 +50,14 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 	const currentTitle = list.find((p) => p.id === currentId)?.title || "项目";
 
 	return (
-		// min-w-[3rem] ≥ 按钮 min-content（两枚 shrink-0 图标 + gap + padding），
+		// min-w-12 ≥ 按钮 min-content（两枚 shrink-0 图标 + gap + padding），
 		// 否则窄屏下按钮盒溢出 wrapper 叠印到 nav 上并抢走命中测试
-		<div className="relative min-w-[3rem]" ref={ref}>
+		<div className="relative min-w-12" ref={ref}>
 			{/* overflow-hidden 只能包按钮：放到外层会把下拉面板一起裁掉 */}
 			<div className="overflow-hidden">
 				<PlainButton
 					onClick={() => setOpen(!open)}
-					className="touch-target-dense flex max-w-[6rem] items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-[14rem]"
+					className="touch-target-dense flex max-w-24 items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-56"
 					aria-expanded={open}
 					aria-haspopup="listbox"
 				>
@@ -77,7 +77,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 
 			{open && (
 				<div
-					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border-2 border-ink/15 bg-paper-200 py-1 shadow-panel"
+					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border border-line bg-paper-200 py-1 shadow-panel"
 					role="listbox"
 					aria-label="项目列表"
 				>
@@ -89,7 +89,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 						<RectangleStackIcon className="h-3 w-3" aria-hidden="true" />
 						全部项目
 					</Link>
-					<div className="my-1 border-t border-ink/10" />
+					<div className="my-1 border-t border-line" />
 					{list.map((p) => {
 						const st = getProjectStatusMeta(p.status);
 						return (
@@ -114,7 +114,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 							</Link>
 						);
 					})}
-					<div className="my-1 border-t border-ink/10" />
+					<div className="my-1 border-t border-line" />
 					<Link
 						to="/"
 						onClick={() => setOpen(false)}
@@ -156,7 +156,7 @@ function UniverseChip({ projectId }: { projectId: number }) {
 	return (
 		<Link
 			to={`/universes/${universeId}`}
-			className="touch-target-dense hidden max-w-[11rem] items-center gap-1 truncate rounded-full border border-primary/25 bg-primary/10 px-2 text-xs font-bold text-primary transition-colors duration-fast hover:bg-primary/15 sm:inline-flex"
+			className="touch-target-dense hidden max-w-44 items-center gap-1 truncate rounded-full border border-primary/25 bg-primary/10 px-2 text-xs font-bold text-primary transition-colors duration-fast hover:bg-primary/15 sm:inline-flex"
 			title={chapterTitle || universe?.name || "IP 宇宙"}
 		>
 			<SparklesIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -184,7 +184,7 @@ function NavLink({
 				"touch-target-dense inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-bold transition-colors duration-fast",
 				active
 					? // 文字用 primary（作为文字 ≥4.5:1）保证可读，底部内阴影提供颜色之外的第二视觉通道
-						"bg-primary/10 text-primary shadow-[inset_0_-3px_0_0_rgb(var(--color-primary))]"
+						"bg-primary/10 text-primary shadow-tab-active"
 					: "text-ink-muted hover:bg-paper-200 hover:text-ink",
 			)}
 		>
@@ -210,7 +210,7 @@ export function TopBar({ projectId, center }: TopBarProps) {
 
 	return (
 		<header
-			className="chrome-row z-popover gap-1.5 border-b border-ink/10 bg-paper-100 px-2 sm:gap-2 sm:px-3"
+			className="chrome-row z-popover gap-1.5 border-b border-line bg-paper-100 px-2 sm:gap-2 sm:px-3"
 			data-shell="topbar"
 		>
 			<div className="flex min-w-0 items-center gap-1.5">
@@ -224,7 +224,7 @@ export function TopBar({ projectId, center }: TopBarProps) {
 
 				{projectId ? (
 					<>
-						<span className="text-ink/25" aria-hidden="true">
+						<span className="text-ink-faint" aria-hidden="true">
 							/
 						</span>
 						<ProjectDropdown currentId={projectId} />
@@ -233,7 +233,7 @@ export function TopBar({ projectId, center }: TopBarProps) {
 				) : null}
 
 				<nav
-					className="ml-1 flex shrink-0 items-center gap-0.5 border-l border-ink/10 pl-1.5"
+					className="ml-1 flex shrink-0 items-center gap-0.5 border-l border-line pl-1.5"
 					aria-label="主导航"
 				>
 					<NavLink

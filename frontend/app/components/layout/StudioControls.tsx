@@ -94,7 +94,7 @@ export function StudioControls({
 				className={`touch-target-dense inline-flex min-w-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold tabular-nums transition-colors duration-fast ${
 					awaitingConfirm
 						? "border-primary bg-primary text-primary-content"
-						: "border-ink/15 bg-surface text-ink hover:border-primary"
+						: "border-line bg-surface text-ink hover:border-primary"
 				}`}
 				onClick={onOpenInbox}
 				title={studioStatus.description}
@@ -127,7 +127,7 @@ export function StudioControls({
 							tabIndex={0}
 							role="menu"
 							aria-label="工作台工具菜单"
-							className="absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-ink/15 bg-surface p-1 shadow-panel"
+							className="absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-line bg-surface p-1 shadow-panel"
 						>
 							{onOpenVersions ? (
 								<li role="none">

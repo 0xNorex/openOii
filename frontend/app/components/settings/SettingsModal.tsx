@@ -227,7 +227,7 @@ export function SettingsModal() {
 				labelledBy="settings-modal-title"
 				className="flex max-h-[92dvh] w-[min(96vw,76rem)] flex-col p-0"
 			>
-				<div className="flex shrink-0 items-center justify-between border-b border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
+				<div className="flex shrink-0 items-center justify-between border-b border-line bg-paper-200 px-3 py-2 sm:px-4">
 					<h3
 						id="settings-modal-title"
 						className="flex items-center gap-1.5 text-md font-bold"
@@ -269,7 +269,7 @@ export function SettingsModal() {
 						className="flex min-h-0 flex-1 flex-col"
 					>
 						<div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-							<nav className="shrink-0 border-b border-ink/15 bg-paper-200/45 p-2 lg:w-56 lg:border-b-0 lg:border-r" aria-label="设置分类">
+							<nav className="shrink-0 border-b border-line bg-paper-200/45 p-2 lg:w-56 lg:border-b-0 lg:border-r" aria-label="设置分类">
 							<div role="tablist" aria-label="设置分类" onKeyDown={handleTabKeyDown} className="flex gap-1.5 overflow-x-auto lg:flex-col">
 								{sections.map((section) => {
 									const cfg = TAB_CONFIG[section.key];
@@ -289,7 +289,7 @@ export function SettingsModal() {
 											className={`
                         touch-target-dense flex shrink-0 items-center justify-between gap-2 border px-2.5
                         text-xs font-semibold lg:w-full
-												border border-ink/20 transition-colors duration-fast
+												border border-line-strong transition-colors duration-fast
                         ${
 													isActive
 														? "bg-info text-info-content"
@@ -301,7 +301,7 @@ export function SettingsModal() {
 											<span>{cfg?.title || section.title}</span>
 											<span
 												className={`
-                        rounded px-1 py-0.5 text-xs tabular-nums
+                        rounded-sm px-1 py-0.5 text-xs tabular-nums
                         ${isActive ? "bg-info-content/20" : "bg-paper-300"}
                       `}
 											>
@@ -331,7 +331,7 @@ export function SettingsModal() {
 							</div>
 						</div>
 
-						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t-2 border-ink/15 bg-paper-200 px-3 py-2 sm:px-4">
+						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-paper-200 px-3 py-2 sm:px-4">
 							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-info-fg">
 								<InformationCircleIcon className="h-4 w-4 shrink-0" />
 								<span className="truncate">

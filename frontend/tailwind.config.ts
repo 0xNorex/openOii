@@ -86,6 +86,9 @@ export default {
         // 语义对比度令牌，按主题在 tokens.css 中取值（见 ADR 0002 注释）
         "ink-muted": "var(--ink-muted)",
         "ink-subtle": "var(--ink-subtle)",
+        "ink-faint": "var(--ink-faint)",
+        line: "var(--line)",
+        "line-strong": "var(--line-strong)",
       },
       fontFamily: {
         sans: "var(--font-sans)",
@@ -95,9 +98,20 @@ export default {
       boxShadow: {
         panel: "var(--shadow-panel)",
         dialog: "var(--shadow-dialog)",
+        "tab-active": "inset 0 -3px 0 0 rgb(var(--color-primary))",
       },
-      borderWidth: {
-        '3': '3px',
+      transitionTimingFunction: {
+        standard: "var(--ease-standard)",
+      },
+      width: {
+        "panel-agent": "var(--panel-agent)",
+        "panel-inspector": "var(--panel-inspector)",
+      },
+      maxWidth: {
+        panel: "var(--panel-max)",
+      },
+      inset: {
+        toolbar: "var(--toolbar-offset)",
       },
     },
   },

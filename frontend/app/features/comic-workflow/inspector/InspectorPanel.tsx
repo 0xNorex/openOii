@@ -38,7 +38,7 @@ export function InspectorPanel({
 	if (!open) {
 		return (
 			<PlainButton
-				className="absolute right-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-ink/15 bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
+				className="absolute right-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
 				onClick={() => onOpenChange(true)}
 				aria-label="展开检查器"
 				aria-expanded={false}
@@ -52,7 +52,7 @@ export function InspectorPanel({
 
 	return (
 		<aside
-			className="absolute bottom-24 right-3 top-3 z-panel flex w-80 max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
+			className="absolute bottom-24 right-3 top-3 z-panel flex w-panel-inspector max-w-panel flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-panel"
 			aria-label="检查器"
 			data-shell="inspector-panel"
 			onKeyDown={(event) => {
@@ -62,7 +62,7 @@ export function InspectorPanel({
 				onOpenChange(false);
 			}}
 		>
-			<div className="flex items-center justify-between gap-1 border-b border-ink/10 py-1 pl-3 pr-1">
+			<div className="flex items-center justify-between gap-1 border-b border-line py-1 pl-3 pr-1">
 				<h2 className="text-sm font-semibold">{hasSelection ? "检查器" : "项目"}</h2>
 				<IconButton
 					className="shrink-0 text-ink-muted hover:text-ink"
@@ -84,7 +84,7 @@ export function InspectorPanel({
 				/>
 			</div>
 			{!hasSelection && universeId != null ? (
-				<section className="max-h-[45%] shrink-0 overflow-y-auto border-t border-ink/10" aria-label="宇宙时间线">
+				<section className="max-h-[45%] shrink-0 overflow-y-auto border-t border-line" aria-label="宇宙时间线">
 					<UniverseTimelinePanel universeId={universeId} currentProjectId={projectId} />
 				</section>
 			) : null}

@@ -139,7 +139,7 @@ function InlineEditableText({
 				if (e.key === "Escape") setEditing(false);
 			}}
 			onBlur={() => void commit()}
-			className="w-full resize-none rounded-sm border-2 border-primary bg-paper-100 p-1.5 text-xs leading-relaxed text-ink focus:outline-none"
+			className="w-full resize-none rounded-sm border-2 border-primary bg-paper-100 p-1.5 text-xs leading-relaxed text-ink"
 		/>
 	);
 }
@@ -172,7 +172,7 @@ function ReviewActions({
 				className="btn-doodle touch-target-dense h-6 min-h-6 flex-1 px-1.5 text-xs bg-success text-success-content"
 			>
 				{busy === "approve" ? (
-					<span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 				) : (
 					<SvgIcon name="check" size={11} />
 				)}
@@ -188,7 +188,7 @@ function ReviewActions({
 				className="btn-doodle touch-target-dense h-6 min-h-6 flex-1 px-1.5 text-xs bg-transparent text-ink hover:bg-paper-200"
 			>
 				{busy === "redo" ? (
-					<span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 				) : (
 					<SvgIcon name="refresh-cw" size={11} />
 				)}
@@ -201,7 +201,7 @@ function ReviewActions({
 function statusBadge(status: WorkflowNodeStatus) {
 	const copy = STATUS_COPY[status] ?? STATUS_COPY.draft;
 	return (
-		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-ink/15 px-2 py-0.5 text-xs font-medium ${copy.cls}`}>
+		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs font-medium ${copy.cls}`}>
 			<span className="h-2 w-2 rounded-full bg-current opacity-60" />
 			{copy.label}
 		</span>
@@ -277,7 +277,7 @@ function CharacterRefStrip({
 						<img
 							src={getStaticUrl(url) ?? url}
 							alt={`参考图 ${index + 1}`}
-							className="h-7 w-7 rounded-sm border border-ink/20 object-cover"
+							className="h-7 w-7 rounded-sm border border-line-strong object-cover"
 							draggable={false}
 						/>
 						<button
@@ -296,7 +296,7 @@ function CharacterRefStrip({
 							className="absolute -right-1 -top-1 hidden h-3.5 w-3.5 items-center justify-center rounded-full bg-error text-error-content group-hover:flex"
 						>
 							{busy === index ? (
-								<span className="inline-block h-2 w-2 animate-spin rounded-full border border-current border-r-transparent" aria-hidden="true" />
+								<span className="spinner-doodle h-2 w-2" aria-hidden="true" />
 							) : (
 								<SvgIcon name="x" size={8} />
 							)}
@@ -311,10 +311,10 @@ function CharacterRefStrip({
 						stopAll(e);
 						fileRef.current?.click();
 					}}
-					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-ink/25 text-ink-muted transition-colors duration-fast hover:border-primary/50 hover:text-primary"
+					className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-line-strong text-ink-muted transition-colors duration-fast hover:border-primary/50 hover:text-primary"
 				>
 					{busy === "upload" ? (
-						<span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+						<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 					) : (
 						<SvgIcon name="plus" size={12} />
 					)}
@@ -336,7 +336,7 @@ function CharacterRefStrip({
 					className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-ink-muted transition-colors duration-fast hover:bg-ink/10 hover:text-ink"
 				>
 					{busy === "embed" ? (
-						<span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true" />
+						<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 					) : (
 						<SvgIcon name="refresh-cw" size={11} />
 					)}
@@ -391,7 +391,7 @@ function CharacterCard({
 							<span className="inline-flex rounded-full border border-primary/30 bg-primary px-1.5 py-0.5 text-xs text-primary-content">资产一致性</span>
 					) : null}
 					{node.character.visual_notes ? (
-							<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-xs text-ink-muted">视觉笔记</span>
+							<span className="inline-flex rounded-full border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs text-ink-muted">视觉笔记</span>
 					) : null}
 				</div>
 				{node.status === "review" ? (
@@ -418,7 +418,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
-			<div className="relative h-[128px] shrink-0 bg-paper-300">
+			<div className="relative h-32 shrink-0 bg-paper-300">
 				{imageUrl ? (
 					<img
 						src={imageUrl}
@@ -435,10 +435,10 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 					<EmptyMedia label="等待分镜图" />
 				)}
 				{/* 九宫格 cell index */}
-				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border-2 border-ink/20 bg-info px-1 font-mono text-xs font-bold text-info-content">
+				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border border-line-strong bg-info px-1 font-mono text-xs font-bold text-info-content">
 					{cell}
 				</span>
-				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-ink/15 bg-paper-100/90 px-1.5 py-0.5 text-xs tabular-nums">
+				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs tabular-nums">
 					{node.shot.duration ? `${node.shot.duration}s` : "未定时长"}
 				</span>
 				<div className="absolute right-2 top-2">
@@ -493,7 +493,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 						</span>
 					) : null}
 					{node.shot.camera ? (
-						<span className="inline-flex rounded-full border border-ink/15 bg-paper-100/80 px-1.5 py-0.5 text-xs text-ink-muted">{node.shot.camera}</span>
+						<span className="inline-flex rounded-full border border-line bg-paper-100/80 px-1.5 py-0.5 text-xs text-ink-muted">{node.shot.camera}</span>
 					) : null}
 				</div>
 				{node.status === "review" ? (
@@ -525,7 +525,7 @@ function OutputCard({
 
 			{/* 内联播放器：交付台上直接看，不用先开弹窗 */}
 			<div
-				className="relative mt-3 aspect-video shrink-0 overflow-hidden rounded-xl bg-paper-300"
+				className="relative mt-3 aspect-video shrink-0 overflow-hidden rounded-lg bg-paper-300"
 				onPointerDown={stopAll}
 			>
 				{videoUrl ? (
@@ -688,7 +688,7 @@ export function WorkflowFrameView({
 	return (
 		<section
 			aria-label={title}
-			className={`flex h-full w-full flex-col rounded-xl border-3 border-ink/15 p-3 text-ink ${
+			className={`flex h-full w-full flex-col rounded-lg border border-line p-3 text-ink ${
 				draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
 			} ${style.surface}`}
 		>

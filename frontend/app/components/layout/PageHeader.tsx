@@ -30,7 +30,7 @@ export function PageHeader({
 		<header
 			className={clsx(
 				"flex gap-2",
-				divider && "border-b border-ink/10 pb-3",
+				divider && "border-b border-line pb-3",
 				actionsAlign === "title"
 					? "flex-row flex-wrap items-center justify-between"
 					: "flex-col lg:flex-row lg:items-end lg:justify-between",

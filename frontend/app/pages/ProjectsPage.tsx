@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	ArrowPathIcon,
 	DocumentTextIcon,
 	FaceFrownIcon,
 	FolderOpenIcon,
@@ -176,7 +175,7 @@ export function ProjectsPage() {
 
 				{selecting ? (
 				<section
-					className="rounded-lg border border-ink/15 bg-surface"
+					className="rounded-lg border border-line bg-surface"
 					aria-label="项目批量操作"
 				>
 					<div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center sm:justify-between">
@@ -191,7 +190,7 @@ export function ProjectsPage() {
 							<span>全选</span>
 						</label>
 						<div className="flex flex-wrap items-center gap-1.5">
-							<span className="border border-ink/15 bg-paper-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-muted">
+							<span className="border border-line bg-paper-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-muted">
 								{selectedCount > 0
 									? `已选 ${selectedCount}`
 									: "未选择"}
@@ -216,9 +215,9 @@ export function ProjectsPage() {
 					) : visibleProjects.length === 0 ? (
 						<EmptyState />
 					) : (
-						<div className="overflow-hidden rounded-lg border border-ink/15 bg-surface">
+						<div className="overflow-hidden rounded-lg border border-line bg-surface">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
-							<div className={"hidden border-b border-ink/10 bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
+							<div className={"hidden border-b border-line bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
 								{selecting ? <span /> : null}
 								<span>项目</span>
 								<span>状态</span>
@@ -362,11 +361,8 @@ function ProjectRow({
 
 function LoadingState() {
 	return (
-		<div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-ink/15 bg-paper-200/35">
-			<ArrowPathIcon
-				className="h-5 w-5 animate-spin text-primary"
-				aria-hidden="true"
-			/>
+		<div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-paper-200/35">
+			<span className="spinner-doodle h-5 w-5 text-primary" aria-hidden="true" />
 			<p className="m-0 text-sm font-semibold text-ink-muted">
 				正在加载项目…
 			</p>
@@ -376,7 +372,7 @@ function LoadingState() {
 
 function ErrorState() {
 	return (
-		<div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-error/25 bg-error/5 px-3 text-center">
+		<div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
 			<FaceFrownIcon className="h-6 w-6 text-error-fg" aria-hidden="true" />
 			<div>
 				<p className="m-0 text-md font-bold text-error-fg">
@@ -392,7 +388,7 @@ function ErrorState() {
 
 function EmptyState() {
 	return (
-		<div className="min-h-[10rem] rounded-lg border-2 border-dashed border-ink/15 bg-paper-200/35">
+		<div className="min-h-40 rounded-lg border border-dashed border-line bg-paper-200/35">
 			<SharedEmptyState
 				icon={<DocumentTextIcon className="h-5 w-5" aria-hidden="true" />}
 				title="暂无项目"

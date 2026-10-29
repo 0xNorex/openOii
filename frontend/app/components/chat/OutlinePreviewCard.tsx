@@ -43,12 +43,12 @@ export function OutlinePreviewCard({
 				<h3 className="font-bold text-base">故事大纲待确认</h3>
 			</div>
 
-			<p className="leading-relaxed text-ink/80">{outline.logline}</p>
+			<p className="leading-relaxed text-ink-muted">{outline.logline}</p>
 
 			{outline.genre.length > 0 && (
 				<div className="flex flex-wrap gap-1">
 					{outline.genre.map((genre) => (
-						<span key={genre} className="rounded-md border border-ink/20 px-2 py-0.5 text-xs text-ink-muted">
+						<span key={genre} className="rounded-md border border-line-strong px-2 py-0.5 text-xs text-ink-muted">
 							{genre}
 						</span>
 					))}
@@ -87,13 +87,13 @@ export function OutlinePreviewCard({
 			{expanded && (
 				<div className="space-y-2">
 					<textarea
-						className="min-h-40 w-full resize-y rounded-md border-2 border-ink/20 bg-paper-200 p-2 font-mono text-xs focus:border-primary focus:outline-none"
+						className="min-h-40 w-full resize-y rounded-md border border-border-strong bg-paper-200 p-2 font-mono text-xs focus:border-primary"
 						value={draft}
 						onChange={(e) => setDraft(e.currentTarget.value)}
 						aria-label="编辑故事大纲 JSON"
 					/>
 					<textarea
-						className="min-h-16 w-full resize-y rounded-md border-2 border-ink/20 bg-paper-200 p-2 text-xs focus:border-primary focus:outline-none"
+						className="min-h-16 w-full resize-y rounded-md border border-border-strong bg-paper-200 p-2 text-xs focus:border-primary"
 						value={feedback}
 						onChange={(e) => setFeedback(e.currentTarget.value)}
 						placeholder="重新生成要求（可选）"

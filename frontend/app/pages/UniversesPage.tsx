@@ -114,7 +114,7 @@ export function UniversesPage() {
 
 					{/* 服务故障时不渲染空态，避免把加载失败说成「还没有数据」 */}
 					{!isLoading && isError && (
-						<div className="flex min-h-[10rem] flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
+						<div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
 							<div>
 								<p className="m-0 text-md font-bold text-error-fg">
 									宇宙列表加载失败

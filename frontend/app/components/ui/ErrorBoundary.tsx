@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <h2 className="mb-1 text-lg font-bold">
               出错了
             </h2>
-            <p className="mb-3 text-sm text-ink/75">
+            <p className="mb-3 text-sm text-ink-muted">
               应用遇到了意外错误，请尝试刷新页面。
             </p>
             {this.state.error && (

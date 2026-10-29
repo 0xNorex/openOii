@@ -62,7 +62,7 @@ export function VideoPreviewModal({
         <XMarkIcon className="w-5 h-5" aria-hidden="true" />
       </IconButton>
       {showDownload && (
-        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-neutral/80 rounded-xl px-4 py-3 border border-ink/10">
+        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-neutral/80 rounded-lg px-4 py-3 border border-line">
           <span className="text-primary-content text-sm font-medium truncate">
             {title}
           </span>

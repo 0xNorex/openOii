@@ -79,7 +79,7 @@ export function ConfirmModal({
         <button
           ref={cancelRef}
           type="button"
-          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-9 min-h-9 border-2 border-ink/20 px-3 text-sm"
+          className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 h-9 min-h-9 border border-line-strong px-3 text-sm"
           onClick={onClose}
           disabled={isLoading}
         >
@@ -87,7 +87,7 @@ export function ConfirmModal({
         </button>
         <button
           type="button"
-          className={`btn-doodle ${styles.button} h-9 min-h-9 border-2 border-ink/20 px-3 text-sm`}
+          className={`btn-doodle ${styles.button} h-9 min-h-9 border border-line-strong px-3 text-sm`}
           onClick={onConfirm}
           disabled={isLoading}
         >

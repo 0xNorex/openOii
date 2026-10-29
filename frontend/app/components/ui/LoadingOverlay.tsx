@@ -18,7 +18,7 @@ export function LoadingOverlay({ text, className }: LoadingOverlayProps) {
         aria-hidden="true"
       />
       {text ? (
-        <p className="mt-3 text-sm font-bold text-ink/80">
+        <p className="mt-3 text-sm font-bold text-ink-muted">
           {text}
         </p>
       ) : null}

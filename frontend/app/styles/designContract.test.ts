@@ -46,7 +46,39 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\bshadow-(?:brutal|comic)/, "硬偏移阴影已删除：浮层用 shadow-panel，成片卡用 comic-frame"],
 	[/\bfont-(?:heading|comic|sketch)\b/, "字体只有 font-sans / font-mono / font-brand（字标）"],
 	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
+	// polish pass（docs/research/polish-pass.md）
+	[/\brounded-xl\b/, "卡片/面板用 rounded-lg（xl 与 lg 同值，只留一种写法）"],
+	[/["'`\s]rounded(?=["'`\s])/, "裸 rounded：写明 rounded-sm / md / lg / full"],
+	[/\bborder-ink\/\d/, "边框颜色用 border-line / border-line-strong / border-border-strong"],
+	[/\btext-ink\/\d/, "文字颜色用 text-ink / ink-muted / ink-subtle；装饰图形 ink-faint"],
+	[/\bborder-3\b/, "边框 1px；2px 只用于选中、tab 下划线、左侧强调条"],
+	[/\bfocus:outline-none\b/, "不许去掉焦点环（:focus-visible 全局 2px primary）"],
+	[/animate-spin rounded-full border/, "转圈用 spinner-doodle"],
 ];
+
+/**
+ * 任意值白名单：新增 *-[…] 必须先在这里登记（或改成 token）。
+ * 只放一次性的布局几何；重复出现的值请进 tokens.css。
+ */
+const ARBITRARY_ALLOWED = new Set([
+	"[field-sizing:content]",
+	"aspect-[4/3]",
+	"grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem]",
+	"grid-cols-[auto_minmax(0,1fr)_auto]",
+	"grid-cols-[minmax(0,1fr)_7rem_7rem_2.75rem]",
+	"grid-cols-[minmax(0,1fr)_auto]",
+	"grid-cols-[minmax(0,7fr)_minmax(0,5fr)]",
+	"max-h-[45%]",
+	"max-h-[90vh]",
+	"max-h-[92dvh]",
+	"max-w-[22rem]",
+	"min-[1400px]",
+	"min-h-[...]",
+	"min-w-[3.25rem]",
+	"w-[min(720px,calc(100%-1.5rem))]",
+	"w-[min(96vw,76rem)]",
+]);
+const ARBITRARY = /(?<![\w\-[])-?[a-z][a-z0-9-]*-\[[^\]\s"'`]+\]|(?<![\w-])\[[a-z-]+:[a-z-]+\]/g;
 
 /** 漫画点缀白名单（spec §7.6）：CMYK 偏移框只在成片卡上 */
 const COMIC_FRAME_OWNERS = ["app/features/comic-workflow/canvas/WorkflowCards.tsx"];
@@ -69,6 +101,18 @@ describe("Design Contract: geometry 走 token 映射", () => {
 			.filter(({ text }) => pattern.test(text))
 			.map(({ file }) => file);
 		expect(hits, `${hint}\n违规文件：\n${hits.join("\n")}`).toEqual([]);
+	});
+});
+
+describe("Design Contract: 任意值只来自白名单", () => {
+	it("没有未登记的 *-[…]", () => {
+		const bad: string[] = [];
+		for (const { file, text } of sources) {
+			for (const m of text.matchAll(ARBITRARY)) {
+				if (!ARBITRARY_ALLOWED.has(m[0])) bad.push(`${file}: ${m[0]}`);
+			}
+		}
+		expect(bad, `改用 token，或有意登记到 ARBITRARY_ALLOWED：\n${bad.join("\n")}`).toEqual([]);
 	});
 });
 

@@ -16,12 +16,12 @@ export function FieldList({ items }: { items: Array<[string, string | number]> }
 			{items.map(([label, value]) => (
 				<div
 					key={label}
-					className="flex items-start justify-between gap-3 border-b border-ink/10 pb-1.5 text-sm"
+					className="flex items-start justify-between gap-3 border-b border-line pb-1.5 text-sm"
 				>
 					<span className="font-mono text-xs uppercase text-ink-muted">
 						{label}
 					</span>
-					<span className="min-w-0 text-right text-ink/75">{value}</span>
+					<span className="min-w-0 text-right text-ink-muted">{value}</span>
 				</div>
 			))}
 		</div>

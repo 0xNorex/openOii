@@ -17,7 +17,7 @@ export function ConfigField({
 	onChange: ConfigChangeHandler;
 }) {
 	return (
-		<div className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5">
+		<div className="rounded-md border border-line bg-paper-200/70 p-2.5">
 			<div className="mb-1.5 flex flex-wrap items-center gap-1.5">
 				<span className="font-mono text-xs font-bold">{item.key.toUpperCase()}</span>
 				{item.is_sensitive && (

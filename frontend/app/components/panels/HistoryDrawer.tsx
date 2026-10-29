@@ -30,13 +30,13 @@ function statusLabel(status: string) {
 
 function statusCls(status: string) {
 	const map: Record<string, string> = {
-		draft: "bg-paper-100/80 text-ink-muted border-ink/15",
+		draft: "bg-paper-100/80 text-ink-muted border-line",
 		processing: "bg-warning/15 text-warning-fg border-warning/30",
 		completed: "bg-success/15 text-success-fg border-success/30",
 		error: "bg-error/15 text-error-fg border-error/30",
-		ready: "bg-paper-100/80 text-ink-muted border-ink/15",
+		ready: "bg-paper-100/80 text-ink-muted border-line",
 	};
-	return map[status] || "bg-paper-100/80 text-ink-muted border-ink/15";
+	return map[status] || "bg-paper-100/80 text-ink-muted border-line";
 }
 
 function ProjectRow({
@@ -66,7 +66,7 @@ function ProjectRow({
 
 	return (
 		<div
-			className={`flex items-start gap-2 py-2 px-2 rounded transition-colors duration-fast mb-0.5 ${
+			className={`flex items-start gap-2 py-2 px-2 rounded-sm transition-colors duration-fast mb-0.5 ${
 				isSelected ? "bg-primary/10" : "hover:bg-paper-200/50"
 			}`}
 		>
@@ -227,13 +227,13 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 				labelledBy="history-drawer-title"
 				className="w-72"
 			>
-				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
+				<div className="flex items-center justify-between border-b border-line px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="clock-3" size={14} className="text-primary" />
 						<h3 id="history-drawer-title" className="m-0 text-sm font-bold">
 							项目历史
 						</h3>
-						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
+						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-line tabular-nums">
 							{projects?.length ?? 0}
 						</span>
 					</div>
@@ -249,7 +249,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 				</div>
 
 				{projects && projects.length > 0 && (
-					<div className="flex items-center gap-2 border-b border-ink/10 px-2.5 py-1.5 text-xs">
+					<div className="flex items-center gap-2 border-b border-line px-2.5 py-1.5 text-xs">
 						<label className="flex cursor-pointer select-none items-center gap-1">
 							<input
 								type="checkbox"
@@ -284,7 +284,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 							<SvgIcon
 								name="clapperboard"
 								size={22}
-								className="mx-auto mb-2 text-ink/15"
+								className="mx-auto mb-2 text-ink-faint"
 							/>
 							<p className="m-0">还没有项目</p>
 							<p className="m-0 mt-1 text-ink-muted">

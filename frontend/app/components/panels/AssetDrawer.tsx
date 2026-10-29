@@ -146,7 +146,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 			labelledBy="create-asset-title"
 			className="flex w-72 flex-col"
 		>
-				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
+				<div className="flex items-center justify-between border-b border-line px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="plus" size={14} className="text-primary" />
 						<h3 id="create-asset-title" className="m-0 text-sm font-bold">
@@ -238,7 +238,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 								<img
 									src={imagePreview}
 									alt="预览"
-									className="w-full h-28 object-cover rounded-lg border-2 border-ink/10"
+									className="w-full h-28 object-cover rounded-lg border border-line"
 								/>
 								<IconButton
 									className="absolute top-1 right-1 rounded-full bg-paper-100/90 text-error-fg hover:bg-error-bg"
@@ -257,7 +257,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 							<Button
 								variant="ghost"
 								size="sm"
-								className="!h-20 !min-h-0 w-full flex-col rounded-lg border-2 border-dashed border-ink/20 hover:border-primary/40 transition-colors duration-fast"
+								className="!h-20 !min-h-0 w-full flex-col rounded-lg border border-dashed border-line-strong hover:border-primary/40 transition-colors duration-fast"
 								onClick={() => fileInputRef.current?.click()}
 								onDragOver={(e) => e.preventDefault()}
 								onDrop={handleDrop}
@@ -266,7 +266,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 								<SvgIcon
 									name="image"
 									size={20}
-									className="text-ink/25 mb-1"
+									className="text-ink-faint mb-1"
 								/>
 								<span className="text-xs text-ink-muted">
 									点击上传或拖拽图片
@@ -333,7 +333,7 @@ function AssetCard({
 	isUsing: boolean;
 }) {
 	return (
-		<div className="card-doodle p-2 bg-paper-200 border-2 border-ink/10 hover:border-primary/40 transition-colors duration-fast">
+		<div className="card-doodle p-2 bg-paper-200 border border-line hover:border-primary/40 transition-colors duration-fast">
 			<figure className="h-32 bg-paper-300 overflow-hidden">
 				{asset.image_url ? (
 					<img
@@ -343,14 +343,14 @@ function AssetCard({
 						loading="lazy"
 					/>
 				) : (
-					<div className="flex items-center justify-center w-full h-full text-ink/20">
+					<div className="flex items-center justify-center w-full h-full text-ink-faint">
 						<SvgIcon name="image" size={32} />
 					</div>
 				)}
 			</figure>
 			<div className="flex flex-col gap-2 p-4 p-2 gap-1">
 				<div className="flex items-center gap-1">
-					<span className="badge-doodle text-xs px-1.5 py-0.5 bg-transparent text-ink border-ink/20 shrink-0">
+					<span className="badge-doodle text-xs px-1.5 py-0.5 bg-transparent text-ink border-line-strong shrink-0">
 						{asset.asset_type === "character"
 							? "角色"
 							: asset.asset_type === "scene"
@@ -453,13 +453,13 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 				labelledBy="asset-drawer-title"
 				className="w-72"
 			>
-				<div className="flex items-center justify-between border-b-2 border-ink/10 px-2.5 py-2">
+				<div className="flex items-center justify-between border-b border-line px-2.5 py-2">
 					<div className="flex items-center gap-1.5">
 						<SvgIcon name="archive" size={14} className="text-primary" />
 						<h3 id="asset-drawer-title" className="m-0 text-sm font-bold">
 							资产库
 						</h3>
-						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-ink/15 tabular-nums">
+						<span className="badge-doodle text-xs px-1.5 py-0.5 bg-paper-100/80 text-ink-muted border-line tabular-nums">
 							{data?.total ?? 0}
 						</span>
 					</div>
@@ -486,14 +486,14 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 					</div>
 				</div>
 
-				<div className="flex border-b-2 border-ink/10">
+				<div className="flex border-b border-line">
 					{ASSET_TABS.map((tab) => (
 						<PlainButton
 							key={tab.key}
-							className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium transition-colors duration-fast border-b-2 -mb-[2px] ${
+							className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium transition-colors duration-fast border-b-2 -mb-0.5 ${
 								activeTab === tab.key
 									? "border-primary text-primary"
-									: "border-transparent text-ink-muted hover:text-ink/80"
+									: "border-transparent text-ink-muted hover:text-ink-muted"
 							}`}
 							onClick={() => setActiveTab(tab.key)}
 						>
@@ -528,7 +528,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 							<SvgIcon
 								name="layers"
 								size={24}
-								className="mx-auto mb-2 text-ink/15"
+								className="mx-auto mb-2 text-ink-faint"
 							/>
 							{search ? (
 								<p>没有匹配的资产</p>

@@ -31,7 +31,7 @@ export function Toast({ toast }: ToastProps) {
   return (
     <div
       className={`
-        relative min-w-[16rem] max-w-[22rem] border-2 bg-paper-100 p-3
+        relative min-w-64 max-w-[22rem] rounded-lg border bg-paper-100 p-3
         shadow-panel ${typeStyles[toast.type]}
         animate-slide-in-right
       `}
@@ -50,7 +50,7 @@ export function Toast({ toast }: ToastProps) {
         </IconButton>
       </div>
 
-      <p className="m-0 text-xs leading-snug text-ink/75">
+      <p className="m-0 text-xs leading-snug text-ink-muted">
         {toast.message}
       </p>
 

@@ -43,7 +43,7 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 	};
 
 	const fieldClass =
-		"input-doodle  h-9 touch-target-dense w-full border border-ink/25 bg-paper-100 px-2.5 font-mono text-xs";
+		"input-doodle  h-9 touch-target-dense w-full border border-line-strong bg-paper-100 px-2.5 font-mono text-xs";
 
 	if (isSensitive) {
 		const displayValue = isRevealed ? value : isMasked ? value : "••••••••";

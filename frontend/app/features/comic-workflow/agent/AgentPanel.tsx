@@ -39,7 +39,7 @@ export function AgentPanel({
 	if (collapsed) {
 		return (
 			<PlainButton
-				className="absolute left-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-ink/15 bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
+				className="absolute left-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
 				onClick={() => onCollapsedChange(false)}
 				aria-label="展开活动面板"
 				aria-expanded={false}
@@ -56,11 +56,11 @@ export function AgentPanel({
 
 	return (
 		<aside
-			className="absolute bottom-24 left-3 top-3 z-panel flex w-[360px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-lg border border-ink/15 bg-surface shadow-panel"
+			className="absolute bottom-24 left-3 top-3 z-panel flex w-panel-agent max-w-panel flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-panel"
 			aria-label="工作流活动"
 			data-shell="agent-panel"
 		>
-			<div className="flex items-center justify-between gap-1 border-b border-ink/10 py-1 pl-3 pr-1">
+			<div className="flex items-center justify-between gap-1 border-b border-line py-1 pl-3 pr-1">
 				<div className="flex items-center gap-1" role="tablist" aria-label="Agent 面板">
 					{(
 						[

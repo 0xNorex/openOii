@@ -64,7 +64,7 @@ function ProviderBody({
 	return (
 		<>
 			{hasProviderItem && (
-				<div className="rounded-md border border-ink/15 bg-paper-200/70 p-2.5">
+				<div className="rounded-md border border-line bg-paper-200/70 p-2.5">
 					<div className="mb-2 flex items-center gap-1.5">
 						<span className="font-mono text-xs font-bold">{name}</span>
 						<span className="badge-doodle bg-primary text-primary-content border-primary/30 text-xs px-1.5 py-0.5">必选</span>
@@ -74,7 +74,7 @@ function ProviderBody({
 							<label
 								key={option.value}
 								className={`flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast ${
-									provider === option.value ? "border-info bg-info/10" : "border-ink/20 hover:bg-paper-300"
+									provider === option.value ? "border-info bg-info/10" : "border-line-strong hover:bg-paper-300"
 								}`}
 							>
 								<input

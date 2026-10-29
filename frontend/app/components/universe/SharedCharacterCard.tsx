@@ -38,8 +38,8 @@ export function SharedCharacterCard({
 						/>
 					</div>
 				) : (
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ink/10 bg-paper-200">
-						<UserIcon className="h-4 w-4 text-ink/30" aria-hidden="true" />
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-paper-200">
+						<UserIcon className="h-4 w-4 text-ink-faint" aria-hidden="true" />
 					</div>
 				)}
 				<div className="min-w-0 flex-1">

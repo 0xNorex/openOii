@@ -25,7 +25,7 @@ interface PromptBarProps {
 }
 
 const chipClass =
-	"inline-flex max-w-[12rem] shrink-0 items-center gap-0.5 truncate rounded-full border px-2 py-0.5 text-xs font-semibold";
+	"inline-flex max-w-48 shrink-0 items-center gap-0.5 truncate rounded-full border px-2 py-0.5 text-xs font-semibold";
 
 export function PromptBar({
 	selection,
@@ -85,8 +85,8 @@ export function PromptBar({
 		<footer
 			className={
 				floating
-					? "absolute bottom-3 left-1/2 z-panel w-[min(720px,calc(100%-1.5rem))] -translate-x-1/2 rounded-lg border border-ink/15 bg-surface p-1.5 shadow-panel"
-					: "z-panel shrink-0 border-t border-ink/15 bg-surface px-2 py-1.5"
+					? "absolute bottom-3 left-1/2 z-panel w-[min(720px,calc(100%-1.5rem))] -translate-x-1/2 rounded-lg border border-line bg-surface p-1.5 shadow-panel"
+					: "z-panel shrink-0 border-t border-line bg-surface px-2 py-1.5"
 			}
 			data-shell="prompt-bar"
 		>
@@ -126,7 +126,7 @@ export function PromptBar({
 						</span>
 					))
 				) : awaitingConfirm && gateLabel ? null : (
-					<span className={`${chipClass} border-ink/15 text-ink-muted`}>整个项目</span>
+					<span className={`${chipClass} border-line text-ink-muted`}>整个项目</span>
 				)}
 			</div>
 			<MessageInput

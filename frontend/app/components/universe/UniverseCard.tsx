@@ -27,7 +27,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 			<Link to={`/universes/${universe.id}`} className="block">
 				<Card className="h-full !p-3 transition-colors duration-fast hover:border-primary sm:!p-4">
 					{universe.cover_image_url ? (
-						<div className="-mx-1 -mt-1 mb-3 h-24 overflow-hidden border border-ink/10">
+						<div className="-mx-1 -mt-1 mb-3 h-24 overflow-hidden border border-line">
 							<img
 								src={universe.cover_image_url}
 								alt={universe.name}
@@ -38,7 +38,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 							/>
 						</div>
 					) : (
-						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-ink/10 bg-paper-200 p-2">
+						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-line bg-paper-200 p-2">
 							<SparklesIcon className="h-6 w-6 text-primary" aria-hidden="true" />
 							<span className="font-mono text-xs uppercase tracking-widest text-ink-muted">universe / {universe.id}</span>
 						</div>
@@ -63,11 +63,11 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 					)}
 
 					<div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-ink-muted">
-						<span className="inline-flex items-center gap-1 rounded-full border border-ink/10 bg-paper-200 px-1.5 py-0.5 tabular-nums">
+						<span className="inline-flex items-center gap-1 rounded-full border border-line bg-paper-200 px-1.5 py-0.5 tabular-nums">
 							<SparklesIcon className="h-3 w-3" aria-hidden="true" />
 							{universe.projects_count} 章节
 						</span>
-						<span className="inline-flex items-center gap-1 rounded-full border border-ink/10 bg-paper-200 px-1.5 py-0.5 tabular-nums">
+						<span className="inline-flex items-center gap-1 rounded-full border border-line bg-paper-200 px-1.5 py-0.5 tabular-nums">
 							<UsersIcon className="h-3 w-3" aria-hidden="true" />
 							{universe.shared_characters_count} 角色
 						</span>

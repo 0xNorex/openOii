@@ -34,7 +34,7 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 	useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
 
 	return (
-		<details className="border-t border-ink/10 pt-2">
+		<details className="border-t border-line pt-2">
 			<summary className="touch-target-dense cursor-pointer py-2 text-xs font-bold">画面设置（可选）· 风格、宇宙、参考图、镜头与角色</summary>
 			<div className="grid gap-3 pt-2 sm:grid-cols-2">
 				<label className="block text-xs font-bold">
@@ -103,7 +103,7 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 						{previews.map((url, index) => (
 							<PlainButton
 								key={url}
-								className="group relative h-10 w-10 border border-ink/15"
+								className="group relative h-10 w-10 border border-line"
 								onClick={() => set({ referenceFiles: value.referenceFiles.filter((_, i) => i !== index) })}
 								aria-label={`移除参考图 ${index + 1}`}
 								disabled={disabled}

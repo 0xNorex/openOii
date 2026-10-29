@@ -352,7 +352,7 @@ function FlowInner({
 				aria-live="polite"
 				className={
 					announcement
-						? "absolute left-1/2 top-3 z-panel m-0 -translate-x-1/2 rounded-full border border-ink/15 bg-surface px-3 py-1 text-xs text-ink shadow-panel"
+						? "absolute left-1/2 top-3 z-panel m-0 -translate-x-1/2 rounded-full border border-line bg-surface px-3 py-1 text-xs text-ink shadow-panel"
 						: "sr-only"
 				}
 			>

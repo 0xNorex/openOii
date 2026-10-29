@@ -162,7 +162,7 @@ export function UniverseDetailPage() {
 			<PageShell data-shell="universe-detail-error">
 				<TopBar />
 				<div className="flex flex-1 items-center justify-center p-4">
-					<div className="flex min-h-[10rem] w-full max-w-md flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-4 text-center">
+					<div className="flex min-h-40 w-full max-w-md flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-4 text-center">
 						<div>
 							<p className="m-0 text-md font-bold text-error-fg">
 								宇宙加载失败
@@ -323,7 +323,7 @@ export function UniverseDetailPage() {
 									.map((ch) => (
 										<div
 											key={ch.id}
-											className="flex min-h-10 items-center justify-between gap-2 rounded-md border border-ink/10 bg-paper-200/50 px-2 py-1.5 transition-colors duration-fast hover:bg-paper-200"
+											className="flex min-h-10 items-center justify-between gap-2 rounded-md border border-line bg-paper-200/50 px-2 py-1.5 transition-colors duration-fast hover:bg-paper-200"
 										>
 											<div className="flex min-w-0 items-center gap-2">
 												{ch.chapter_number != null ? (
@@ -331,7 +331,7 @@ export function UniverseDetailPage() {
 														第{ch.chapter_number}章
 													</span>
 												) : (
-													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-ink/15 text-xs px-2 py-0.5 shrink-0">
+													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-line text-xs px-2 py-0.5 shrink-0">
 														未编号
 													</span>
 												)}
@@ -345,7 +345,7 @@ export function UniverseDetailPage() {
 													#{ch.project_id}
 												</span>
 												{!ch.is_main_story ? (
-													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-ink/15 text-xs px-1.5 py-0.5 shrink-0">
+													<span className="badge-doodle bg-paper-100/80 text-ink-muted border-line text-xs px-1.5 py-0.5 shrink-0">
 														外传
 													</span>
 												) : null}

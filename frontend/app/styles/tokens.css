@@ -44,6 +44,9 @@
      * subtle: 纯装饰标签，≥3:1 */
     --ink-muted: #5b5b66;
     --ink-subtle: rgb(var(--color-ink) / 0.55);
+    --ink-faint: rgb(var(--color-ink) / 0.25); /* 仅装饰性图形（空状态图标），不承载文字 */
+    --line: rgb(var(--color-ink) / 0.12); /* 容器/分隔线 hairline，随底色自适应 */
+    --line-strong: rgb(var(--color-ink) / 0.22); /* 虚线投放区、强调分隔 */
 
     /* —— Spacing (dense default; use for new chrome) —— */
     --space-0: 0;
@@ -88,10 +91,15 @@
     --duration-fast: 150ms;
     --duration-normal: 200ms;
     --duration-slow: 300ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* 进入/状态变化 */
 
     /* —— Workbench Shell geometry ——
      * 画布占满 TopBar 以下的全部空间；Agent 面板与检查器都浮在画布上。 */
     --workbench-header: 2.75rem; /* TopBar */
+    --panel-agent: 22.5rem; /* 360 Agent 面板 */
+    --panel-inspector: 20rem; /* 320 检查器 */
+    --panel-max: calc(100% - 1.5rem); /* 浮层面板在窄屏不顶边 */
+    --toolbar-offset: 6.75rem; /* 画布工具条悬在提示栏上方 */
     /* 画布几何（卡片/九宫格/frame 内距）的 SSOT 是 layoutComicWorkflow.ts：
      * 画布消费 px 数值，这里不保留 rem 副本以免两套数字漂移。 */
 
