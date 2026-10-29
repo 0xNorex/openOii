@@ -553,13 +553,19 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								<InboxPanel items={inboxItems} actions={inboxActions} />
 							) : null
 						}
-						activity={
-							<ChatPanel
-								projectId={projectId}
-								onCancel={handleCancel}
-								isGenerating={hasActiveRun}
-								limit={5}
-							/>
+						activity={<ChatPanel projectId={projectId} isGenerating={hasActiveRun} limit={5} />}
+						primaryAction={
+							hasActiveRun && !runAwaitingConfirm ? (
+								<Button
+									size="sm"
+									variant="ghost"
+									onClick={handleCancel}
+									className="h-8 min-h-8 gap-1 px-2 text-error-fg hover:bg-error/10"
+									aria-label="停止生成"
+								>
+									<SvgIcon name="stop" size={14} /> 停止
+								</Button>
+							) : null
 						}
 					/>
 				) : null}

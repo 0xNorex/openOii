@@ -84,7 +84,7 @@ export function PromptBar({
 	const placeholder = awaitingConfirm
 		? "说明需要修改的地方…"
 		: isGenerating
-			? "当前阶段进行中，待审批后可提交修改"
+			? "生成中，到下一个确认点时可以提修改意见"
 			: selection.length > 0
 				? "描述如何调整所选内容…"
 				: "描述你想生成的内容…";

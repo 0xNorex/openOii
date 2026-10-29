@@ -32,6 +32,8 @@ interface MobileWorkbenchPreviewProps {
 	inbox?: ReactNode;
 	/** 最近动态（页面最底部）。 */
 	activity?: ReactNode;
+	/** 状态卡唯一的操作（生成中是「停止」）；闸门、恢复的按钮在待处理卡里 */
+	primaryAction?: ReactNode;
 }
 
 export function MobileWorkbenchPreview({
@@ -42,6 +44,7 @@ export function MobileWorkbenchPreview({
 	characters,
 	inbox,
 	activity,
+	primaryAction,
 }: MobileWorkbenchPreviewProps) {
 	const videoSrc = getStaticUrl(videoUrl);
 	// 与桌面成片下载同源：后端 final-video 端点
@@ -64,9 +67,10 @@ export function MobileWorkbenchPreview({
 						className={`h-2.5 w-2.5 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
 						aria-hidden="true"
 					/>
-					<h2 className="m-0 text-sm font-bold">
+					<h2 className="m-0 min-w-0 flex-1 text-sm font-bold">
 						{studioStatusText(studioStatus)}
 					</h2>
+					{primaryAction ? <div className="shrink-0">{primaryAction}</div> : null}
 				</div>
 				<p className="m-0 mt-1 text-xs text-ink-muted">
 					{studioStatus.description}

@@ -344,3 +344,51 @@ test("mobile names the step and shows where it is in the six", async ({ page }) 
 	await expect(page.getByRole("heading", { name: "待确认 · 分镜脚本" })).toBeVisible();
 	await expect(page.getByLabel("第 3 步，共 6 步")).toBeVisible();
 });
+
+test("mobile while running: one status card with the only 停止, and the input says when feedback is possible", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await mockServer(page, control("running"));
+	await page.goto("/project/7");
+
+	await expect(page.getByRole("heading", { name: /^生成中/ })).toBeVisible();
+	await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(1);
+	await expect(page.getByPlaceholder("生成中，到下一个确认点时可以提修改意见")).toBeVisible();
+	await expect(page.getByPlaceholder(/待审批后可提交修改/)).toHaveCount(0);
+});
+
+test("mobile at a gate has no 停止 and the input asks for change notes", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await mockServer(page, control("waiting_for_approval"));
+	await page.goto("/project/7");
+
+	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
+	await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+	await expect(page.getByPlaceholder("说明需要修改的地方…")).toBeVisible();
+});
+
+test("version compare opens on 当前 vs 上一版 and shows the current image", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	const characters = [{ id: 1, project_id: 7, name: "小曦", description: "便利店常客", image_url: "/static/x.png", approval_state: "approved", revision: 1 }];
+	await mockServer(page, null, characters);
+	await page.route("**/static/x.png", (route) => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64") }));
+	await page.route("**/api/v1/projects/7/versions**", (route) =>
+		route.fulfill({
+			contentType: "application/json",
+			body: JSON.stringify({
+				entity_type: "character",
+				entity_id: 1,
+				versions: [{ id: 1, entity_type: "character", entity_id: 1, version: 1, trigger: "generation", created_at: "2026-10-29T00:00:00Z", snapshot: { name: "小曦", description: "便利店常客", image_url: null } }],
+			}),
+		}),
+	);
+	await page.goto("/project/7");
+	await page.getByRole("button", { name: "工作台工具" }).click();
+	await page.getByRole("menuitem", { name: "打开版本对比" }).click();
+
+	const dialog = page.getByRole("dialog", { name: "版本对比" });
+	await expect(dialog.getByText("新 · 当前")).toBeVisible();
+	await expect(dialog.getByText("旧 · v1 · 生成")).toBeVisible();
+	await expect(dialog.getByRole("img", { name: "新 · 当前" })).toBeVisible();
+	await expect(dialog.getByText("这一版还没有图")).toBeVisible();
+	await expect(dialog.getByText(/内容相同/)).toHaveCount(0);
+});

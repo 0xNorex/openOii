@@ -20,7 +20,8 @@ const EMPTY_MESSAGES: AgentMessage[] = [];
 
 interface ChatPanelProps {
 	projectId: number;
-	onCancel: () => void;
+	/** 不传时不画「停止」（移动端的停止在顶部状态卡里，只留一个） */
+	onCancel?: () => void;
 	isGenerating: boolean;
 	/** Only show the newest N entries (mobile summary). */
 	limit?: number;
@@ -130,6 +131,7 @@ export function ChatPanel({
               </span>
             )}
           </div>
+          {onCancel ? (
           <Button
             size="sm"
             variant="ghost"
@@ -139,6 +141,7 @@ export function ChatPanel({
           >
             <SvgIcon name="stop" size={14} /> 停止
           </Button>
+          ) : null}
         </div>
       )}
 
