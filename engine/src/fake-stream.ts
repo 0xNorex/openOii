@@ -66,10 +66,12 @@ export function fakeRespond(system: string, prompt: string): string {
           (hint): hint is string => typeof hint === "string" && hint.trim().length > 0,
         )
       : [];
+    // No visual_notes: like a terse real plan, so fake runs also exercise
+    // (and stream) the character visual design call before each portrait.
     const defaults = [
-      { name: "小欧", description: "好奇的开发者，蓝色卫衣。", visual_notes: "清爽线条" },
-      { name: "调试精灵", description: "发光的小精灵，爱提示。", visual_notes: "荧光轮廓" },
-      { name: "时间线猫", description: "踩着时间线的猫，慵懒可靠。", visual_notes: "圆滚滚轮廓" },
+      { name: "小欧", description: "好奇的开发者，蓝色卫衣。" },
+      { name: "调试精灵", description: "发光的小精灵，爱提示。" },
+      { name: "时间线猫", description: "踩着时间线的猫，慵懒可靠。" },
     ];
     const characters = hints.length
       ? hints.map((hint) => {
@@ -77,7 +79,6 @@ export function fakeRespond(system: string, prompt: string): string {
           return {
             name: (description.length ? name ?? hint : hint).trim(),
             description: description.join("：").trim() || `${hint.trim()}，参与故事的角色。`,
-            visual_notes: "清晰的发型、服装与标志性配饰",
           };
         })
       : defaults;

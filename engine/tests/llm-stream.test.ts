@@ -24,7 +24,12 @@ describe("readableStreamText", () => {
 
   it("drops a dangling escape in the open value", () => {
     expect(readableStreamText('{"summary":"第一行\\')).toBe("第一行");
-    expect(readableStreamText('{"summary":"猫\\u72')).toBe("猫");
+    expect(readableStreamText('{"summary":"三只猫\\u72')).toBe("三只猫");
+  });
+
+  it("hides short labels such as act titles", () => {
+    const raw = '{"acts":[{"act":1,"title":"起","summary":"主角启动流程。"},{"title":"承转","summary":"逐步验证"';
+    expect(readableStreamText(raw)).toBe("主角启动流程。 · 逐步验证");
   });
 
   it("passes plain text through", () => {
@@ -42,9 +47,9 @@ describe("tailCodePoints", () => {
 });
 
 describe("LlmStreamSink", () => {
-  it("throttles frames and keeps only the final one", () => {
+  it("throttles frames and each frame replaces the earlier ones", () => {
     const published: Array<LlmStreamEvent & { seq: number }> = [];
-    const compacted: Array<[string, number]> = [];
+    const compacted: number[] = [];
     let now = 0;
     const sink = new LlmStreamSink(
       {
@@ -52,22 +57,55 @@ describe("LlmStreamSink", () => {
           published.push({ ...event, seq: published.length + 1 });
           return published.length;
         },
-        compact: (id, keep) => compacted.push([id, keep]),
+        compact: (keep) => compacted.push(keep),
       },
       "outline",
       () => now,
       100,
+      (chars) => chars / 100,
     );
     const update = (u: LlmStreamUpdate) => sink.update(u);
     update({ thinking: "想", text: "" });
     now = 50;
     update({ thinking: "想一想", text: "" });
     now = 120;
-    update({ thinking: "想一想", text: '{"title":"猫' });
+    update({ thinking: "想一想", text: '{"title":"午后的猫' });
     sink.end("done");
     expect(published.map((e) => e.status)).toEqual(["streaming", "streaming", "done"]);
-    expect(published[1]?.text).toBe("猫");
-    expect(compacted).toEqual([[published[0]!.stream_id, 3]]);
+    expect(published[1]?.text).toBe("午后的猫");
+    expect(compacted).toEqual([1, 2, 3]);
+    expect(published.map((e) => e.progress)).toEqual([0, 0.14, 0.14]);
+  });
+});
+
+describe("compactStreamEvents", () => {
+  it("keeps the newest frame of the run and every error frame", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openoii-compact-"));
+    try {
+      const file = join(dir, "o.db");
+      const raw = new SqliteDatabase(file);
+      raw.exec(SCHEMA);
+      installEngineRuntimeSchema(raw);
+      raw.close();
+      const db = new EngineDatabase(file);
+      const frame = (stream_id: string, status: string) => ({ stream_id, agent: "plan", status });
+      db.appendEvent(1, 1, "llm_stream", frame("a", "done"));
+      db.appendEvent(1, 1, "llm_stream", frame("b", "error"));
+      db.appendEvent(1, 1, "run_message", { content: "keep" });
+      db.appendEvent(2, 1, "llm_stream", frame("other-run", "done"));
+      const keep = db.appendEvent(1, 1, "llm_stream", frame("c", "streaming"));
+      db.compactStreamEvents(1, keep);
+      const left = db.eventsForRun(1).map((e) => [e.type, (JSON.parse(e.payload) as { stream_id?: string }).stream_id]);
+      expect(left).toEqual([
+        ["llm_stream", "b"],
+        ["run_message", undefined],
+        ["llm_stream", "c"],
+      ]);
+      expect(db.eventsForRun(2)).toHaveLength(1);
+      db.db.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

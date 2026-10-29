@@ -1,7 +1,8 @@
 /**
  * Live preview of an LLM call: throttled `llm_stream` events carrying the tail
- * of the thinking and of the human-readable part of the reply. When the call
- * ends, only the final event is kept, so streaming does not bloat the event log.
+ * of the thinking and of the human-readable part of the reply. Frames are
+ * snapshots, so each new one replaces the run's earlier frames in the event
+ * log (error frames stay): streaming never grows the log by more than one row.
  */
 import { randomUUID } from "node:crypto";
 import type { LlmStreamUpdate } from "../llm.js";
@@ -19,13 +20,15 @@ export interface LlmStreamEvent {
   text: string;
   chars: number;
   error?: string;
+  /** Overall run progress (0..1) estimated from the output so far. */
+  progress?: number;
 }
 
 export interface LlmStreamPublisher {
   /** Append a durable event; returns its seq. */
   publish(event: LlmStreamEvent): number;
-  /** Drop earlier events of this stream, keeping `keepSeq`. */
-  compact(streamId: string, keepSeq: number): void;
+  /** Drop the run's earlier non-error `llm_stream` events, keeping `keepSeq`. */
+  compact(keepSeq: number): void;
 }
 
 /** Last `max` code points, never splitting a surrogate pair. */
@@ -36,10 +39,12 @@ export function tailCodePoints(text: string, max = STREAM_TAIL_CHARS): string {
 }
 
 const IDENTIFIER = /^[A-Za-z0-9_.:/-]*$/;
+/** Shorter values are labels (「起」「承转」, act numbers), not prose. */
+const MIN_VALUE_CHARS = 3;
 
 /**
  * The agents answer in JSON. Show the string values (titles, summaries,
- * descriptions) and hide keys, punctuation and identifier-like values. The
+ * descriptions) and hide keys, punctuation, short labels and identifier-like values. The
  * last value may still be open; it is shown as it grows.
  */
 export function readableStreamText(raw: string): string {
@@ -61,7 +66,7 @@ export function readableStreamText(raw: string): string {
       // keep the raw slice
     }
     value = value.replace(/\s+/g, " ").trim();
-    if (!value || IDENTIFIER.test(value)) continue;
+    if (Array.from(value).length < MIN_VALUE_CHARS || IDENTIFIER.test(value)) continue;
     values.push(value);
   }
   return values.join(" · ");
@@ -78,6 +83,7 @@ export class LlmStreamSink {
     private readonly agent: string,
     private readonly now: () => number = Date.now,
     private readonly throttleMs = STREAM_THROTTLE_MS,
+    private readonly progressFor?: (chars: number) => number,
   ) {}
 
   /** Called on every delta; publishes at most once per throttle window. */
@@ -90,14 +96,13 @@ export class LlmStreamSink {
     this.flush("streaming");
   };
 
-  /** Final state; earlier frames of this stream are compacted away. */
+  /** Final state of the call. */
   end(status: "done" | "error", error?: string): void {
     if (this.lastEmitAt === -Infinity && !this.pending && status === "done") return;
-    const seq = this.flush(status, error);
-    this.publisher.compact(this.streamId, seq);
+    this.flush(status, error);
   }
 
-  private flush(status: LlmStreamStatus, error?: string): number {
+  private flush(status: LlmStreamStatus, error?: string): void {
     this.pending = false;
     const event: LlmStreamEvent = {
       stream_id: this.streamId,
@@ -108,6 +113,7 @@ export class LlmStreamSink {
       chars: this.last.text.length,
     };
     if (error) event.error = error;
-    return this.publisher.publish(event);
+    if (this.progressFor) event.progress = this.progressFor(event.chars);
+    this.publisher.compact(this.publisher.publish(event));
   }
 }

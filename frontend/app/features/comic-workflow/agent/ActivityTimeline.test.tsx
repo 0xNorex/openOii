@@ -112,4 +112,25 @@ describe("ActivityTimeline", () => {
 		expect(screen.getByRole("alert")).toHaveTextContent("连接断开");
 		expect(screen.getByTestId("live-stream").querySelector(".stream-caret")).toBeNull();
 	});
+
+	it("流式输出并入正在进行的同一步，不再重复「进行中」和「正在生成…」行", () => {
+		const live = { streamId: "s1", agent: "outline", status: "streaming" as const, thinking: "", text: "午后的猫", chars: 12 };
+		const entries = [
+			entry("a"),
+			entry("step", { agent: "outline", agentLabel: "大纲", title: "生成故事大纲", status: "running" }),
+			entry("msg", { kind: "message", agent: "outline", agentLabel: "大纲", title: "正在生成故事大纲…" }),
+		];
+		const { container, rerender } = render(<ActivityTimeline entries={entries} live={live} />);
+		const row = screen.getByTestId("live-stream");
+		expect(row).toHaveTextContent("大纲 · 正在输出");
+		expect(row).toHaveTextContent("生成故事大纲");
+		expect(container).not.toHaveTextContent("进行中");
+		expect(container).not.toHaveTextContent("正在生成故事大纲…");
+		expect(container.querySelectorAll("li[data-status]")).toHaveLength(2);
+
+		rerender(<ActivityTimeline entries={entries} live={null} />);
+		expect(screen.queryByTestId("live-stream")).toBeNull();
+		expect(container).toHaveTextContent("大纲 · 进行中");
+		expect(container).toHaveTextContent("正在生成故事大纲…");
+	});
 });

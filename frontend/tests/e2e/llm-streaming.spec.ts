@@ -43,7 +43,7 @@ const activeRun = {
 };
 
 async function setup(page: Page) {
-	const state = { running: false, cancelCalls: 0 };
+	const state = { running: false, cancelCalls: 0, status: "active" };
 	await page.addInitScript(() => {
 		class MockWebSocket {
 			static instances: MockWebSocket[] = [];
@@ -81,7 +81,7 @@ async function setup(page: Page) {
 			route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 		if (pathname === "/api/v1/config") return json([]);
 		if (pathname === "/api/v1/projects") return json({ items: [project], total: 1 });
-		if (pathname === "/api/v1/projects/7") return json(project);
+		if (pathname === "/api/v1/projects/7") return json({ ...project, status: state.status });
 		if (/^\/api\/v1\/projects\/7\/(characters|shots|messages)$/.test(pathname)) return json([]);
 		if (pathname === "/api/v1/projects/7/runs/current") return json(state.running ? activeRun : null);
 		if (pathname === "/api/v1/runs/901/cancel" && method === "POST") {
@@ -94,8 +94,9 @@ async function setup(page: Page) {
 	return state;
 }
 
-async function open(page: Page) {
-	await page.goto("/project/7");
+async function open(page: Page, reload = false) {
+	if (reload) await page.reload();
+	else await page.goto("/project/7");
 	await page.waitForLoadState("networkidle");
 	await expect.poll(() => page.evaluate(() => window.__mockWs.count())).toBeGreaterThan(0);
 	const pill = page.getByRole("button", { name: "展开活动面板" });
@@ -226,4 +227,70 @@ test("an error mid-stream keeps the partial output and says why", async ({ page 
 	await expect(page.getByTestId("live-stream-text")).toHaveText(PART_1);
 	await expect(row.locator(".stream-caret")).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+
+	// A reload of the failed project keeps the cut-off output and the reason.
+	state.running = false;
+	state.status = "failed";
+	await open(page, true);
+	// A failed project opens on 待处理; the cut-off output is under 活动.
+	await page.getByRole("tab", { name: "活动" }).click();
+	await expect(row).toHaveAttribute("data-status", "error");
+	await expect(row.getByRole("alert")).toHaveText("llm error: 连接被重置");
+	await expect(page.getByTestId("live-stream-text")).toHaveText(PART_1);
+
+	// The next run starts clean, and a later reload does not bring the old row back.
+	await startRun(page, state);
+	await expect(row).toHaveCount(0);
+	state.running = false;
+	await open(page, true);
+	await page.getByRole("tab", { name: "活动" }).click();
+	await expect(page.getByRole("tab", { name: "活动" })).toHaveAttribute("aria-selected", "true");
+	await expect(row).toHaveCount(0);
+});
+
+test("the stream folds into its running step, moves progress, and hides bare separators", async ({ page }) => {
+	const state = await setup(page);
+	await open(page);
+	await startRun(page, state);
+	const message = (role: string, content: string) => ({
+		type: "run_message",
+		data: { agent: "outline", role, content, isLoading: true, progress: 0, project_id: 7, run_id: 901 },
+	});
+	await dispatch(page, message("step", "生成故事大纲"));
+	await dispatch(page, message("assistant", "正在生成故事大纲…"));
+	const timeline = page.getByRole("list", { name: "活动时间线" });
+	await expect(timeline).toContainText("大纲 · 进行中");
+
+	await dispatch(page, frame({ thinking: THINKING, text: PART_1, chars: 40, progress: 0.05 }));
+	const row = page.getByTestId("live-stream");
+	await expect(row).toContainText("大纲 · 正在输出");
+	await expect(row).toContainText("生成故事大纲");
+	// One row for the step: no separate 「进行中」 or 「正在生成…」 lines.
+	await expect(timeline).not.toContainText("进行中");
+	await expect(timeline).not.toContainText("正在生成故事大纲…");
+	await expect(timeline.locator(":scope > li[data-status]")).toHaveCount(1);
+	// The agent's own "progress: 0" no longer pins the run at 0%.
+	await expect(page.getByText(/规划 · 5%/).first()).toBeVisible();
+
+	// A new value is typed out without a bare " · " ever at the tail.
+	const tails = await page.evaluate(async (next) => {
+		const el = document.querySelector("[data-testid='live-stream-text']")!;
+		window.__mockWs.dispatch({
+			type: "llm_stream",
+			data: { stream_id: "s1", agent: "outline", status: "streaming", thinking: "", text: next, chars: 60 },
+		});
+		const seen: string[] = [];
+		const until = performance.now() + 600;
+		while (performance.now() < until) {
+			seen.push(el.textContent ?? "");
+			await new Promise(requestAnimationFrame);
+		}
+		return seen;
+	}, `${PART_1} · 水碗空了`);
+	expect(tails.at(-1)).toBe(`${PART_1} · 水碗空了`);
+	expect(tails.filter((t) => /·\s*$/.test(t))).toEqual([]);
+
+	await dispatch(page, frame({ status: "done", text: PART_1 }));
+	await expect(row).toHaveCount(0);
+	await expect(timeline).toContainText("大纲 · 进行中");
 });

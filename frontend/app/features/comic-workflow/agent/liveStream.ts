@@ -14,6 +14,37 @@ export interface LiveStream {
 const ANCHOR = 8;
 
 /**
+ * Readable values arrive joined by " · ". While a new value is still being
+ * typed, or the tail window cut through one, a bare separator can sit at
+ * either end; it carries nothing, so it is not shown.
+ */
+export function tidyStreamText(text: string): string {
+	return text.replace(/^\s*·\s*/, "").replace(/\s*·\s*$/, "");
+}
+
+const FAILED_KEY = "openoii.failedStream.";
+
+/** The interrupted output survives a reload of a failed project (same tab). */
+export function rememberFailedStream(projectId: number, stream: LiveStream | null): void {
+	try {
+		if (stream?.status === "error") sessionStorage.setItem(FAILED_KEY + projectId, JSON.stringify(stream));
+		else sessionStorage.removeItem(FAILED_KEY + projectId);
+	} catch {
+		// storage unavailable: the row just does not survive a reload
+	}
+}
+
+export function recallFailedStream(projectId: number): LiveStream | null {
+	try {
+		const raw = sessionStorage.getItem(FAILED_KEY + projectId);
+		const stream = raw ? (JSON.parse(raw) as LiveStream) : null;
+		return stream?.status === "error" && typeof stream.streamId === "string" ? stream : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Split the next snapshot into what is already on screen and what still has
  * to be typed out. Frames carry a sliding tail, so the old text is located by
  * its last few code points instead of assuming a prefix.

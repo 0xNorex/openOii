@@ -259,7 +259,8 @@ class LlmStreamEventData(BaseModel):
     """Live preview of one LLM call: tails of the thinking and readable text.
 
     Frames are snapshots, not deltas, so a client that joins mid-stream only
-    needs the latest one. The engine keeps only the final frame per stream.
+    needs the latest one. The engine keeps only the run's newest frame (plus
+    error frames) in the event log.
     """
 
     stream_id: str
@@ -269,6 +270,8 @@ class LlmStreamEventData(BaseModel):
     text: str = ""
     chars: int = Field(default=0, ge=0)
     error: str | None = None
+    # Overall run progress estimated from the output so far.
+    progress: float | None = Field(default=None, ge=0, le=1)
 
 
 class VersionCreatedEventData(BaseModel):

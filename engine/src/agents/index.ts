@@ -25,6 +25,7 @@ import {
 } from "../style.js";
 import type { AiOperation } from "../ai-operation.js";
 import { BackendWorker } from "../backend-worker.js";
+import { progressForStage, type StageId } from "../contract.js";
 
 export function targetCheckpointStage(
   kind: "character_image" | "shot_image" | "shot_video",
@@ -77,6 +78,8 @@ export interface StageContext {
   completionInfo: CompletionInfo | null;
   /** Whether the previous critique decided to regenerate (route handling). */
   willRegenerate: boolean;
+  /** Production stage being run; live LLM output advances its progress. */
+  stage?: StageId;
 }
 
 export function extractJson(text: string): Record<string, unknown> {
@@ -107,7 +110,12 @@ async function callLlm(
   prompt: string,
   maxTokens = 8192,
 ): Promise<Record<string, unknown>> {
-  const live = ctx.emitter.llmStream(agent);
+  const stage = ctx.stage;
+  // Rough within-stage estimate from output length; the client only moves it forward.
+  const live = ctx.emitter.llmStream(
+    agent,
+    stage ? (chars) => progressForStage(stage, Math.min(0.9, chars / (maxTokens * 1.5))) : undefined,
+  );
   let res: Awaited<ReturnType<typeof ctx.llm.generate>>;
   try {
     res = await ctx.llm.generate({

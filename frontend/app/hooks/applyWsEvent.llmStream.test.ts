@@ -4,6 +4,7 @@ vi.mock("~/utils/toast", () => ({ toast: { success: vi.fn(), warning: vi.fn(), e
 
 import { applyWsEvent } from "~/hooks/applyWsEvent";
 import { patchRunState, readRunState, resetRunState } from "~/query/runState";
+import { recallFailedStream } from "~/features/comic-workflow/agent/liveStream";
 
 const send = (type: string, data: Record<string, unknown>) =>
 	applyWsEvent(1, { type, data } as never, "manual", vi.fn());
@@ -50,7 +51,27 @@ describe("llm_stream projection", () => {
 			isGenerating: false,
 			liveStream: { status: "error", text: "半句", error: "连接断开" },
 		});
+		expect(recallFailedStream(1)).toMatchObject({ status: "error", text: "半句" });
 		send("run_started", { run_id: 10, project_id: 1 });
+		expect(readRunState(1).liveStream).toBeNull();
+		expect(recallFailedStream(1)).toBeNull();
+	});
+
+	it("frames move the run progress forward only; agent messages do not touch it", () => {
+		patchRunState(1, { progress: 0.1 });
+		send("run_message", { agent: "outline", role: "assistant", content: "正在生成故事大纲…", progress: 0 });
+		expect(readRunState(1).progress).toBe(0.1);
+		send("llm_stream", frame({ text: "午后的猫", progress: 0.05 }));
+		expect(readRunState(1).progress).toBe(0.1);
+		send("llm_stream", frame({ text: "午后的猫醒来", progress: 0.12 }));
+		expect(readRunState(1).progress).toBe(0.12);
+		send("run_message", { agent: "outline", role: "assistant", content: "已完成故事大纲", progress: 1 });
+		expect(readRunState(1).progress).toBe(0.12);
+	});
+
+	it("a gate clears a row whose done frame never arrived", () => {
+		send("llm_stream", frame({ text: "午后的猫" }));
+		send("run_awaiting_confirm", { run_id: 9, agent: "outline", message: "请确认", auto_mode: true });
 		expect(readRunState(1).liveStream).toBeNull();
 	});
 });

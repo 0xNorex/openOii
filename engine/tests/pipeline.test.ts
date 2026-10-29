@@ -81,6 +81,14 @@ describe("pipeline runner (fake providers, auto-mode)", () => {
       shared.updateRun(runId, { confirm_requested: 1 });
     }, 100);
 
+    // Record every llm_stream frame as it is written (the log keeps only the newest).
+    const streamed: Array<{ agent: string; status: string; progress?: number }> = [];
+    const append = edb.appendEvent.bind(edb);
+    edb.appendEvent = ((run, project, type, payload) => {
+      if (type === "llm_stream") streamed.push(payload as (typeof streamed)[number]);
+      return append(run, project, type, payload);
+    }) as typeof edb.appendEvent;
+
     const outcome = await runnerFor(runId).run({ projectId, runId, autoMode: true, userFeedback: "" });
     clearInterval(confirmer);
 
@@ -124,17 +132,19 @@ describe("pipeline runner (fake providers, auto-mode)", () => {
       expect(types, `missing ${expected}`).toContain(expected);
     }
 
-    // Every LLM call streamed; only its final frame is kept in the event log.
+    // Every LLM call streamed, including the character visual design call
+    // during render, and frames carry a run progress estimate.
+    const agents = new Set(streamed.map((f) => f.agent));
+    for (const agent of ["outline", "plan", "render"]) expect(agents, agent).toContain(agent);
+    expect(streamed.every((f) => typeof f.progress === "number")).toBe(true);
+    // Frames are snapshots: the log keeps only the newest one.
     const streams = edb
       .eventsForRun(runId)
       .filter((e) => e.type === "llm_stream")
-      .map((e) => JSON.parse(e.payload) as { stream_id: string; status: string; thinking: string });
-    expect(streams.length).toBeGreaterThan(0);
-    expect(new Set(streams.map((e) => e.stream_id)).size).toBe(streams.length);
-    for (const frame of streams) {
-      expect(frame.status).toBe("done");
-      expect(frame.thinking.length).toBeGreaterThan(0);
-    }
+      .map((e) => JSON.parse(e.payload) as { status: string; thinking: string });
+    expect(streams).toHaveLength(1);
+    expect(streams[0]!.status).toBe("done");
+    expect(streams[0]!.thinking.length).toBeGreaterThan(0);
 
     const messageCount = Number(
       (edb.db.prepare("SELECT COUNT(*) AS n FROM message WHERE run_id = ?").get(runId) as {

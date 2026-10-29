@@ -3,11 +3,11 @@ import { clsx } from "clsx";
 import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
 import type { ActivityEntry } from "./activityTimeline";
-import { formatDuration } from "./activityTimeline";
+import { attachLiveStream, formatDuration } from "./activityTimeline";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MonoRuns } from "~/components/ui/MonoRuns";
 import type { LiveStream } from "./liveStream";
-import { LiveStreamRow } from "./LiveStreamRow";
+import { LiveCharCount, LiveStreamBody, LiveStreamRow, liveStatusLabel } from "./LiveStreamRow";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;
@@ -26,7 +26,8 @@ function StatusDot({ status }: { status: ActivityEntry["status"] }) {
 	);
 }
 
-function EntryRow({ entry }: { entry: ActivityEntry }) {
+/** `live`: this step's LLM call is streaming; its output shows inside the step. */
+function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) {
 	const [open, setOpen] = useState(false);
 	const expanded = open || entry.status === "running";
 
@@ -41,15 +42,22 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 	}
 
 	return (
-		<li className="flex gap-2 py-1" data-activity={entry.kind} data-status={entry.status}>
+		<li
+			className="flex gap-2 py-1"
+			data-activity={entry.kind}
+			data-status={entry.status}
+			{...(live ? { "data-testid": "live-stream", "aria-busy": true } : {})}
+		>
 			<StatusDot status={entry.status} />
 			<div className="min-w-0 flex-1">
 				<div className="flex items-baseline justify-between gap-2">
 					<span className="text-xs font-semibold text-ink-muted">
 						{entry.kind === "user" ? "你" : entry.agentLabel}
-						{entry.status === "running" ? " · 进行中" : null}
+						{live ? ` · ${liveStatusLabel(live)}` : entry.status === "running" ? " · 进行中" : null}
 					</span>
-					{entry.durationMs !== undefined ? (
+					{live ? (
+						<LiveCharCount stream={live} />
+					) : entry.durationMs !== undefined ? (
 						<span className="shrink-0 font-mono text-xs tabular-nums text-ink-muted">
 							{formatDuration(entry.durationMs)}
 						</span>
@@ -91,6 +99,7 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 						</div>
 					</>
 				) : null}
+				{live ? <LiveStreamBody key={live.streamId} stream={live} /> : null}
 			</div>
 		</li>
 	);
@@ -108,6 +117,7 @@ export function ActivityTimeline({
 }) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [following, setFollowing] = useState(true);
+	const { entries: rows, host } = attachLiveStream(entries, live);
 
 	const scrollToBottom = () => {
 		const el = scrollRef.current;
@@ -146,10 +156,14 @@ export function ActivityTimeline({
 				data-testid="activity-scroll"
 			>
 				<ol className="m-0 list-none p-0" aria-label="活动时间线">
-					{entries.map((entry) => (
+					{rows.map((entry) => (
 						<EntryRow key={entry.id} entry={entry} />
 					))}
-					{live ? <LiveStreamRow key={live.streamId} stream={live} /> : null}
+					{host && live ? (
+						<EntryRow key={host.id} entry={host} live={live} />
+					) : live ? (
+						<LiveStreamRow key={live.streamId} stream={live} />
+					) : null}
 				</ol>
 			</div>
 			{following ? null : (

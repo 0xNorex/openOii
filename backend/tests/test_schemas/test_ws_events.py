@@ -181,6 +181,17 @@ class TestLlmStreamEventData:
         )
         assert frame.error is None
         assert frame.chars == 12
+        assert frame.progress is None
+
+    def test_progress_is_a_fraction(self):
+        frame = LlmStreamEventData.model_validate(
+            {"stream_id": "s1", "agent": "outline", "status": "streaming", "progress": 0.05}
+        )
+        assert frame.progress == 0.05
+        with pytest.raises(ValueError):
+            LlmStreamEventData.model_validate(
+                {"stream_id": "s1", "agent": "outline", "status": "streaming", "progress": 1.5}
+            )
 
     def test_rejects_unknown_status(self):
         with pytest.raises(ValueError):

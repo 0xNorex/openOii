@@ -110,12 +110,13 @@ export class EngineDatabase {
   }
 
   /** Keep only the final frame of one `llm_stream` (see pipeline/llm-stream.ts). */
-  compactStreamEvents(runId: number, streamId: string, keepSeq: number): void {
+  /** `llm_stream` frames are snapshots: keep the newest, plus error frames. */
+  compactStreamEvents(runId: number, keepSeq: number): void {
     this.db
       .prepare(
-        "DELETE FROM engine_run_events WHERE run_id = ? AND type = 'llm_stream' AND seq < ? AND json_extract(payload, '$.stream_id') = ?",
+        "DELETE FROM engine_run_events WHERE run_id = ? AND type = 'llm_stream' AND seq < ? AND json_extract(payload, '$.status') <> 'error'",
       )
-      .run(runId, keepSeq, streamId);
+      .run(runId, keepSeq);
   }
 
   eventsForRun(runId: number, afterSeq = 0): RunEventRow[] {

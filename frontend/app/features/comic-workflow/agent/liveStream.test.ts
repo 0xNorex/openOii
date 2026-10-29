@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitForReveal } from "./liveStream";
+import { recallFailedStream, rememberFailedStream, splitForReveal, tidyStreamText } from "./liveStream";
 
 describe("splitForReveal", () => {
 	it("types out only what is new when the snapshot grows", () => {
@@ -19,5 +19,31 @@ describe("splitForReveal", () => {
 	it("never splits a surrogate pair", () => {
 		const { pending } = splitForReveal("", "🐱🐶");
 		expect(pending).toEqual(["🐱", "🐶"]);
+	});
+});
+
+describe("tidyStreamText", () => {
+	it("hides a bare separator at either end, mid-typing or after the tail cut", () => {
+		expect(tidyStreamText("午后的猫 · ")).toBe("午后的猫");
+		expect(tidyStreamText("午后的猫 ·")).toBe("午后的猫");
+		expect(tidyStreamText("· 醒来")).toBe("醒来");
+		expect(tidyStreamText("午后 · 醒来")).toBe("午后 · 醒来");
+	});
+});
+
+describe("failed stream across reloads", () => {
+	const failed = { streamId: "s1", agent: "outline", status: "error" as const, thinking: "", text: "半句", chars: 9, error: "连接断开" };
+
+	it("remembers an interrupted stream per project and forgets it on null", () => {
+		rememberFailedStream(7, failed);
+		expect(recallFailedStream(7)).toEqual(failed);
+		expect(recallFailedStream(8)).toBeNull();
+		rememberFailedStream(7, null);
+		expect(recallFailedStream(7)).toBeNull();
+	});
+
+	it("never stores a stream that did not fail", () => {
+		rememberFailedStream(7, { ...failed, status: "streaming" });
+		expect(recallFailedStream(7)).toBeNull();
 	});
 });

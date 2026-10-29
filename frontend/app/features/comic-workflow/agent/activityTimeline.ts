@@ -205,3 +205,28 @@ export function formatDuration(ms: number): string {
 	if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)}s`;
 	return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
 }
+
+/** A transient "doing X…" line: the live stream says the same thing, better. */
+const TRANSIENT = /…$/;
+
+/**
+ * Put the streaming call inside the step it belongs to instead of a row of its
+ * own: the running step of the same agent hosts it, and the trailing
+ * "正在生成…" lines of that agent are dropped. Without such a step (or with
+ * anything else after it) the stream keeps its own row.
+ */
+export function attachLiveStream(
+	entries: ActivityEntry[],
+	live: { agent: string; status: string } | null,
+): { entries: ActivityEntry[]; host: ActivityEntry | null } {
+	if (!live || live.status === "error") return { entries, host: null };
+	let i = entries.length - 1;
+	while (i >= 0 && entries[i].kind === "message" && entries[i].agent === live.agent && TRANSIENT.test(entries[i].title)) {
+		i -= 1;
+	}
+	const host = entries[i];
+	if (!host || host.kind !== "step" || host.status !== "running" || host.agent !== live.agent) {
+		return { entries, host: null };
+	}
+	return { entries: entries.slice(0, i), host };
+}

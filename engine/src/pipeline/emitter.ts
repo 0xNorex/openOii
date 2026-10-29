@@ -9,7 +9,7 @@
 import { progressForStage } from "../contract.js";
 import type { EngineDatabase } from "../db.js";
 import type { SharedDb } from "../shared-db.js";
-import { LlmStreamSink } from "./llm-stream.js";
+import { LlmStreamSink, STREAM_THROTTLE_MS } from "./llm-stream.js";
 
 export interface EmitterConfig {
   thinkingChainEnabled: boolean;
@@ -37,16 +37,19 @@ export class PipelineEmitter {
   }
 
   /** Live `llm_stream` preview for one LLM call. */
-  llmStream(agent: string): LlmStreamSink {
+  llmStream(agent: string, progressFor?: (chars: number) => number): LlmStreamSink {
     return new LlmStreamSink(
       {
         publish: (event) => {
           this.shared.assertExecutionFence();
           return this.db.appendEvent(this.runId, this.projectId, "llm_stream", event);
         },
-        compact: (streamId, keepSeq) => this.db.compactStreamEvents(this.runId, streamId, keepSeq),
+        compact: (keepSeq) => this.db.compactStreamEvents(this.runId, keepSeq),
       },
       agent,
+      Date.now,
+      STREAM_THROTTLE_MS,
+      progressFor,
     );
   }
 

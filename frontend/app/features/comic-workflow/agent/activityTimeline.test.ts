@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "~/types";
-import { deriveActivityTimeline, formatDuration, formatEta, tidyEllipsis } from "./activityTimeline";
+import {
+	attachLiveStream,
+	deriveActivityTimeline,
+	formatDuration,
+	formatEta,
+	tidyEllipsis,
+	type ActivityEntry,
+} from "./activityTimeline";
 
 const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
 const msg = (role: string, content: string, s: number, extra: Partial<AgentMessage> = {}): AgentMessage => ({
@@ -133,5 +140,34 @@ describe("tidyEllipsis", () => {
 		expect(tidyEllipsis("开始生成 8 个分镜视频 . . .")).toBe("开始生成 8 个分镜视频…");
 		expect(tidyEllipsis("处理中。。。")).toBe("处理中…");
 		expect(tidyEllipsis("评分 8.5/10")).toBe("评分 8.5/10");
+	});
+});
+
+describe("attachLiveStream", () => {
+	const e = (id: string, extra: Partial<ActivityEntry>): ActivityEntry => ({
+		id,
+		kind: "step",
+		agent: "outline",
+		agentLabel: "大纲",
+		title: id,
+		status: "done",
+		children: [],
+		...extra,
+	});
+	const live = { agent: "outline", status: "streaming" };
+
+	it("hosts the stream in the running step and drops its trailing 「…」 lines", () => {
+		const step = e("step", { status: "running" });
+		const out = attachLiveStream([e("old", {}), step, e("m", { kind: "message", title: "正在生成故事大纲…" })], live);
+		expect(out.host).toBe(step);
+		expect(out.entries.map((x) => x.id)).toEqual(["old"]);
+	});
+
+	it("keeps its own row when another agent's step runs, a real line follows, or it failed", () => {
+		const running = e("step", { status: "running" });
+		expect(attachLiveStream([running], { agent: "plan", status: "streaming" }).host).toBeNull();
+		expect(attachLiveStream([running, e("m", { kind: "message", title: "正在绘制：小欧 (1/3)" })], live).host).toBeNull();
+		expect(attachLiveStream([running], { agent: "outline", status: "error" }).host).toBeNull();
+		expect(attachLiveStream([e("done", {})], live).host).toBeNull();
 	});
 });

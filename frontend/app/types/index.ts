@@ -443,6 +443,8 @@ export interface LlmStreamEventData {
 	text?: string;
 	chars?: number;
 	error?: string | null;
+	/** Overall run progress (0..1) estimated from the output so far. */
+	progress?: number | null;
 }
 
 export interface WsEvent {

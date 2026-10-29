@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clearMessageFeed, replaceMessageFeed } from "~/query/messageFeed";
 import { projectQueryKeys } from "~/query/queryKeys";
+import { patchRunState, readRunState } from "~/query/runState";
+import { recallFailedStream } from "~/features/comic-workflow/agent/liveStream";
 import { projectsApi } from "~/services/api";
 import type { Character, Project, Shot } from "~/types";
 import { ApiError } from "~/types/errors";
@@ -76,6 +78,16 @@ export function useProjectData(projectId: number): {
 			})),
 		);
 	}, [messages, projectId]);
+
+	// A reload of a failed project brings back the output that was cut off.
+	const failed = project?.status === "failed";
+	useEffect(() => {
+		if (!failed) return;
+		const run = readRunState(projectId);
+		if (run.isGenerating || run.liveStream) return;
+		const stream = recallFailedStream(projectId);
+		if (stream) patchRunState(projectId, { liveStream: stream });
+	}, [failed, projectId]);
 
 	return { project, characters, shots, projectLoading, projectError };
 }

@@ -692,6 +692,7 @@ export class PipelineRunner {
   ): Promise<void> {
     const agent = agentForStage(stage);
     ctx.completionInfo = null;
+    ctx.stage = stage;
     this.shared.updateRun(request.runId, {
       status: "running",
       current_agent: agent,

@@ -18,6 +18,7 @@ import type {
 } from "~/types";
 import { toast } from "~/utils/toast";
 import { resolveEventStage } from "~/utils/workflowStage";
+import { rememberFailedStream } from "~/features/comic-workflow/agent/liveStream";
 
 const TRANSIENT_MESSAGE_PATTERNS = [
 	/^正在生成视频\s+\d+\/\d+/,
@@ -122,6 +123,7 @@ export function applyWsEvent(
 			patchRunState(projectId, { currentAgent: d.current_agent ?? null });
 			patchRunState(projectId, { awaitingConfirm: false, awaitingAgent: null });
 			patchRunState(projectId, { recoveryGate: null, liveStream: null });
+			rememberFailedStream(projectId, null);
 			applyStage(projectId, event.data);
 			if (d.recovery_summary) patchRunState(projectId, { recoverySummary: d.recovery_summary });
 			if (Object.hasOwn(d, "provider_snapshot")) {
@@ -146,10 +148,9 @@ export function applyWsEvent(
 		case "run_message": {
 			const agent = event.data.agent as string;
 			clearLoadingStates(projectId, agent);
+			// Message progress is the agent's own (0 at start, 1 when done), not the
+			// run's; run_progress and llm_stream move the run progress.
 			const msgProgress = event.data.progress as number | undefined;
-			if (typeof msgProgress === "number" && msgProgress >= 0 && msgProgress <= 1) {
-				patchRunState(projectId, { progress: msgProgress });
-			}
 			const message: AgentMessage = {
 				id: generateMessageId(),
 				agent,
@@ -191,7 +192,12 @@ export function applyWsEvent(
 				break;
 			}
 			// Frames queued before a stop can land after it; a stopped run has no live row.
-			if (!readRunState(projectId).isGenerating) break;
+			const run = readRunState(projectId);
+			if (!run.isGenerating) break;
+			// Output so far nudges the run progress forward, never back.
+			if (typeof frame.progress === "number" && frame.progress > run.progress && frame.progress <= 1) {
+				patchRunState(projectId, { progress: frame.progress });
+			}
 			patchRunState(projectId, {
 				liveStream: {
 					streamId: frame.stream_id,
@@ -213,7 +219,8 @@ export function applyWsEvent(
 				patchRunState(projectId, { isGenerating: true });
 				patchRunState(projectId, { currentRunId: gate.run_id });
 			}
-			patchRunState(projectId, { awaitingConfirm: true, awaitingAgent: gate.agent, currentRunId: gate.run_id });
+			// A gate means no call is in flight (its done frame may have been compacted away).
+			patchRunState(projectId, { awaitingConfirm: true, awaitingAgent: gate.agent, currentRunId: gate.run_id, liveStream: null });
 			patchRunState(projectId, { recoveryGate: gate });
 			patchRunState(projectId, { recoverySummary: gate.recovery_summary });
 			applyStage(projectId, event.data);
@@ -275,6 +282,7 @@ export function applyWsEvent(
 			// Keep the interrupted output on screen next to the failure.
 			const interrupted = readRunState(projectId).liveStream;
 			resetRunState(projectId);
+			rememberFailedStream(projectId, interrupted);
 			if (interrupted?.status === "error") patchRunState(projectId, { liveStream: interrupted });
 			appendMessage(projectId, {
 				id: generateMessageId(),
