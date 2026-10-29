@@ -134,6 +134,28 @@
     text-transform: uppercase;
   }
 
+  /* 字标双版：青版垫底，群青版叠印 */
+  .wordmark-cyan {
+    fill: oklch(var(--cmyk-cyan));
+  }
+  .wordmark-key {
+    fill: rgb(var(--color-primary));
+    mix-blend-mode: multiply;
+  }
+  [data-theme="dark"] .wordmark-key {
+    mix-blend-mode: screen;
+  }
+
+  /* 标题字体：Unbounded（拉丁/数字）+ 庆科黄油体（中文子集）。只用于固定文案；
+     Unbounded 很宽，拉丁部分收一点字距，避免顶栏/卡片标题溢出 */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-synthesis: none;
+    font-variant-numeric: lining-nums;
+  }
+
   /* 中文标签：无衬线、不加字距、不转大写；数字部分包一层 font-mono */
   .label {
     font-size: var(--text-xs);

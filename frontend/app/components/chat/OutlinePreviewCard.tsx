@@ -40,7 +40,7 @@ export function OutlinePreviewCard({
 				<p className="label-caps text-ink-muted">
 					Story Outline
 				</p>
-				<h3 className="font-bold text-base">故事大纲待确认</h3>
+				<h3 className="display font-bold text-base">故事大纲待确认</h3>
 			</div>
 
 			<p className="leading-relaxed text-ink-muted">{outline.logline}</p>

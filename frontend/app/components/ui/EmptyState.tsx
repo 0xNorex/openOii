@@ -9,9 +9,12 @@ export function EmptyState({
 	action,
 	className,
 	compact = false,
+	plainTitle = false,
 }: {
 	icon?: ReactNode;
 	title: string;
+	/** 标题默认用 .display（固定文案，字形已子集化）；传用户内容时设 plainTitle 退回正文字体 */
+	plainTitle?: boolean;
 	description?: string;
 	action?: ReactNode;
 	className?: string;
@@ -31,7 +34,7 @@ export function EmptyState({
 					{icon}
 				</div>
 			) : null}
-			<p className="m-0 text-sm font-bold text-ink-muted">
+			<p className={clsx("m-0 text-sm font-bold text-ink-muted", !plainTitle && "display")}>
 				{title}
 			</p>
 			{description ? (

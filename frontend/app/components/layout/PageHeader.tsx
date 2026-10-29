@@ -15,9 +15,12 @@ export function PageHeader({
 	actionsAlign = "below",
 	divider = true,
 	className,
+	plainTitle = false,
 }: {
 	eyebrow?: string;
 	title: string;
+	/** 标题默认用 .display（固定文案，字形已子集化）；传用户内容时设 plainTitle 退回正文字体 */
+	plainTitle?: boolean;
 	description?: string;
 	meta?: ReactNode;
 	actions?: ReactNode;
@@ -46,7 +49,7 @@ export function PageHeader({
 					</p>
 				) : null}
 				<div className="mt-0.5 flex flex-wrap items-end gap-2">
-					<h1 className="m-0 text-2xl font-bold leading-tight text-pretty sm:text-3xl">
+					<h1 className={clsx("m-0 text-2xl font-bold leading-tight text-pretty sm:text-3xl", !plainTitle && "display")}>
 						{title}
 					</h1>
 					{meta ? (

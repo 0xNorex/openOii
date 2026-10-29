@@ -201,7 +201,7 @@ export function VersionCompareDrawer({
 		>
 			<div className="sticky top-0 z-panel flex items-center gap-2 border-b border-line bg-paper-100 px-3 py-2">
 				<SvgIcon name="clock-3" size={16} />
-				<h2 id="version-compare-title" className="m-0 text-md font-bold">版本对比</h2>
+				<h2 id="version-compare-title" className="display m-0 text-md font-bold">版本对比</h2>
 				<IconButton
 					className="ml-auto rounded-full"
 					onClick={onClose}

@@ -17,9 +17,12 @@ export function DeskSection({
 	actions,
 	children,
 	className,
+	plainTitle = false,
 }: {
 	icon?: ReactNode;
 	title: string;
+	/** 标题默认用 .display（固定文案，字形已子集化）；传用户内容时设 plainTitle 退回正文字体 */
+	plainTitle?: boolean;
 	meta?: ReactNode;
 	actions?: ReactNode;
 	children: ReactNode;
@@ -40,7 +43,7 @@ export function DeskSection({
 							{icon}
 						</span>
 					) : null}
-					<h2 className="m-0 text-md font-bold leading-tight">
+					<h2 className={clsx("m-0 text-md font-bold leading-tight", !plainTitle && "display")}>
 						{title}
 					</h2>
 					{meta ? (

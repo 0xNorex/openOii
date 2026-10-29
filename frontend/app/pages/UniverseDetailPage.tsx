@@ -227,6 +227,7 @@ export function UniverseDetailPage() {
 				<PageHeader
 					eyebrow="universe detail"
 					title={u.name}
+					plainTitle
 					description={
 						u.description ||
 						"尚未填写简介 · 可在右侧编辑设定"

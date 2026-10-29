@@ -724,7 +724,7 @@ export function WorkflowFrameView({
 				<span className="shrink-0 rounded-sm border border-line-strong px-1 font-mono text-xs text-ink-muted">
 					{eyebrow}
 				</span>
-				<p className="m-0 truncate text-md font-bold leading-tight">{title}</p>
+				<p className="display m-0 truncate text-md font-bold leading-tight">{title}</p>
 				{countLabel ? (
 					<p className="m-0 ml-auto shrink-0 label text-ink-muted">{countLabel}</p>
 				) : null}

@@ -11,6 +11,7 @@ import { Button } from "~/components/ui/Button";
 import { clsx } from "clsx";
 import { PlainButton } from "../../components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { Wordmark } from "./Wordmark";
 
 interface TopBarProps {
 	projectId?: number;
@@ -202,14 +203,7 @@ export function TopBar({ projectId, center }: TopBarProps) {
 					className="touch-target-dense inline-flex items-center gap-1.5 rounded-md px-1.5 text-base font-bold tracking-tight text-ink"
 					aria-label="openOii 首页"
 				>
-					{/* 字标：群青对位标 + 系统无衬线。识别靠字重和标记，不靠漫画字体 */}
-					<svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-primary">
-						<circle cx="8" cy="8" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.75" />
-						<path d="M8 0.5v15M0.5 8h15" stroke="currentColor" strokeWidth="1.75" />
-					</svg>
-					<span>
-						open<span className="text-primary">Oii</span>
-					</span>
+					<Wordmark className="h-4 w-auto" />
 				</Link>
 
 				{projectId ? (
