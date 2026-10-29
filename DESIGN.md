@@ -154,6 +154,7 @@ px 数值，tokens.css 不保留 rem 副本（避免两套数字漂移）。
 | `--radius-md` | `rounded-md` | ~~`rounded-[var(--radius-md)]`~~ |
 | `--z-popover` | `z-popover` | ~~`z-[var(--z-popover)]`~~、~~`z-50`~~ |
 | `--duration-fast` | `duration-fast` | ~~`duration-[var(--duration-fast)]`~~、~~`duration-150`~~ |
+| `--duration-press` | `duration-press` | ~~`duration-[var(--duration-press)]`~~、~~`duration-100`~~ |
 | `--leading-tight` | `leading-tight` | ~~`leading-4`~~ |
 | `--rhythm-zone` | `gap-5` | ~~`gap-[var(--rhythm-zone)]`~~ |
 
@@ -257,7 +258,8 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Selected canvas card:** the 2px primary ring plus `.crop-marks`, which puts printer's crop marks at the four corners. Canvas cards use `rounded-sm` (4px), like cut paper.
 - **Waiting and empty:** `.media-placeholder` is a 6px halftone with an ink sweep; `.media-blank` is a still halftone; `.corner-marks` draws storyboard-sheet corners on empty slots and `EmptyState`. The output's registration marks sit misregistered (with a cyan ghost) until the video is ready, then register and turn primary.
 - No hover lift. Pressing a button scales it to 0.97 for 120ms, with no bounce.
-- **Motion:** one easing, `--ease-standard` = `cubic-bezier(0.22, 1, 0.36, 1)`. Only transform, opacity, filter and colours animate. Reduced motion makes every change instant.
+- **Motion:** one easing, `--ease-standard` = `cubic-bezier(0.22, 1, 0.36, 1)`. Only transform, opacity, filter and colours animate. Reduced motion makes every change instant and drops the press scale.
+- **Press:** one recipe per size of target, all on `--duration-press` (120ms). Buttons (`.btn-doodle`) scale to 0.97. Selectable cards and prompt chips carry `.press`, which scales to 0.98 because a bigger surface needs less travel. Rows that sit inside a container (menu items, list rows) do not move; they darken to `bg-ink/10` while held. Under reduced motion nothing scales, only the colour changes.
 
 ## 5. Components
 
@@ -269,6 +271,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Danger:** `bg-error text-error-content`.
 - **Components:** `ui/Button` (variant `primary/secondary/ghost/danger`, size `sm/md/lg`), `ui/IconButton` (required `aria-label`), `ui/PlainButton` (unstyled, for tabs, menu items, selectable cards and rows). Native `<button` is only allowed in `components/ui` and the canvas cards; the contract test enforces it.
 - **Disabled:** 50% opacity, `cursor-not-allowed`.
+- **Links that look like buttons:** use `ui/ButtonLink` (same `buttonClass` recipe, renders one `<a>`). Never wrap a `Button` in a `Link` or the other way round: that is two tab stops and invalid HTML. `interactiveNesting.test.ts` scans every TSX file for nested interactive elements.
 - **Tactile:** filled variants carry `.btn-tactile`, which adds a hairline top highlight and a bottom ink edge. On `:active` it turns into an inset press shadow (adapted from rareui.com).
 
 ### Cards / Containers
@@ -294,7 +297,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 ### Overflow menus
 - 只有一个实现：`components/ui/Menu.tsx`（`MenuButton` + `MenuItem` / `MenuLink`），顶栏「工作台工具」和画布「更多画布操作」共用。
 - 打开即聚焦第一项；↑↓/Home/End 移动（跳过禁用项）；Esc 或点外面收起，焦点回到触发按钮；选中一项自动收起。
-- 外观：`rounded-md border-line bg-surface shadow-panel p-1`，项 `text-xs` + 14px 图标，hover/focus 同为 `bg-paper-200`。不另起菜单样式。
+- 外观：`rounded-md border-line bg-surface shadow-panel p-1`，项 `text-xs` + 14px 图标，hover/focus 同为 `bg-paper-200`，按住为 `bg-ink/10`（不缩放）。不另起菜单样式。
 
 ### Dialogs
 - Native `<dialog>` via `showModal()`, so the top layer sits above every floating panel. `.dialog-panel` with `shadow-dialog`.
