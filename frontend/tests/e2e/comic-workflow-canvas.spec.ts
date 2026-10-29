@@ -258,17 +258,30 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 
 	await page.getByRole("button", { name: "适应视图" }).click();
 	const card = page.locator('.react-flow__node[data-id="shot:1"]');
-	// 适配后卡片标题的屏幕字号 ≥ 12px（缩放下限）
+	// 适配整块画板：三个 frame 都完整落在两侧浮动面板之间、底部工具条之上
 	await expect
 		.poll(() =>
-			card.evaluate((el) => {
-				// 画布缩放 = 卡片屏幕宽度 / 布局宽度（宽元素，取整误差小）
-				const scale = el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth;
-				const title = el.querySelector("p.font-bold");
-				return title ? parseFloat(getComputedStyle(title).fontSize) * scale : 0;
+			page.evaluate(() => {
+				const vw = window.innerWidth;
+				const vh = window.innerHeight;
+				const panelLeft = (sel: string, fallback: number) => {
+					const r = document.querySelector(sel)?.getBoundingClientRect();
+					return r && r.width > 0 ? r : fallback;
+				};
+				const agent = panelLeft("aside[aria-label='工作流活动']", 0);
+				const inspector = panelLeft("[aria-label='检查器']", vw);
+				const left = typeof agent === "number" ? agent : agent.right;
+				const right = typeof inspector === "number" ? inspector : inspector.left;
+				const frames = [...document.querySelectorAll(".react-flow__node-frame")].map((el) =>
+					el.getBoundingClientRect(),
+				);
+				return (
+					frames.length === 3 &&
+					frames.every((r) => r.left >= left && r.right <= right && r.top >= 0 && r.bottom <= vh - 150)
+				);
 			}),
 		)
-		.toBeGreaterThanOrEqual(11.95);
+		.toBe(true);
 	const before = await card.boundingBox();
 	expect(before).not.toBeNull();
 	if (!before) return;

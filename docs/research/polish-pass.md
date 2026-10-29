@@ -26,7 +26,7 @@ Rule of thumb: **one way to do each thing**, and the way lives in `tokens.css` �
 
 ## Results (after #39–#44)
 
-Impeccable detect (`/`, `/projects`, `/project/2`, `/project/5`, `/universes` × 1440 / 1280 / 390): low-contrast 0, undersized 0, hard-offset 0 everywhere. Text-occlusion only on the canvas: 11 @1440 (`/project/2`), 14 + 4 @1280 (was 18), 0 on mobile. These are the neighbouring Cast / Final frames that peek out under the floating Agent panel and inspector, plus the second shot row under the toolbar when the storyboard is taller than the viewport at readable zoom. That is how the floating-panel layout is meant to work (fit targets the storyboard; panels re-fit until the user pans, #38). A bigger bottom fit inset was tried and made it worse, so it was left as is.
+Impeccable detect (`/`, `/projects`, `/project/2`, `/project/5`, `/universes` × 1440 / 1280 / 390): low-contrast 0, undersized 0, hard-offset 0 everywhere. Text-occlusion on the canvas was 11 @1440 (`/project/2`), 14 + 4 @1280 (was 18), 0 on mobile, all from the neighbouring Cast / Final frames under the floating panels. After #46 auto-fit targets the whole board (Cast, storyboard, Final), with the open Agent panel and inspector as left/right padding and 168px bottom padding for the toolbar and PromptBar; it still only re-fits until the user pans or zooms (#38). Text-occlusion is now 0 on every canvas page and viewport. Trade-off: the fitted zoom is lower (about 40% at 1440×900), so card text is small until the user zooms in.
 
 Audit 17 → 18/20 (implementation 3 → 4: tokens and guards for borders, radii, text tints, arbitrary values and icon sizes). Nielsen 29 → 30/40 (help/docs 2 → 3: How-it-works panel, empty-frame hints, sort-mode hint; the other heuristics stay at 3).
 

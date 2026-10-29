@@ -3,7 +3,7 @@ import type { Project, Shot } from "~/types";
 import { buildComicWorkflow } from "../../graph/buildComicWorkflow";
 import { layoutComicWorkflow } from "../../graph/layoutComicWorkflow";
 import { moveShot, shotReadingOrder, toFlowNodes, type CardFlowNode } from "./toFlowNodes";
-import { storyboardViewport } from "./FlowWorkflowView";
+import { boardViewport } from "./FlowWorkflowView";
 
 function project(overrides: Partial<Project> = {}): Project {
 	return {
@@ -160,9 +160,9 @@ describe("shotReadingOrder", () => {
 	});
 });
 
-describe("storyboardViewport", () => {
+describe("boardViewport", () => {
 	it("centres a board that fits, between the panels", () => {
-		const v = storyboardViewport(
+		const v = boardViewport(
 			{ x: 0, y: 0, width: 400, height: 200 },
 			{ width: 1400, height: 900 },
 			{ left: 300, right: 300 },
@@ -171,14 +171,21 @@ describe("storyboardViewport", () => {
 		expect(v.x).toBe(348 + (1400 - 696 - 400) / 2);
 	});
 
-	it("stops at the readable zoom and anchors top-left when too big", () => {
-		const v = storyboardViewport(
-			{ x: 100, y: 50, width: 4000, height: 4000 },
-			{ width: 1000, height: 800 },
-		);
-		expect(v.zoom).toBeCloseTo(12 / 13);
-		expect(v.x).toBeCloseTo(48 - 100 * v.zoom);
-		expect(v.y).toBeCloseTo(48 - 50 * v.zoom);
+	it("zooms out until the whole board fits between the open panels", () => {
+		const bounds = { x: 100, y: 50, width: 2000, height: 600 };
+		const v = boardViewport(bounds, { width: 1280, height: 800 }, { left: 372, right: 332 });
+		const availW = 1280 - (48 + 372) - (48 + 332);
+		expect(v.zoom).toBeCloseTo(availW / bounds.width);
+		// 左边缘落在 Agent 面板右侧，右边缘落在检查器左侧
+		expect(v.x + bounds.x * v.zoom).toBeCloseTo(48 + 372);
+		expect(v.x + (bounds.x + bounds.width) * v.zoom).toBeCloseTo(1280 - 48 - 332);
+		// 底部不钻进提示栏 + 工具条
+		expect(v.y + (bounds.y + bounds.height) * v.zoom).toBeLessThanOrEqual(800 - 168);
+	});
+
+	it("never goes below the canvas minimum zoom", () => {
+		const v = boardViewport({ x: 0, y: 0, width: 40000, height: 400 }, { width: 1000, height: 800 });
+		expect(v.zoom).toBe(0.2);
 	});
 });
 

@@ -29,7 +29,6 @@ import {
 	type CanvasViewControls,
 } from "../toolbar/ComicCanvasToolbar";
 import {
-	frameNodeId,
 	shotReadingOrder,
 	moveShot,
 	toFlowNodes,
@@ -39,22 +38,23 @@ import {
 	type WorkflowInteractionMode,
 } from "./toFlowNodes";
 
-/** 卡片标题 13px：缩放不低于 12/13，屏幕字号就 ≥ 12px。 */
-const READABLE_ZOOM = 12 / 13;
+/** 与 <ReactFlow minZoom> 一致：适配再小也不低于画布允许的最小缩放。 */
+const MIN_ZOOM = 0.2;
 /**
- * 适配分镜区并保证文字可读：放得下就居中；放不下就停在可读下限，
- * 从左上角开始看。留白让出底部浮动提示栏 + 工具条和两侧浮动面板。
+ * 适配整块画板（角色、分镜、成片三个 frame 全部可见）：放大不超过 1，
+ * 在剩余空间里居中。留白让出两侧打开的浮动面板，以及底部提示栏 + 工具条
+ * （--toolbar-offset 6.75rem + 工具条 ~44px + 16px 间隙）。
  */
-export function storyboardViewport(
+export function boardViewport(
 	bounds: { x: number; y: number; width: number; height: number },
 	viewport: { width: number; height: number },
 	insets = { left: 0, right: 0 },
 ) {
-	const pad = { left: 48 + insets.left, right: 48 + insets.right, top: 48, bottom: 136 };
+	const pad = { left: 48 + insets.left, right: 48 + insets.right, top: 48, bottom: 168 };
 	const availW = Math.max(1, viewport.width - pad.left - pad.right);
 	const availH = Math.max(1, viewport.height - pad.top - pad.bottom);
 	const fitZoom = Math.min(availW / bounds.width, availH / bounds.height);
-	const zoom = Math.min(1, Math.max(READABLE_ZOOM, fitZoom));
+	const zoom = Math.min(1, Math.max(MIN_ZOOM, fitZoom));
 	const axis = (start: number, avail: number, size: number, origin: number) =>
 		size * zoom <= avail
 			? start + (avail - size * zoom) / 2 - origin * zoom
@@ -156,14 +156,13 @@ function FlowInner({
 	const fit = useCallback(
 		(duration: number) => {
 			const el = containerRef.current;
-			const shotline = flow.getNode(frameNodeId("shotline"));
-			const target = shotline ? [shotline] : flow.getNodes();
+			const target = flow.getNodes();
 			if (!el || target.length === 0) return;
 			const bounds = flow.getNodesBounds(target);
 			if (bounds.width === 0 || bounds.height === 0) return;
 			autoFitRef.current = true;
 			void flow.setViewport(
-				storyboardViewport(
+				boardViewport(
 					bounds,
 					{ width: el.clientWidth, height: el.clientHeight },
 					insetsRef.current,
@@ -337,7 +336,7 @@ function FlowInner({
 					if (event) manual();
 				}}
 				colorMode={theme === "dark" ? "dark" : "light"}
-				minZoom={0.2}
+				minZoom={MIN_ZOOM}
 				maxZoom={2}
 				panOnScroll
 				panOnDrag={tool === "hand" ? true : [1, 2]}
