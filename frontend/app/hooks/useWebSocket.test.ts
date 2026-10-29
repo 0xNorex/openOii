@@ -327,7 +327,7 @@ describe("useProjectWebSocket", () => {
         id: "merge-videos",
         agent: "compose",
         role: "assistant",
-        content: "开始拼接 6 个分镜视频...",
+        content: "开始拼接 6 个分镜视频…",
         isLoading: false,
       },
       {

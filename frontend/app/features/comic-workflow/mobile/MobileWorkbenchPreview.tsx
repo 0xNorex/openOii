@@ -108,7 +108,7 @@ export function MobileWorkbenchPreview({
 							return (
 								<li
 									key={shot.id}
-									className="relative aspect-square overflow-hidden rounded-md border border-line bg-paper-200"
+									className="relative aspect-square overflow-hidden rounded-sm border border-line-strong bg-paper-200"
 								>
 									{imageUrl ? (
 										<img
@@ -119,12 +119,12 @@ export function MobileWorkbenchPreview({
 											{...imageReady}
 										/>
 									) : (
-										<span className="flex h-full items-center justify-center text-xs text-ink-muted">
+										<span className="media-blank flex h-full items-center justify-center text-xs text-ink-muted">
 											待生成
 										</span>
 									)}
 									<span
-										className="absolute left-1 top-1 rounded-full bg-neutral/80 px-1.5 font-mono text-xs font-bold tabular-nums text-neutral-content"
+										className="absolute left-0 top-0 rounded-br-sm bg-ink px-1.5 font-mono text-xs font-bold text-paper-100"
 										aria-hidden="true"
 									>
 										{shot.order}

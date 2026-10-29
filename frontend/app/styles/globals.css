@@ -210,6 +210,40 @@
     transform: scale(0.97);
     transition-duration: var(--duration-press);
   }
+  /* 触感按钮（rareui.com 的 inset 处理）：顶部 1px 内高光 + 底部 1px 内暗边，读作“凸起的键”；
+   * 按下时换成顶部内阴影，读作“压进纸里”，配合 .97 缩放。不用外投影。 */
+  .btn-tactile {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 -1px 0 rgb(var(--color-ink) / 0.12);
+    transition-property: background-color, border-color, color, transform, box-shadow;
+  }
+  [data-theme="dark"] .btn-tactile {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 -1px 0 rgb(0 0 0 / 0.3);
+  }
+  .btn-tactile:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px rgb(var(--color-ink) / 0.22);
+  }
+  [data-theme="dark"] .btn-tactile:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.5);
+  }
+
+  /* 高度展开（transitions.dev）：动 grid-template-rows 0fr→1fr，不动 height，内容高度不用量 */
+  .collapse-rows {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition-property: grid-template-rows, opacity;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-standard);
+  }
+  .collapse-rows[data-open] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .collapse-rows > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .btn-doodle:disabled {
     @apply cursor-not-allowed;
   }

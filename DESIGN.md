@@ -238,6 +238,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Danger:** `bg-error text-error-content`.
 - **Components:** `ui/Button` (variant `primary/secondary/ghost/danger`, size `sm/md/lg`), `ui/IconButton` (required `aria-label`), `ui/PlainButton` (unstyled, for tabs, menu items, selectable cards and rows). Native `<button` is only allowed in `components/ui` and the canvas cards; the contract test enforces it.
 - **Disabled:** 50% opacity, `cursor-not-allowed`.
+- **Tactile:** filled variants carry `.btn-tactile`, which adds a hairline top highlight and a bottom ink edge. On `:active` it turns into an inset press shadow (adapted from rareui.com).
 
 ### Cards / Containers
 - **card-doodle:** `rounded-lg` (10px), 1px `border-paper-300`, `bg-paper-100`; hover border `border-strong`. No shadow.
@@ -257,6 +258,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 ### Activity timeline
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
 - Follows the newest entry; scrolling up stops following and shows "跳到最新".
+- The detail disclosure uses `.collapse-rows`, a `grid-template-rows` 0fr→1fr transition (from transitions.dev). It is `inert` while closed and instant under reduced motion.
 
 ### Dialogs
 - Native `<dialog>` via `showModal()`, so the top layer sits above every floating panel. `.dialog-panel` with `shadow-dialog`.

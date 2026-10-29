@@ -91,7 +91,7 @@ def extract_json(text: str) -> dict:
             continue
 
     # 所有修复都失败，抛出原始错误
-    raise ValueError(f"无法解析 LLM 响应的 JSON: {json_text[:200]}...")
+    raise ValueError(f"无法解析 LLM 响应的 JSON: {json_text[:200]}…")
 
 
 def _extract_first_complete_json(text: str) -> str | None:

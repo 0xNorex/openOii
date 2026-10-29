@@ -55,7 +55,7 @@ describe("deriveActivityTimeline", () => {
 	it("keeps tool rows that follow an assistant message under the open step", () => {
 		const entries = deriveActivityTimeline([
 			msg("step", "生成故事大纲", 0),
-			msg("assistant", "正在生成故事大纲...", 1),
+			msg("assistant", "正在生成故事大纲…", 1),
 			msg("tool_call", "文本生成", 2),
 			msg("tool_result", "文本生成", 9),
 		]);

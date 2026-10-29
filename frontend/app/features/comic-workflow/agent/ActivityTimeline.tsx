@@ -74,16 +74,17 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 							/>
 							{entry.children.length} 项细节
 						</PlainButton>
-						{expanded ? (
-							<ul className="m-0 mt-0.5 list-none space-y-0.5 border-l border-line pl-2">
+						{/* 常驻 DOM，用 grid-rows 展开；收起时 inert，读屏与 Tab 都跳过 */}
+						<div className="collapse-rows" data-open={expanded || undefined} {...(expanded ? {} : { inert: "" })}>
+							<ul className="m-0 list-none space-y-0.5 border-l border-line pl-2">
 								{entry.children.map((child) => (
-									<li key={child.id} className="text-xs text-ink-muted">
+									<li key={child.id} className="text-xs text-ink-muted first:mt-0.5">
 										<span className="font-semibold">{child.label}</span>
 										{child.content ? ` · ${child.content}` : null}
 									</li>
 								))}
 							</ul>
-						) : null}
+						</div>
 					</>
 				) : null}
 			</div>

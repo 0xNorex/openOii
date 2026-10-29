@@ -163,8 +163,8 @@ export function cleanOutline(data: Record<string, unknown>): CleanOutline {
 }
 
 export async function runOutline(ctx: StageContext): Promise<void> {
-  await ctx.emitter.sendMessage("outline", "正在生成故事大纲...", { progress: 0, isLoading: true });
-  await ctx.emitter.sendThinking("outline", "planning", "正在提炼故事核心、三幕结构和视觉方向...");
+  await ctx.emitter.sendMessage("outline", "正在生成故事大纲…", { progress: 0, isLoading: true });
+  await ctx.emitter.sendThinking("outline", "planning", "正在提炼故事核心、三幕结构和视觉方向…");
 
   const project = ctx.shared.getProject(ctx.projectId);
   if (!project) throw new Error(`project ${ctx.projectId} not found`);
@@ -287,14 +287,14 @@ function planBasePayload(ctx: StageContext, task: "characters" | "shots"): Recor
 }
 
 export async function runPlanCharacters(ctx: StageContext): Promise<void> {
-  await ctx.emitter.sendMessage("plan", "正在规划角色设定...", { progress: 0, isLoading: true });
-  await ctx.emitter.sendThinking("plan", "planning", "正在设计角色设定与人物关系...");
+  await ctx.emitter.sendMessage("plan", "正在规划角色设定…", { progress: 0, isLoading: true });
+  await ctx.emitter.sendThinking("plan", "planning", "正在设计角色设定与人物关系…");
 
   const payload = planBasePayload(ctx, "characters");
   const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096);
   await applyCharacterPlan(ctx, data);
 
-  await ctx.emitter.sendThinking("plan", "decision", "角色设定完成，等待分镜脚本...");
+  await ctx.emitter.sendThinking("plan", "decision", "角色设定完成，等待分镜脚本…");
   ctx.completionInfo = {
     completed: "角色设定已生成",
     details: "共 3 个角色",
@@ -304,14 +304,14 @@ export async function runPlanCharacters(ctx: StageContext): Promise<void> {
 }
 
 export async function runPlanShots(ctx: StageContext): Promise<void> {
-  await ctx.emitter.sendMessage("plan", "正在生成分镜脚本...", { progress: 0, isLoading: true });
-  await ctx.emitter.sendThinking("plan", "planning", "正在分镜与节奏设计...");
+  await ctx.emitter.sendMessage("plan", "正在生成分镜脚本…", { progress: 0, isLoading: true });
+  await ctx.emitter.sendThinking("plan", "planning", "正在分镜与节奏设计…");
 
   const payload = planBasePayload(ctx, "shots");
   const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096);
   await applyShotPlan(ctx, data);
 
-  await ctx.emitter.sendThinking("plan", "decision", "分镜脚本完成...");
+  await ctx.emitter.sendThinking("plan", "decision", "分镜脚本完成…");
   ctx.completionInfo = {
     completed: "分镜脚本已生成",
     details: "分镜与节奏已确定",
@@ -441,7 +441,7 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
     await ctx.emitter.sendMessage("render", "所有角色已有形象图。");
     return;
   }
-  await ctx.emitter.sendMessage("render", "开始生成角色形象图...", { progress: 0, isLoading: true });
+  await ctx.emitter.sendMessage("render", "开始生成角色形象图…", { progress: 0, isLoading: true });
   const total = pending.length;
   let index = 0;
   const worker = new BackendWorker(ctx.signal);
@@ -591,7 +591,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
     await ctx.emitter.sendMessage("render", "所有分镜已有首帧图片。");
     return;
   }
-  await ctx.emitter.sendMessage("render", "开始生成分镜首帧图...", { progress: 0, isLoading: true });
+  await ctx.emitter.sendMessage("render", "开始生成分镜首帧图…", { progress: 0, isLoading: true });
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const idToName = new Map(characters.map((c) => [c.id, c.name]));
   const byId = new Map(characters.map((c) => [c.id, c]));
@@ -702,7 +702,7 @@ export async function runCritique(
       ? ctx.shared.charactersForProject(ctx.projectId)
       : ctx.shared.shotsForProject(ctx.projectId);
   const rounds = entityType === "character" ? ctx.critiqueRounds.characters : ctx.critiqueRounds.shots;
-  await ctx.emitter.sendMessage("critic", `开始审查 ${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}...`);
+  await ctx.emitter.sendMessage("critic", `开始审查 ${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}…`);
 
   let minScore = 10;
   let willRegenerate = false;
@@ -777,7 +777,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
     await ctx.emitter.sendMessage("compose", "所有分镜已有视频。");
     return;
   }
-  await ctx.emitter.sendMessage("compose", `开始生成 ${shots.length} 个分镜视频...`, { progress: 0, isLoading: true });
+  await ctx.emitter.sendMessage("compose", `开始生成 ${shots.length} 个分镜视频…`, { progress: 0, isLoading: true });
   const useI2V = ctx.mediaSettings.enableImageToVideo;
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const byId = new Map(characters.map((character) => [character.id, character]));
@@ -870,8 +870,8 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
   await ctx.emitter.sendMessage(
     "compose",
     ctx.media.audioEnabled
-      ? `正在处理 ${shots.length} 个分镜音轨并拼接...`
-      : `开始拼接 ${shots.length} 个分镜视频...`,
+      ? `正在处理 ${shots.length} 个分镜音轨并拼接…`
+      : `开始拼接 ${shots.length} 个分镜视频…`,
     { progress: 0, isLoading: true },
   );
   const project = ctx.shared.getProject(ctx.projectId);
