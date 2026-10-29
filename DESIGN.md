@@ -24,14 +24,14 @@ colors:
   dark-primary: "#96ACFE"
   dark-primary-hover: "#A6BCFF"
   dark-primary-pressed: "#8499E9"
-  dark-primary-content: "#121216"
-  dark-surface: "#1B1B21"
-  dark-paper-100: "#121216"
-  dark-paper-200: "#24242C"
-  dark-paper-300: "#33333D"
-  dark-border-strong: "#6E6E7A"
-  dark-ink: "#ECECF1"
-  dark-ink-muted: "#A3A3AF"
+  dark-primary-content: "#0F1018"
+  dark-surface: "#181A26"
+  dark-paper-100: "#0F1018"
+  dark-paper-200: "#212434"
+  dark-paper-300: "#2F3348"
+  dark-border-strong: "#6C7191"
+  dark-ink: "#ECEDF5"
+  dark-ink-muted: "#A5A8BD"
   dark-info: "#5FCFE0"
   dark-success: "#6FD3A0"
   dark-warning: "#F2B35A"
@@ -215,14 +215,17 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Brand** (`font-brand`): Bangers, Latin only, for the `OPENOII` wordmark. It is the only bundled webfont.
 - Headings are `font-sans` with `font-semibold` or `font-bold`; there is no separate heading face.
 - Chinese text has no letter-spacing and no italics.
+- Numbers in `font-mono`, `kbd` and `code` are tabular by default. Uppercase mono labels get 0.06em tracking. `text-autospace` adds the CJK/Latin gap where the browser supports it.
+- **Browser surfaces:** a selection tinted with `primary`, a `primary` caret, thin ink scrollbars, `color-scheme` and a `theme-color` meta that follow the theme. See `docs/research/craft-direction.md`.
 
 ## 4. Elevation
 
 - **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-line`, or `border-border-strong` for controls). 2px is reserved for selection, active-tab underlines and left accent bars. No shadow.
-- **Floating panels, popovers, toasts, the canvas toolbar:** `shadow-panel`.
+- **Floating panels, popovers, toasts, the canvas toolbar:** `shadow-panel`, a layered ink-tinted shadow (a short contact layer plus a soft ambient one). In dark mode it opens with a 1px white 6% hairline.
 - **Dialogs:** `shadow-dialog` on `.dialog-panel`.
 - **Comic accent** (spec §7.6): `.comic-frame` — 2px ink border plus a 3px CMYK cyan/magenta offset. Only on the final-video card. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.
-- No hover lift, no press translate.
+- No hover lift. Pressing a button scales it to 0.97 for 120ms, with no bounce.
+- **Motion:** one easing, `--ease-standard` = `cubic-bezier(0.22, 1, 0.36, 1)`. Only transform, opacity, filter and colours animate. Reduced motion makes every change instant.
 
 ## 5. Components
 

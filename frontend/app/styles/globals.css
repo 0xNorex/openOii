@@ -17,6 +17,46 @@
   html {
     height: 100%;
     overflow: hidden;
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+    /* 中西文之间自动留 1/4 em（CSS Text 4；不支持的浏览器保持原样） */
+    text-autospace: normal;
+    /* 浏览器表面：滚动条是细墨线，不是系统灰轨 */
+    scrollbar-color: rgb(var(--color-ink) / 0.22) transparent;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  * {
+    scrollbar-width: thin;
+  }
+
+  ::selection {
+    background-color: rgb(var(--color-primary) / 0.22);
+  }
+
+  [data-theme="dark"] ::selection {
+    background-color: rgb(var(--color-primary) / 0.35);
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    caret-color: rgb(var(--color-primary));
+  }
+
+  /* 数字一律等宽对齐：计数、时长、格号不会随数值跳动 */
+  .font-mono,
+  kbd,
+  code {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 等宽的大写标签像印刷标号：加一点字距 */
+  .font-mono.uppercase {
+    letter-spacing: 0.06em;
   }
 
   body {
@@ -118,9 +158,10 @@
     transition-property: background-color, border-color, color, transform;
     transition-timing-function: var(--ease-standard);
   }
-  /* 按下：1px 下沉，所有按钮同一手感 */
+  /* 按下：缩到 .97，120ms，不回弹（transitions.dev 的 press 配方），所有按钮同一手感 */
   .btn-doodle:active:not(:disabled) {
-    transform: translateY(1px);
+    transform: scale(0.97);
+    transition-duration: var(--duration-press);
   }
   .btn-doodle:disabled {
     @apply cursor-not-allowed;

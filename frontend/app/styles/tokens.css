@@ -82,18 +82,22 @@
     --radius-xl: 10px;
 
     /* —— Elevation：平面元素只用 1px border；浮层面板一级，Dialog 再加一级 —— */
-    --shadow-panel: 0 4px 16px rgb(0 0 0 / 0.08);
-    --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.16);
+    /* 层叠阴影：近处一层短影定位置，远处一层柔影给体积（Vercel guidelines / transitions.dev）。
+     * 阴影带墨色而不是纯黑，纸面上不发灰。 */
+    --shadow-panel: 0 1px 2px rgb(var(--color-ink) / 0.06), 0 8px 24px -4px rgb(var(--color-ink) / 0.1);
+    --shadow-dialog: 0 2px 6px rgb(var(--color-ink) / 0.08), 0 24px 56px -8px rgb(var(--color-ink) / 0.2);
 
     /* —— Touch —— */
     --touch-target-min: 44px; /* primary actions, WCAG-friendly */
     --touch-target-dense: 32px; /* chrome chips only; not sole target for critical ops */
 
     /* —— Motion —— */
+    --duration-press: 120ms; /* 按压 */
     --duration-fast: 150ms;
     --duration-normal: 200ms;
     --duration-slow: 300ms;
-    --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* 进入/状态变化 */
+    /* 一条缓动（transitions.dev 的 ease-out-quint 系）：快起、长尾、不回弹 */
+    --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 
     /* —— Workbench Shell geometry ——
      * 画布占满 TopBar 以下的全部空间；Agent 面板与检查器都浮在画布上。 */
@@ -113,34 +117,36 @@
     --z-tooltip: 70;
   }
 
+  /* 深色 = 油墨版：底色带群青色相（hue≈265），不是中性灰 */
   [data-theme="dark"] {
     --color-primary: 150 172 254; /* #96ACFE 群青（深色） */
     --color-primary-hover: 166 188 255; /* #A6BCFF */
     --color-primary-pressed: 132 153 233; /* #8499E9 */
-    --color-primary-content: 18 18 22;
-    --color-neutral: 8 8 10;
-    --color-neutral-content: 236 236 241;
-    --color-surface: 27 27 33; /* #1B1B21 */
-    --color-paper-100: 18 18 22; /* #121216 */
-    --color-paper-200: 36 36 44; /* #24242C */
-    --color-paper-300: 51 51 61; /* #33333D */
-    --color-border-strong: 110 110 122; /* #6E6E7A */
-    --color-ink: 236 236 241; /* #ECECF1 */
+    --color-primary-content: 15 16 24;
+    --color-neutral: 8 8 14;
+    --color-neutral-content: 236 237 245;
+    --color-surface: 24 26 38; /* #181A26 */
+    --color-paper-100: 15 16 24; /* #0F1018 */
+    --color-paper-200: 33 36 52; /* #212434 */
+    --color-paper-300: 47 51 72; /* #2F3348 */
+    --color-border-strong: 108 113 145; /* #6C7191 */
+    --color-ink: 236 237 245; /* #ECEDF5 */
     --color-info: 95 207 224; /* #5FCFE0 */
-    --color-info-content: 18 18 22;
+    --color-info-content: 15 16 24;
     --color-success: 111 211 160; /* #6FD3A0 */
-    --color-success-content: 18 18 22;
+    --color-success-content: 15 16 24;
     --color-warning: 242 179 90; /* #F2B35A */
-    --color-warning-content: 18 18 22;
+    --color-warning-content: 15 16 24;
     --color-error: 255 138 128; /* #FF8A80 */
-    --color-error-content: 18 18 22;
+    --color-error-content: 15 16 24;
     --status-bg-alpha: 0.15;
     --cmyk-cyan: 0.6 0.12 195;
     --cmyk-magenta: 0.6 0.24 340;
-    --ink-muted: #a3a3af;
+    --ink-muted: #a5a8bd;
     --ink-subtle: rgb(var(--color-ink) / 0.45);
-    --shadow-panel: 0 4px 16px rgb(0 0 0 / 0.4);
-    --shadow-dialog: 0 12px 40px rgb(0 0 0 / 0.5);
+    /* 深色面板：白 8% 发丝描边勾边（beautifului.dev），再加压暗的投影 */
+    --shadow-panel: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px -4px rgb(0 0 0 / 0.5);
+    --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 56px -8px rgb(0 0 0 / 0.6);
   }
 
   /* 触屏下密集档自动升到无障碍下限；桌面密集布局不受影响 */

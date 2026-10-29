@@ -25,7 +25,11 @@ export function migrateTheme(stored: unknown): Theme {
 }
 
 function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
+  const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
+  // 浏览器 UI（移动端地址栏）跟着纸色走
+  const paper = getComputedStyle(root).getPropertyValue("--color-paper-100").trim();
+  if (paper) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", `rgb(${paper})`);
 }
 
 export const useThemeStore = create<ThemeState>()(
