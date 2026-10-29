@@ -54,12 +54,20 @@ describe("InboxPanel", () => {
 	it("resumes or cancels a recoverable run", async () => {
 		const a = actions();
 		render(
-			<InboxPanel items={[{ kind: "recoverable", id: "recoverable", title: "运行中断", detail: "可继续" }]} actions={a} />,
+			<InboxPanel items={[{ kind: "recoverable", id: "recoverable", title: "运行中断", detail: "可继续", resumable: true }]} actions={a} />,
 		);
 		await userEvent.click(screen.getByRole("button", { name: "继续" }));
 		await userEvent.click(screen.getByRole("button", { name: "取消" }));
 		expect(a.onResume).toHaveBeenCalledTimes(1);
 		expect(a.onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("hides 继续 when the run cannot be resumed", () => {
+		render(
+			<InboxPanel items={[{ kind: "recoverable", id: "recoverable", title: "运行中断", detail: "无法继续", resumable: false }]} actions={actions()} />,
+		);
+		expect(screen.queryByRole("button", { name: "继续" })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
 	});
 
 	it("selects a blocking shot and retries a failed run", async () => {

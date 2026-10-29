@@ -322,7 +322,7 @@ export function useRunController(args: {
 		});
 	};
 
-	const handleFeedback = (content: string) => {
+	const handleFeedback = (content: string): Promise<boolean> => {
 		setLastRunStatus(null);
 		const ids = selectedNodeIds.length > 0 ? selectedNodeIds : selectedNodeId ? [selectedNodeId] : [];
 		const shotIds = ids
@@ -355,13 +355,19 @@ export function useRunController(args: {
 				: `（${characterIds.length} 个角色）`;
 		}
 
-		feedbackMutation.mutate({ content, entityType, entityId, entityIds });
-		appendMessage(projectId, {
-			agent: "user",
-			role: "user",
-			content: contextLabel ? `${content}\n${contextLabel}` : content,
-			timestamp: new Date().toISOString(),
-		});
+		// 只有服务端接受后才写进对话流；失败时由 PromptBar 保留草稿
+		return feedbackMutation.mutateAsync({ content, entityType, entityId, entityIds }).then(
+			() => {
+				appendMessage(projectId, {
+					agent: "user",
+					role: "user",
+					content: contextLabel ? `${content}\n${contextLabel}` : content,
+					timestamp: new Date().toISOString(),
+				});
+				return true;
+			},
+			() => false,
+		);
 	};
 
 	const handleConfirm = (feedback?: string) => {

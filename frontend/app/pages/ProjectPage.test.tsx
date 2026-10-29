@@ -230,6 +230,19 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
           options.onSettled?.();
         }
       },
+      mutateAsync: async (variables?: unknown) => {
+        mutateSpy(variables);
+        try {
+          const result = await options.mutationFn(variables);
+          options.onSuccess?.(result, variables);
+          return result;
+        } catch (error) {
+          options.onError?.(error as Error, variables);
+          throw error;
+        } finally {
+          options.onSettled?.();
+        }
+      },
       isPending,
     };
   },

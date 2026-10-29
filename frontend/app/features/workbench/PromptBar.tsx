@@ -18,7 +18,8 @@ interface PromptBarProps {
 	gateLabel: string | null;
 	awaitingConfirm: boolean;
 	isGenerating: boolean;
-	onSendFeedback: (content: string) => void;
+	/** 返回 false 表示没发出去，草稿会放回输入框 */
+	onSendFeedback: (content: string) => Promise<boolean> | void;
 	onConfirm: (feedback?: string) => void;
 	/** 桌面：浮在画布底部居中；手机：留在页面底部。 */
 	floating?: boolean;
@@ -69,8 +70,11 @@ export function PromptBar({
 			});
 			return;
 		}
-		onSendFeedback(input);
+		const draft = input;
 		setInput("");
+		void Promise.resolve(onSendFeedback(draft)).then((sent) => {
+			if (sent === false) setInput((current) => current || draft);
+		});
 	};
 
 	const placeholder = awaitingConfirm

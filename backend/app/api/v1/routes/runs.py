@@ -281,6 +281,19 @@ async def _classify_pending_feedback(
             entity_type, target_ids = "shot", inferred_targets["shot_ids"]
         else:
             entity_type, target_ids = explicit_type, explicit_ids
+        has_targets = bool(target_ids)
+        compatible_stage = (
+            classified_stage == "render_characters"
+            if entity_type == "character" and has_targets
+            else classified_stage in {"render_shots", "compose_videos"}
+            if entity_type == "shot" and has_targets
+            else True
+        )
+        if not target_issue and not compatible_stage:
+            target_issue = (
+                "这条意见需要改剧本或分镜脚本，不能只重画选中的内容。"
+                "可以取消选中后再发送，或改成画面类意见（例如：重画首帧，改成夜景）。"
+            )
         if target_issue:
             rejected_snapshot = {
                 **snapshot,
@@ -307,23 +320,6 @@ async def _classify_pending_feedback(
                     detail={"code": "RUN_CANCELLED_OR_CLAIM_LOST", "message": "反馈分类已取消或执行权已过期"},
                 )
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=target_issue)
-        has_targets = bool(target_ids)
-        compatible_stage = (
-            classified_stage == "render_characters"
-            if entity_type == "character" and has_targets
-            else classified_stage in {"render_shots", "compose_videos"}
-            if entity_type == "shot" and has_targets
-            else True
-        )
-        if not compatible_stage:
-            raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "code": "FEEDBACK_STAGE_TARGET_MISMATCH",
-                    "message": "反馈分类阶段与所选目标不兼容；请调整反馈或重新选择目标。",
-                    "details": {"stage": classified_stage, "entity_type": entity_type},
-                },
-            )
         intent = build_rerun_intent(
             start_stage=classified_stage,
             entity_type=entity_type,
@@ -381,6 +377,13 @@ async def _classify_pending_feedback(
         )
         await session.commit()
         raise
+
+
+def _rejected_feedback(run: AgentRun | None) -> bool:
+    """反馈在分类时就被拒绝（目标不明确/不兼容）：没有产物，不该作为可恢复运行出现。"""
+    snapshot = run.context_snapshot if run is not None and isinstance(run.context_snapshot, dict) else {}
+    pending = snapshot.get("pending_feedback")
+    return isinstance(pending, dict) and pending.get("state") == "needs_target"
 
 
 async def _latest_run_for_project(
@@ -496,6 +499,8 @@ async def get_current_run(
     resumable_run = newly_recoverable or await _latest_run_for_project(
         session, project_id, _RECOVERABLE_RUN_STATUSES
     )
+    if _rejected_feedback(resumable_run):
+        resumable_run = None
     if resumable_run is not None:
         return await build_recovery_control_surface(
             session=session,
@@ -530,6 +535,8 @@ async def start_run(
     resumable_run = stale_run or await _latest_run_for_project(
         session, project_id, _RECOVERABLE_RUN_STATUSES
     )
+    if _rejected_feedback(resumable_run):
+        resumable_run = None
 
     provider_resolution: ProviderResolution = await resolve_project_provider_settings_async(
         project, settings

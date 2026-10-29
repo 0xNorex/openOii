@@ -87,10 +87,12 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 					return (
 						<Card key={item.id} tone="warning" title={item.title} detail={item.detail}>
 							<div className="flex gap-2">
-								<Button variant="primary" size="sm" className="flex-1" onClick={actions.onResume}>
-									<PlayIcon className="h-3.5 w-3.5" aria-hidden="true" />
-									继续
-								</Button>
+								{item.resumable ? (
+									<Button variant="primary" size="sm" className="flex-1" onClick={actions.onResume}>
+										<PlayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+										继续
+									</Button>
+								) : null}
 								<Button variant="ghost" size="sm" className="flex-1" onClick={actions.onCancel}>
 									<XMarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
 									取消

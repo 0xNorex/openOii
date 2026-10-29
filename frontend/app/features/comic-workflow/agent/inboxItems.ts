@@ -8,7 +8,7 @@ import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
 	| { kind: "gate"; id: string; title: string; detail: string | null; gate: RunAwaitingConfirmEventData | null }
-	| { kind: "recoverable"; id: "recoverable"; title: string; detail: string }
+	| { kind: "recoverable"; id: "recoverable"; title: string; detail: string; resumable: boolean }
 	| { kind: "blocked"; id: "blocked"; title: string; clips: BlockingClip[] }
 	| { kind: "failed"; id: "failed"; title: string; detail: string };
 
@@ -50,11 +50,17 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		const summary = input.recoveryControl.recovery_summary;
 		const stage = stageTitle(summary?.current_stage) ?? "上次运行";
 		const kept = summary?.preserved_stages?.length ?? 0;
+		const resumable = input.recoveryControl.available_actions.includes("resume");
 		items.push({
 			kind: "recoverable",
 			id: "recoverable",
 			title: `运行中断于${stage}`,
-			detail: kept > 0 ? `已保留 ${kept} 个阶段的产物，可以继续` : input.recoveryControl.detail || "可以继续或取消",
+			detail: !resumable
+				? "这次运行无法接着跑，取消后可以重新生成"
+				: kept > 0
+					? `已保留 ${kept} 个阶段的产物，可以继续`
+					: "可以继续或取消",
+			resumable,
 		});
 	}
 

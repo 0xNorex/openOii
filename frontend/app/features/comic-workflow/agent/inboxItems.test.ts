@@ -47,6 +47,14 @@ describe("deriveInboxItems", () => {
 		expect(item).toMatchObject({ kind: "recoverable", title: "运行中断于渲染阶段", detail: "已保留 2 个阶段的产物，可以继续" });
 	});
 
+	it("offers only cancel when the run cannot be resumed", () => {
+		const [item] = deriveInboxItems({
+			...base,
+			recoveryControl: { ...recoverable, available_actions: ["cancel"] },
+		});
+		expect(item).toMatchObject({ kind: "recoverable", resumable: false, detail: "这次运行无法接着跑，取消后可以重新生成" });
+	});
+
 	it("ignores an active (not recoverable) control", () => {
 		expect(deriveInboxItems({ ...base, recoveryControl: { ...recoverable, state: "active" } })).toEqual([]);
 	});

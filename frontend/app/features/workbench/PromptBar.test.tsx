@@ -56,6 +56,15 @@ describe("PromptBar", () => {
 		expect(onSendFeedback).toHaveBeenCalledWith("第一行\n第二行");
 	});
 
+	it("puts the draft back when the feedback was not sent", async () => {
+		const onSendFeedback = vi.fn().mockResolvedValue(false);
+		render(<PromptBar {...base} onSendFeedback={onSendFeedback} />);
+
+		await userEvent.type(screen.getByRole("textbox"), "重画这一格{Enter}");
+		expect(onSendFeedback).toHaveBeenCalledWith("重画这一格");
+		expect(await screen.findByDisplayValue("重画这一格")).toBeInTheDocument();
+	});
+
 	it("shows the gate chip and sends feedback to the gate", async () => {
 		const onConfirm = vi.fn();
 		render(<PromptBar {...base} awaitingConfirm isGenerating gateLabel="规划" onConfirm={onConfirm} />);
