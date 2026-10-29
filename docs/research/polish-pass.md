@@ -23,3 +23,11 @@ Rule of thumb: **one way to do each thing**, and the way lives in `tokens.css` �
 2. states & motion: pressed, hover unification, focus fixes, panel/menu transitions.
 3. media placeholders (`ui/media.ts`) + canvas card states + icon-size scale (guarded in `designContract.test.ts`).
 4. final detect/critique + screenshots (`.devdata/screens/polish-*.png`).
+
+## Results (after #39–#44)
+
+Impeccable detect (`/`, `/projects`, `/project/2`, `/project/5`, `/universes` × 1440 / 1280 / 390): low-contrast 0, undersized 0, hard-offset 0 everywhere. Text-occlusion only on the canvas: 11 @1440 (`/project/2`), 14 + 4 @1280 (was 18), 0 on mobile. These are the neighbouring Cast / Final frames that peek out under the floating Agent panel and inspector, plus the second shot row under the toolbar when the storyboard is taller than the viewport at readable zoom. That is how the floating-panel layout is meant to work (fit targets the storyboard; panels re-fit until the user pans, #38). A bigger bottom fit inset was tried and made it worse, so it was left as is.
+
+Audit 17 → 18/20 (implementation 3 → 4: tokens and guards for borders, radii, text tints, arbitrary values and icon sizes). Nielsen 29 → 30/40 (help/docs 2 → 3: How-it-works panel, empty-frame hints, sort-mode hint; the other heuristics stay at 3).
+
+Screens: `.devdata/screens/polish-{desktop,mobile}-{light,dark}.png`.
