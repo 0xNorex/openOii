@@ -102,6 +102,29 @@ describe("entity revision compare-and-set", () => {
     expect(shared.getCharacter(1)?.image_url).toBeNull();
   });
 
+  it("a re-plan that deletes a frozen shot can write the row that reuses its id", () => {
+    // The backend's shot table has a plain INTEGER PRIMARY KEY, so rowids are reused.
+    const { sql } = edb.db.prepare("SELECT sql FROM sqlite_master WHERE name = 'shot'").get() as { sql: string };
+    edb.db.exec(`DROP TABLE shot; ${sql.replace(" AUTOINCREMENT", "")}`);
+    edb.db
+      .prepare('INSERT INTO shot (project_id, "order", description, revision) VALUES (1, 1, \'old\', 2)')
+      .run();
+    const stage = shared.withFrozenStageInput({
+      project: null,
+      characters: [],
+      shots: [shared.getShot(1)!],
+    });
+
+    stage.deleteShot(1);
+    const id = stage.insertShot(1, 1, { description: "new", character_ids: [] });
+    expect(id).toBe(1); // SQLite hands the freed rowid back
+    stage.updateShot(id, { image_url: "/static/images/new.png" });
+
+    expect(shared.getShot(1)?.description).toBe("new");
+    expect(shared.getShot(1)?.image_url).toBe("/static/images/new.png");
+    expect(stage.shotsForProject(1).map((shot) => shot.id)).not.toContain(1);
+  });
+
   it("rejects a shot write based on a superseded snapshot", () => {
     edb.db
       .prepare('INSERT INTO shot (project_id, "order", description) VALUES (1, 1, \'shot\')')

@@ -740,6 +740,7 @@ export class SharedDb {
   deleteCharacter(characterId: number): void {
     this.assertExecutionFence();
     this.db.prepare("DELETE FROM character WHERE id = ?").run(characterId);
+    this.forgetFrozen("character", characterId);
   }
 
   // ---- shots ----
@@ -832,6 +833,20 @@ export class SharedDb {
   deleteShot(shotId: number): void {
     this.assertExecutionFence();
     this.db.prepare("DELETE FROM shot WHERE id = ?").run(shotId);
+    this.forgetFrozen("shot", shotId);
+  }
+
+  /**
+   * A deleted row leaves the frozen snapshot too. SQLite reuses the highest
+   * rowid, so a re-plan that deletes shot N and inserts a new one gets id N
+   * back; checking that new row against the old row's frozen revision would
+   * fail every redo with a false ConcurrentModificationError.
+   */
+  private forgetFrozen(entity: "character" | "shot", entityId: number): void {
+    if (!this.frozenInput) return;
+    const rows = entity === "shot" ? this.frozenInput.shots : this.frozenInput.characters;
+    const index = rows.findIndex((row) => row.id === entityId);
+    if (index >= 0) rows.splice(index, 1);
   }
 
   // ---- artifact versions ----
