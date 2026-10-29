@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
+import { versionsApi } from "~/services/api";
 import type { Character } from "~/types";
 import type { ComicWorkflowNode } from "../graph/types";
 import { WorkflowInspector } from "./WorkflowInspector";
@@ -120,6 +121,11 @@ describe("WorkflowInspector", () => {
 		const user = userEvent.setup();
 		const seen = vi.fn();
 		const off = canvasEvents.on("version-history", seen);
+		vi.spyOn(versionsApi, "list").mockResolvedValue({
+			entity_type: "character",
+			entity_id: 1,
+			versions: [{ id: 1, entity_type: "character", entity_id: 1, version: 1, snapshot: { name: "旧名" }, trigger: "generation", created_at: "" }],
+		});
 		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
 
 		await user.click(screen.getByRole("button", { name: "历史" }));
@@ -127,5 +133,14 @@ describe("WorkflowInspector", () => {
 		await user.click(screen.getByRole("button", { name: "对比生成版本" }));
 		expect(seen).toHaveBeenCalledWith({ entityType: "character", entityId: 1 });
 		off();
+	});
+
+	it("disables 对比 when the only snapshot equals the current entity", async () => {
+		const user = userEvent.setup();
+		vi.spyOn(versionsApi, "list").mockResolvedValue({ entity_type: "character", entity_id: 1, versions: [{ id: 1, entity_type: "character", entity_id: 1, version: 1, snapshot: { name: "阿一", description: "主角" }, trigger: "generation", created_at: "" }] });
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
+		await user.click(screen.getByRole("button", { name: "历史" }));
+		expect(await screen.findByText("只有一个版本，重新生成或修改后才能对比。")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "对比生成版本" })).toBeDisabled();
 	});
 });

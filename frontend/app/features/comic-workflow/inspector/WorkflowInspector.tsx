@@ -120,7 +120,7 @@ export function WorkflowInspector({
 						multiShotIds={multiShotIds}
 					/>
 				) : null}
-				{activeTab === "history" ? <HistorySection node={selectedNode} /> : null}
+				{activeTab === "history" ? <HistorySection node={selectedNode} projectId={projectId} /> : null}
 			</div>
 		</div>
 	);

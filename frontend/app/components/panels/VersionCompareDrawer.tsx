@@ -6,7 +6,7 @@ import { Select } from "~/components/ui/Select";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { getStaticUrl, projectsApi, versionsApi } from "~/services/api";
-import type { ArtifactVersion, VersionDiff, VersionEntityType } from "~/types";
+import type { ArtifactVersion, VersionEntityType } from "~/types";
 import { toast } from "~/utils/toast";
 import { IconButton } from "../../components/ui/IconButton";
 
@@ -48,6 +48,40 @@ const DISPLAY_FIELDS = [
 	"visual_notes",
 ];
 
+/** 参与对比的字段：展示字段 + 图片 */
+const COMPARE_FIELDS = [...DISPLAY_FIELDS, "image_url"];
+
+/** 右侧默认是「当前」：实体此刻的样子，不是某个快照 */
+const CURRENT = 0;
+
+type Snapshot = Record<string, unknown>;
+type FieldDiff = { field: string; before: unknown; after: unknown };
+
+function blank(value: unknown): boolean {
+	return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
+}
+
+/** 两份快照在对比字段上的差异；空值彼此相等 */
+export function diffSnapshots(before: Snapshot | undefined, after: Snapshot | undefined): FieldDiff[] {
+	if (!before || !after) return [];
+	return COMPARE_FIELDS.flatMap((field) => {
+		const a = before[field];
+		const b = after[field];
+		if (blank(a) && blank(b)) return [];
+		if (JSON.stringify(a) === JSON.stringify(b)) return [];
+		return [{ field, before: a, after: b }];
+	});
+}
+
+/**
+ * 默认对比「当前 vs 上一版」：上一版是最新的、和当前确实不同的快照。
+ * 都和当前相同（或没有快照）时返回 null，抽屉给出提示而不是空对比。
+ */
+export function defaultPrevious(current: Snapshot | undefined, versions: ArtifactVersion[]): number | null {
+	const differing = versions.find((version) => diffSnapshots(version.snapshot, current).length > 0);
+	return differing?.version ?? null;
+}
+
 function valueToText(value: unknown): string {
 	if (value === null || value === undefined || value === "") return "—";
 	if (Array.isArray(value)) return value.join(", ");
@@ -61,27 +95,36 @@ function versionLabel(version: ArtifactVersion): string {
 	return `v${version.version} · ${TRIGGER_LABEL[version.trigger] ?? version.trigger}`;
 }
 
-function VersionColumn({ title, version }: { title: string; version?: ArtifactVersion }) {
-	const imageUrl = getStaticUrl(version?.snapshot.image_url as string | null | undefined);
+function VersionColumn({ title, snapshot, changed }: { title: string; snapshot?: Snapshot; changed: Set<string> }) {
+	const imageUrl = getStaticUrl(snapshot?.image_url as string | null | undefined);
 	return (
 		<section className="min-w-0 rounded-md border border-line bg-paper-200/60 p-2.5">
 			<h3 className="m-0 text-xs font-bold">{title}</h3>
-			<div className="mt-1.5 aspect-video overflow-hidden rounded-sm border border-line bg-paper-300">
+			<div
+				className={`mt-1.5 aspect-video overflow-hidden rounded-sm border bg-paper-300 ${changed.has("image_url") ? "border-primary" : "border-line"}`}
+			>
 				{imageUrl ? (
 					<img src={imageUrl} alt={title} className="h-full w-full object-cover" />
 				) : (
 					<div className="flex h-full items-center justify-center text-xs text-ink-muted">
-						图片不存在或未生成
+						这一版还没有图
 					</div>
 				)}
 			</div>
 			<div className="mt-2 space-y-1.5">
 				{DISPLAY_FIELDS.map((field) => {
-					const value = version?.snapshot[field];
-					if (value === undefined || value === null || value === "") return null;
+					const value = snapshot?.[field];
+					if (blank(value)) return null;
+					const isChanged = changed.has(field);
 					return (
-						<div key={field} className="text-xs">
-							<div className="font-semibold text-ink-muted">{LABELS[field] || field}</div>
+						<div
+							key={field}
+							className={`text-xs ${isChanged ? "-mx-1 rounded-sm bg-primary/10 px-1" : ""}`}
+						>
+							<div className="font-semibold text-ink-muted">
+								{LABELS[field] || field}
+								{isChanged && <span className="ml-1 text-primary">· 有变化</span>}
+							</div>
 							<div className="whitespace-pre-wrap break-words">{valueToText(value)}</div>
 						</div>
 					);
@@ -91,18 +134,23 @@ function VersionColumn({ title, version }: { title: string; version?: ArtifactVe
 	);
 }
 
-function DiffRow({ diff }: { diff: VersionDiff }) {
+function diffText(field: string, value: unknown): string {
+	if (field === "image_url") return blank(value) ? "没有图" : "有图（见上方对比）";
+	return valueToText(value);
+}
+
+function DiffRow({ diff }: { diff: FieldDiff }) {
 	return (
 		<li className="rounded-sm border border-line bg-paper-100 p-2 text-xs">
-			<div className="mb-1 font-semibold">{LABELS[diff.field_name] || diff.field_name}</div>
+			<div className="mb-1 font-semibold">{LABELS[diff.field] || diff.field}</div>
 			<div className="grid gap-2 md:grid-cols-2">
 				<div className="rounded-sm bg-error/10 p-2">
 					<div className="mb-1 text-error-fg">旧</div>
-					<pre className="whitespace-pre-wrap break-words font-sans">{valueToText(diff.old_value)}</pre>
+					<pre className="whitespace-pre-wrap break-words font-sans">{diffText(diff.field, diff.before)}</pre>
 				</div>
 				<div className="rounded-sm bg-success/10 p-2">
 					<div className="mb-1 text-success-fg">新</div>
-					<pre className="whitespace-pre-wrap break-words font-sans">{valueToText(diff.new_value)}</pre>
+					<pre className="whitespace-pre-wrap break-words font-sans">{diffText(diff.field, diff.after)}</pre>
 				</div>
 			</div>
 		</li>
@@ -150,26 +198,27 @@ export function VersionCompareDrawer({
 	const versions = versionsQuery.data?.versions ?? [];
 	const [leftVersion, setLeftVersion] = useState<number | null>(null);
 	const [rightVersion, setRightVersion] = useState<number | null>(null);
-	const effectiveLeft = leftVersion ?? versions[1]?.version ?? versions[0]?.version ?? null;
-	const effectiveRight = rightVersion ?? versions[0]?.version ?? null;
-
-	const compareQuery = useQuery({
-		queryKey: ["versions", "compare", projectId, entityType, selectedEntityId, effectiveLeft, effectiveRight],
-		queryFn: () =>
-			versionsApi.compare(
-				projectId,
-				entityType,
-				selectedEntityId ?? 0,
-				effectiveLeft ?? 1,
-				effectiveRight ?? 1,
-			),
-		enabled: open && Boolean(selectedEntityId && effectiveLeft && effectiveRight),
-	});
-
+	const currentSnapshot = useMemo(
+		() =>
+			(entities as unknown as Snapshot[]).find((entity) => entity.id === selectedEntityId),
+		[entities, selectedEntityId],
+	);
+	const previous = useMemo(() => defaultPrevious(currentSnapshot, versions), [currentSnapshot, versions]);
+	const effectiveLeft = leftVersion ?? previous ?? versions[0]?.version ?? null;
+	const effectiveRight = rightVersion ?? CURRENT;
 	const versionByNumber = useMemo(
 		() => new Map(versions.map((version) => [version.version, version])),
 		[versions],
 	);
+	const snapshotOf = (n: number | null): Snapshot | undefined =>
+		n === CURRENT ? currentSnapshot : n === null ? undefined : versionByNumber.get(n)?.snapshot;
+	const leftSnapshot = snapshotOf(effectiveLeft);
+	const rightSnapshot = snapshotOf(effectiveRight);
+	const diffs = diffSnapshots(leftSnapshot, rightSnapshot);
+	const changed = new Set(diffs.map((diff) => diff.field));
+	const nothingToCompare = versions.length > 0 && previous === null && leftVersion === null && rightVersion === null;
+	const sideLabel = (n: number | null) =>
+		n === CURRENT ? "当前" : n === null ? "—" : versionByNumber.get(n) ? versionLabel(versionByNumber.get(n)!) : `v${n}`;
 	const rollbackMutation = useMutation({
 		mutationFn: (targetVersion: number) =>
 			versionsApi.rollback(entityType, selectedEntityId ?? 0, targetVersion),
@@ -247,7 +296,13 @@ export function VersionCompareDrawer({
 					</div>
 				)}
 
-				{versions.length > 0 && (
+				{nothingToCompare && (
+					<div className="rounded-md border border-line bg-paper-200/40 p-3 text-xs text-ink-muted" role="note">
+						只有一个版本：历史快照和当前内容相同，重新生成或修改后才有可对比的内容。
+					</div>
+				)}
+
+				{versions.length > 0 && !nothingToCompare && (
 					<>
 						<div className="grid gap-2 md:grid-cols-2">
 							<Select
@@ -263,9 +318,10 @@ export function VersionCompareDrawer({
 							<Select
 								density="compact"
 								aria-label="新版本"
-								value={effectiveRight ?? ""}
+								value={effectiveRight}
 								onChange={(e) => setRightVersion(Number(e.currentTarget.value))}
 							>
+								<option value={CURRENT}>当前</option>
 								{versions.map((version) => (
 									<option key={version.id} value={version.version}>{versionLabel(version)}</option>
 								))}
@@ -273,19 +329,18 @@ export function VersionCompareDrawer({
 						</div>
 
 						<div className="grid gap-3 lg:grid-cols-2">
-							<VersionColumn title={`旧版本 v${effectiveLeft ?? "—"}`} version={effectiveLeft ? versionByNumber.get(effectiveLeft) : undefined} />
-							<VersionColumn title={`新版本 v${effectiveRight ?? "—"}`} version={effectiveRight ? versionByNumber.get(effectiveRight) : undefined} />
+							<VersionColumn title={`旧 · ${sideLabel(effectiveLeft)}`} snapshot={leftSnapshot} changed={changed} />
+							<VersionColumn title={`新 · ${sideLabel(effectiveRight)}`} snapshot={rightSnapshot} changed={changed} />
 						</div>
 
 						<section className="rounded-md border border-line bg-paper-200/40 p-2.5">
 							<h3 className="mb-1.5 text-xs font-bold">差异</h3>
-							{compareQuery.isLoading && <div className="text-xs text-ink-muted">计算差异中…</div>}
-							{!compareQuery.isLoading && (compareQuery.data?.diffs.length ?? 0) === 0 && (
-								<div className="text-xs text-ink-muted">两个版本内容相同。</div>
+							{diffs.length === 0 && (
+								<div className="text-xs text-ink-muted">这两边内容相同，换一个版本看看。</div>
 							)}
 							<ul className="space-y-1.5">
-								{compareQuery.data?.diffs.map((diff) => (
-									<DiffRow key={diff.field_name} diff={diff} />
+								{diffs.map((diff) => (
+									<DiffRow key={diff.field} diff={diff} />
 								))}
 							</ul>
 						</section>
