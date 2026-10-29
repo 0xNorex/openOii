@@ -171,8 +171,8 @@ describe("boardViewport", () => {
 		expect(v.x).toBe(348 + (1400 - 696 - 400) / 2);
 	});
 
-	it("zooms out until the whole board fits between the open panels", () => {
-		const bounds = { x: 100, y: 50, width: 2000, height: 600 };
+	it("zooms out a little to fit the whole board between the open panels", () => {
+		const bounds = { x: 100, y: 50, width: 500, height: 300 };
 		const v = boardViewport(bounds, { width: 1280, height: 800 }, { left: 372, right: 332 });
 		const availW = 1280 - (48 + 372) - (48 + 332);
 		expect(v.zoom).toBeCloseTo(availW / bounds.width);
@@ -183,9 +183,14 @@ describe("boardViewport", () => {
 		expect(v.y + (bounds.y + bounds.height) * v.zoom).toBeLessThanOrEqual(800 - 168);
 	});
 
-	it("never goes below the canvas minimum zoom", () => {
-		const v = boardViewport({ x: 0, y: 0, width: 40000, height: 400 }, { width: 1000, height: 800 });
-		expect(v.zoom).toBe(0.2);
+	it("stops at the readable zoom and centres the storyboard when the board is too big", () => {
+		const board = { x: 0, y: 0, width: 2000, height: 600 };
+		const storyboard = { x: 700, y: 0, width: 400, height: 300 };
+		const v = boardViewport(board, { width: 1280, height: 800 }, { left: 372, right: 332 }, storyboard);
+		expect(v.zoom).toBeCloseTo(12 / 13);
+		const centre = v.x + (storyboard.x + storyboard.width / 2) * v.zoom;
+		expect(centre).toBeCloseTo(48 + 372 + (1280 - 420 - 380) / 2);
+		expect(v.y + storyboard.y * v.zoom).toBeGreaterThanOrEqual(48);
 	});
 });
 

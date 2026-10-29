@@ -29,6 +29,7 @@ import {
 	type CanvasViewControls,
 } from "../toolbar/ComicCanvasToolbar";
 import {
+	frameNodeId,
 	shotReadingOrder,
 	moveShot,
 	toFlowNodes,
@@ -38,30 +39,35 @@ import {
 	type WorkflowInteractionMode,
 } from "./toFlowNodes";
 
-/** 与 <ReactFlow minZoom> 一致：适配再小也不低于画布允许的最小缩放。 */
+/** 与 <ReactFlow minZoom> 一致：手动缩放的下限。 */
 const MIN_ZOOM = 0.2;
+/** 卡片标题 13px：自动适配不低于 12/13，屏幕字号就 ≥ 12px。 */
+const READABLE_ZOOM = 12 / 13;
 /**
- * 适配整块画板（角色、分镜、成片三个 frame 全部可见）：放大不超过 1，
- * 在剩余空间里居中。留白让出两侧打开的浮动面板，以及底部提示栏 + 工具条
+ * 适配整块画板（角色、分镜、成片三个 frame）：放大不超过 1，在剩余空间里居中。
+ * 整块放不下可读字号时，停在可读下限并以分镜区（focus）为中心，两侧 frame 可以被裁掉。
+ * 留白让出两侧打开的浮动面板，以及底部提示栏 + 工具条
  * （--toolbar-offset 6.75rem + 工具条 ~44px + 16px 间隙）。
  */
 export function boardViewport(
 	bounds: { x: number; y: number; width: number; height: number },
 	viewport: { width: number; height: number },
 	insets = { left: 0, right: 0 },
+	focus = bounds,
 ) {
 	const pad = { left: 48 + insets.left, right: 48 + insets.right, top: 48, bottom: 168 };
 	const availW = Math.max(1, viewport.width - pad.left - pad.right);
 	const availH = Math.max(1, viewport.height - pad.top - pad.bottom);
 	const fitZoom = Math.min(availW / bounds.width, availH / bounds.height);
-	const zoom = Math.min(1, Math.max(MIN_ZOOM, fitZoom));
+	const zoom = Math.min(1, Math.max(READABLE_ZOOM, fitZoom));
+	const box = fitZoom < READABLE_ZOOM ? focus : bounds;
 	const axis = (start: number, avail: number, size: number, origin: number) =>
 		size * zoom <= avail
 			? start + (avail - size * zoom) / 2 - origin * zoom
 			: start - origin * zoom;
 	return {
-		x: axis(pad.left, availW, bounds.width, bounds.x),
-		y: axis(pad.top, availH, bounds.height, bounds.y),
+		x: axis(pad.left, availW, box.width, box.x),
+		y: axis(pad.top, availH, box.height, box.y),
 		zoom,
 	};
 }
@@ -160,12 +166,14 @@ function FlowInner({
 			if (!el || target.length === 0) return;
 			const bounds = flow.getNodesBounds(target);
 			if (bounds.width === 0 || bounds.height === 0) return;
+			const shotline = flow.getNode(frameNodeId("shotline"));
 			autoFitRef.current = true;
 			void flow.setViewport(
 				boardViewport(
 					bounds,
 					{ width: el.clientWidth, height: el.clientHeight },
 					insetsRef.current,
+					shotline ? flow.getNodesBounds([shotline]) : bounds,
 				),
 				{ duration },
 			);
