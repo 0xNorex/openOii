@@ -9,6 +9,17 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def as_naive_utc(value: datetime) -> datetime:
+    """Naive UTC for arithmetic between backend and engine timestamps.
+
+    The backend stores naive UTC; the engine writes ISO-8601 with a trailing Z,
+    which reads back tz-aware. Mixing the two in a subtraction raises TypeError.
+    """
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
 def redact_credentials(conn_str: str) -> str:
     """去掉连接串中的账号口令，避免凭据进入日志。"""
     parts = urlsplit(conn_str)

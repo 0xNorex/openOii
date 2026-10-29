@@ -16,7 +16,7 @@ from app.agents.base import AgentContext
 from app.agents.review_rules import ReviewAgent
 from app.api.deps import SessionDep, SettingsDep, WsManagerDep, get_or_404, require_run_id
 from app.config import Settings
-from app.db.utils import utcnow
+from app.db.utils import as_naive_utc, utcnow
 from app.exceptions import AppException, BusinessError
 from app.generated.workflow_contract import GRAPH_STAGE_FOR_AGENT, WORKFLOW_VERSION
 from app.models.agent_run import AgentMessage, AgentRun
@@ -1172,7 +1172,7 @@ async def regenerate_plan(
         snapshot = latest_full.context_snapshot if isinstance(latest_full.context_snapshot, dict) else {}
         command = snapshot.get("execution_command")
         auto = isinstance(command, dict) and command.get("auto_mode") is True
-        elapsed = (latest_full.updated_at - latest_full.created_at).total_seconds()
+        elapsed = (as_naive_utc(latest_full.updated_at) - as_naive_utc(latest_full.created_at)).total_seconds()
         # Only an auto run measures generation alone; a manual run includes the
         # time the user spent at each gate.
         if auto and 60 <= elapsed <= 4 * 3600:

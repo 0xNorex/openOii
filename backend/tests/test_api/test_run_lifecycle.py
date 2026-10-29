@@ -272,6 +272,32 @@ async def test_restore_refuses_a_stale_capture(async_client, test_session, valid
 
 
 @pytest.mark.asyncio
+async def test_regenerate_plan_reads_engine_written_timestamps(async_client, test_session, valid_providers):
+    """The engine stamps agentrun.updated_at as ISO-8601 with a trailing Z (tz-aware)
+    while the backend writes created_at naive UTC. Subtracting the two used to 500
+    the plan, which also hid 恢复上一版 after a finished regenerate."""
+    from sqlalchemy import text
+
+    project, _, _ = await _finished_project(test_session)
+    run_id = (await async_client.post(f"/api/v1/projects/{project.id}/runs", json={"auto_mode": True})).json()["id"]
+    run = await test_session.get(AgentRun, run_id)
+    run.status = "succeeded"
+    run.created_at = utcnow() - timedelta(minutes=20)
+    test_session.add(run)
+    await test_session.commit()
+    finished = (utcnow() - timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    await test_session.execute(text("UPDATE agentrun SET updated_at = :t WHERE id = :id"), {"t": finished, "id": run_id})
+    await test_session.commit()
+    test_session.expire_all()
+
+    plan = await async_client.get(f"/api/v1/projects/{project.id}/runs/regenerate-plan")
+    assert plan.status_code == 200, plan.text
+    body = plan.json()
+    assert body["previous_version"]["restorable"] is True
+    assert body["estimate"]["basis"] == "history"
+
+
+@pytest.mark.asyncio
 async def test_regenerate_plan_for_empty_project(async_client, test_session):
     project = await create_project(test_session)
     res = await async_client.get(f"/api/v1/projects/{project.id}/runs/regenerate-plan")
