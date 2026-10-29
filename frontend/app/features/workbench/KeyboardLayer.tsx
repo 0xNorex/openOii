@@ -106,14 +106,14 @@ export function KeyboardLayer({
 
 	return (
 		<>
-			<Dialog open={open === "help"} onClose={() => setOpen(null)} labelledBy="shortcut-sheet-title" className="w-[min(92vw,28rem)] p-4">
+			<Dialog open={open === "help"} onClose={() => setOpen(null)} labelledBy="shortcut-sheet-title" className="w-full max-w-md p-4">
 				<h2 id="shortcut-sheet-title" className="m-0 mb-3 text-md font-bold">
 					键盘快捷键
 				</h2>
-				<dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+				<dl className="m-0 flex flex-col gap-2 text-sm">
 					{SHORTCUTS.map(([keys, action]) => (
-						<div key={keys} className="contents">
-							<dt>
+						<div key={keys} className="flex items-baseline gap-4">
+							<dt className="w-36 shrink-0">
 								<kbd className="rounded-sm border border-line-strong bg-paper-200 px-1.5 py-0.5 font-mono text-xs">{keys}</kbd>
 							</dt>
 							<dd className="m-0 text-ink-muted">{action}</dd>
@@ -160,7 +160,7 @@ function CommandPalette({
 	};
 
 	return (
-		<Dialog open onClose={onClose} label="命令面板" initialFocusRef={inputRef} className="w-[min(92vw,34rem)] p-0">
+		<Dialog open onClose={onClose} label="命令面板" initialFocusRef={inputRef} className="w-full max-w-lg p-0">
 			<input
 				ref={inputRef}
 				role="combobox"
