@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
-import { assetsApi, charactersApi, getStaticUrl, shotsApi, universesApi } from "~/services/api";
+import { assetsApi, charactersApi, getStaticUrl, shotsApi, universesApi, versionsApi } from "~/services/api";
 import { removeCharacterFromCache, removeShotFromCache, upsertCharacterInCache, upsertShotInCache } from "~/query/applyServerEvent";
 import { toast } from "~/utils/toast";
+import type { ArtifactVersion } from "~/types";
 import type { ComicWorkflowNode } from "../graph/types";
 import { ActionButton, ActionStack, errorMessage } from "./fields";
 import { MultiShotActions } from "./MultiShotActions";
@@ -123,6 +124,20 @@ export function GenerationSection({
 							: `重做本格 · 视频（${cell}）`,
 				message: "任务已启动，仅影响选中实体",
 			});
+		});
+
+	// 版本切换：回到上一版本身也会记成新版本，所以再点一次就切回来
+	const swapToPrevious = () =>
+		runAction("previous", async () => {
+			const kind = node.kind === "character" ? "character" : "shot";
+			const { versions } = await versionsApi.list(projectId, kind, entityId);
+			const target = previousVersion(versions);
+			if (!target) {
+				toast.info({ title: "版本", message: "还没有上一版，重做一次之后才能切换" });
+				return;
+			}
+			await versionsApi.rollback(kind, entityId, target.version);
+			toast.success({ title: "已换回上一版", message: `内容来自 v${target.version}，再点一次可切回` });
 		});
 
 	const addToAssets = () =>
@@ -245,6 +260,13 @@ export function GenerationSection({
 				</>
 			)}
 			<ActionButton
+				icon="clock-3"
+				label="换回上一版"
+				disabled={writeDisabled}
+				loading={busy === "previous"}
+				onClick={swapToPrevious}
+			/>
+			<ActionButton
 				icon="archive"
 				label="保存到资产库"
 				disabled={writeDisabled}
@@ -273,4 +295,10 @@ function deleteMessage(node: ComicWorkflowNode): string {
 		return "确定删除这个镜头吗？镜头顺序和最终合成需要重新确认。";
 	}
 	return "确定删除吗？";
+}
+
+/** 上一版：列表按新到旧排，第二条就是当前之前的那一版。 */
+export function previousVersion(versions: ArtifactVersion[]): ArtifactVersion | null {
+	const sorted = [...versions].sort((a, b) => b.version - a.version);
+	return sorted[1] ?? null;
 }
