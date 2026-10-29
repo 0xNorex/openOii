@@ -703,7 +703,7 @@ export class MediaService {
     const url = item?.url;
     if (typeof url !== "string" || !url) throw new Error("image provider returned no URL");
     return this.persistProviderMedia(
-      absoluteMediaUrl(url, this.settings.imageBaseUrl),
+      this.providerMediaUrl(url, this.settings.imageBaseUrl),
       "image",
       this.settings.imageBaseUrl,
     );
@@ -717,6 +717,22 @@ export class MediaService {
    * configured); any other host goes through the public-address guard.
    * If the copy fails the remote URL is kept, as before.
    */
+  /**
+   * Where a provider-returned URL points. A relative `/static/...` path that
+   * already exists in our static directory is ours (a local gateway or proxy
+   * may have written the file there), so it is kept as a local path; any other
+   * relative URL belongs to the provider host.
+   */
+  private providerMediaUrl(url: string, providerBaseUrl: string): string {
+    if (url.startsWith("/static/")) {
+      const relative = url.slice("/static/".length).split(/[?#]/)[0] ?? "";
+      const root = resolve(this.settings.staticDir);
+      const candidate = resolve(root, relative);
+      if (relative && candidate.startsWith(root + sep) && existsSync(candidate)) return url;
+    }
+    return absoluteMediaUrl(url, providerBaseUrl);
+  }
+
   private async persistProviderMedia(
     url: string,
     kind: "image" | "video",
@@ -917,7 +933,7 @@ export class MediaService {
     }
     if (!url) throw new Error("video provider returned no URL");
     return this.persistProviderMedia(
-      absoluteMediaUrl(url, this.settings.videoBaseUrl),
+      this.providerMediaUrl(url, this.settings.videoBaseUrl),
       "video",
       this.settings.videoBaseUrl,
     );

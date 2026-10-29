@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import SqliteDatabase from "better-sqlite3";
@@ -357,6 +357,9 @@ describe("OpenAI-compatible media provider", () => {
       } else if (path === "/v1/media/img.webp") {
         res.writeHead(200, { "Content-Type": "application/octet-stream" });
         res.end(WEBP);
+      } else if (path === "/v1/videos/generations" && body.prompt === "local") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "completed", url: "/static/videos/gateway-clip.mp4" }));
       } else if (path === "/v1/videos/generations") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ id: "task_1", status: "queued" }));
@@ -454,5 +457,14 @@ describe("OpenAI-compatible media provider", () => {
       "image provider failed: 524",
     );
     expect(seen.filter((s) => s.path === "/v1/images/generations")).toHaveLength(4);
+  });
+
+  it("keeps a relative /static/ URL that a local gateway already wrote into our static dir", async () => {
+    mkdirSync(join(dir, "videos"), { recursive: true });
+    writeFileSync(join(dir, "videos", "gateway-clip.mp4"), "mp4");
+    const { media } = service();
+    const url = await media.generateVideoUrl({ prompt: "local", duration: 5 });
+    expect(url).toBe("/static/videos/gateway-clip.mp4");
+    expect(seen.map((s) => s.path)).toEqual(["/v1/videos/generations"]);
   });
 });
