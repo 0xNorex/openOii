@@ -585,7 +585,7 @@ describe("useProjectWebSocket", () => {
     expect(readRunState(1).recoverySummary).toEqual({ updated: true });
     expect(readMessageFeed(1).at(-1)).toMatchObject({
       role: "info",
-      content: "已确认，继续执行...",
+      content: "已确认，继续执行…",
     });
   });
 
@@ -634,7 +634,7 @@ describe("useProjectWebSocket", () => {
     expect(readRunState(1).awaitingConfirm).toBe(false);
     expect(readMessageFeed(1).at(-1)).toMatchObject({
       role: "info",
-      content: "自动确认，继续执行...",
+      content: "自动确认，继续执行…",
     });
   });
 

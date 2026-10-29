@@ -412,7 +412,7 @@ describe("ConfigInput", () => {
 
 		await waitFor(() => {
 			const input = screen.getByDisplayValue("sk-actual-key-123456");
-			expect(input).toHaveAttribute("placeholder", "输入新值...");
+			expect(input).toHaveAttribute("placeholder", "输入新值…");
 		});
 	});
 });

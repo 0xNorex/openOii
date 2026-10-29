@@ -240,7 +240,7 @@ export function VersionCompareDrawer({
 					</Select>
 				</div>
 
-				{versionsQuery.isLoading && <div className="text-xs text-ink-muted">加载版本中...</div>}
+				{versionsQuery.isLoading && <div className="text-xs text-ink-muted">加载版本中…</div>}
 				{!versionsQuery.isLoading && versions.length === 0 && (
 					<div className="rounded-md border border-line p-4 text-xs text-ink-muted">
 						暂无版本快照。生成或重新生成后会自动记录。
@@ -279,7 +279,7 @@ export function VersionCompareDrawer({
 
 						<section className="rounded-md border border-line bg-paper-200/40 p-2.5">
 							<h3 className="mb-1.5 text-xs font-bold">差异</h3>
-							{compareQuery.isLoading && <div className="text-xs text-ink-muted">计算差异中...</div>}
+							{compareQuery.isLoading && <div className="text-xs text-ink-muted">计算差异中…</div>}
 							{!compareQuery.isLoading && (compareQuery.data?.diffs.length ?? 0) === 0 && (
 								<div className="text-xs text-ink-muted">两个版本内容相同。</div>
 							)}

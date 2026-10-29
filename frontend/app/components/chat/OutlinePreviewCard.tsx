@@ -69,7 +69,7 @@ export function OutlinePreviewCard({
 			{visualBible && (
 				<p className="text-xs text-ink-muted bg-paper-200/60 rounded-md p-2">
 					<span className="font-bold">视觉指南：</span>
-					{visualBible.slice(0, 120)}{visualBible.length > 120 ? "..." : ""}
+					{visualBible.slice(0, 120)}{visualBible.length > 120 ? "…" : ""}
 				</p>
 			)}
 

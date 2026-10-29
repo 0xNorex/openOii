@@ -528,7 +528,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 							<Suspense
 								fallback={
 									<div className="flex h-full w-full items-center justify-center bg-paper-100 text-sm text-ink-muted">
-										正在加载画布...
+										正在加载画布…
 									</div>
 								}
 							>

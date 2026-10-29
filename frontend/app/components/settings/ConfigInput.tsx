@@ -92,7 +92,7 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 						onChange={onChange}
 						className={`${fieldClass} pr-10`}
 						autoComplete="off"
-						placeholder={isRevealed ? "输入新值..." : ""}
+						placeholder={isRevealed ? "输入新值…" : ""}
 					/>
 					<IconButton aria-label={isRevealed ? "隐藏真实值" : "显示真实值"}
 						onClick={handleToggleReveal}

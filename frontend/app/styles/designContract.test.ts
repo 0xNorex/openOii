@@ -46,6 +46,7 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\bshadow-(?:brutal|comic)/, "硬偏移阴影已删除：浮层用 shadow-panel，成片卡用 comic-frame"],
 	[/\bfont-(?:heading|comic|sketch|brand)\b/, "字体只有 font-sans / font-mono；字标是对位标 + 系统无衬线"],
 	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
+	[/[\u4e00-\u9fff]\.\.\.|"\.\.\."/, "三个点：文案里的省略用 …（Vercel guidelines）"],
 	// polish pass（docs/research/polish-pass.md）
 	[/\brounded-xl\b/, "卡片/面板用 rounded-lg（xl 与 lg 同值，只留一种写法）"],
 	[/["'`\s]rounded(?=["'`\s])/, "裸 rounded：写明 rounded-sm / md / lg / full"],

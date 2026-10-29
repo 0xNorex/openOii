@@ -186,7 +186,7 @@ export function UniversesPage() {
 								id="universe-description"
 								name="universe-description"
 								className="input-doodle bg-paper-200 w-full h-20 text-sm"
-								placeholder="宇宙的简要描述..."
+								placeholder="宇宙的简要描述…"
 								value={createForm.description}
 								onChange={(e) =>
 									setCreateForm({ ...createForm, description: e.target.value })
@@ -202,7 +202,7 @@ export function UniversesPage() {
 								id="universe-world-setting"
 								name="universe-world-setting"
 								className="input-doodle bg-paper-200 w-full h-24 text-sm"
-								placeholder="统一的世界观设定，所有章节必须遵循..."
+								placeholder="统一的世界观设定，所有章节必须遵循…"
 								value={createForm.world_setting}
 								onChange={(e) =>
 									setCreateForm({ ...createForm, world_setting: e.target.value })
@@ -218,7 +218,7 @@ export function UniversesPage() {
 								id="universe-style-rules"
 								name="universe-style-rules"
 								className="input-doodle bg-paper-200 w-full h-16 text-sm"
-								placeholder="角色设计、场景风格等统一规则..."
+								placeholder="角色设计、场景风格等统一规则…"
 								value={createForm.style_rules}
 								onChange={(e) =>
 									setCreateForm({ ...createForm, style_rules: e.target.value })

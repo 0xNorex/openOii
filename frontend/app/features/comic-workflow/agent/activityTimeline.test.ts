@@ -79,7 +79,7 @@ describe("deriveActivityTimeline", () => {
 
 	it("drops system info and empty messages, keeps errors with details", () => {
 		const entries = deriveActivityTimeline([
-			msg("info", "已确认，继续执行...", 0, { agent: "system" }),
+			msg("info", "已确认，继续执行…", 0, { agent: "system" }),
 			msg("assistant", "   ", 1),
 			msg("error", "生成失败: timeout", 2, { agent: "system", details: "provider=doubao" }),
 		]);

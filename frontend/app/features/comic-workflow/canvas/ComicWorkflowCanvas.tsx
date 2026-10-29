@@ -110,7 +110,7 @@ export function ComicWorkflowCanvas({
 	if (projectLoading || charactersLoading || shotsLoading || !graph || !layout) {
 		return (
 			<div className="flex h-full w-full items-center justify-center bg-paper-100 text-sm text-ink-muted">
-				正在加载工作流...
+				正在加载工作流…
 			</div>
 		);
 	}

@@ -214,7 +214,7 @@ export function applyWsEvent(
 				id: generateMessageId(),
 				agent: "system",
 				role: "info",
-				content: confirmed.auto_mode ? "自动确认，继续执行..." : "已确认，继续执行...",
+				content: confirmed.auto_mode ? "自动确认，继续执行…" : "已确认，继续执行…",
 				timestamp: new Date().toISOString(),
 			});
 			break;
