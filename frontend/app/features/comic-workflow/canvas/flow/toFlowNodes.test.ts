@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Project, Shot } from "~/types";
 import { buildComicWorkflow } from "../../graph/buildComicWorkflow";
 import { layoutComicWorkflow } from "../../graph/layoutComicWorkflow";
-import { shotReadingOrder, toFlowNodes, type CardFlowNode } from "./toFlowNodes";
+import { moveShot, shotReadingOrder, toFlowNodes, type CardFlowNode } from "./toFlowNodes";
 import { storyboardViewport } from "./FlowWorkflowView";
 
 function project(overrides: Partial<Project> = {}): Project {
@@ -179,5 +179,25 @@ describe("storyboardViewport", () => {
 		expect(v.zoom).toBeCloseTo(12 / 13);
 		expect(v.x).toBeCloseTo(48 - 100 * v.zoom);
 		expect(v.y).toBeCloseTo(48 - 50 * v.zoom);
+	});
+});
+
+describe("moveShot", () => {
+	it("moves a shot one step and renumbers in order", () => {
+		const { graph, layout } = setup();
+		const nodes = toFlowNodes(graph, layout, "sort");
+		const move = moveShot(nodes, "shot:10", 1);
+		expect(move?.items).toEqual([
+			{ shot_id: 11, order: 1 },
+			{ shot_id: 10, order: 2 },
+		]);
+		expect(move?.position).toBe(2);
+	});
+
+	it("refuses to move past either end", () => {
+		const { graph, layout } = setup();
+		const nodes = toFlowNodes(graph, layout, "sort");
+		expect(moveShot(nodes, "shot:10", -1)).toBeNull();
+		expect(moveShot(nodes, "shot:11", 3)).toBeNull();
 	});
 });

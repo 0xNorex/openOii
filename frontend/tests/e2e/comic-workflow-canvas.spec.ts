@@ -368,3 +368,25 @@ test("panels re-fit the board until the user pans", async ({ page }) => {
 	await page.waitForTimeout(500);
 	expect(await transform()).toBe(panned);
 });
+
+test("shots reorder from the keyboard with a live announcement", async ({ page }) => {
+	const bodies: unknown[] = [];
+	await page.goto("/project/7");
+	await page.route("**/api/v1/projects/7/shots/reorder", async (route) => {
+		bodies.push(route.request().postDataJSON());
+		await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+	});
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
+	await page.getByRole("button", { name: "排序九宫格" }).click();
+	const live = page.locator("[aria-live='polite']", { hasText: "排序模式" });
+	await expect(live).toBeVisible();
+
+	await page.locator('.react-flow__node[data-id="shot:1"]').focus();
+	await page.keyboard.press("Alt+ArrowRight");
+	await expect(page.locator("[aria-live='polite']", { hasText: "移到第 2 格" })).toBeVisible();
+	await expect.poll(() => bodies.length).toBe(1);
+	const items = (bodies[0] as { items: { shot_id: number; order: number }[] }).items;
+	expect(items[1]).toEqual({ shot_id: 1, order: 2 });
+	// 键盘排序后留在排序模式，可以继续移动
+	await expect(page.getByRole("button", { name: "完成分镜排序" })).toBeVisible();
+});

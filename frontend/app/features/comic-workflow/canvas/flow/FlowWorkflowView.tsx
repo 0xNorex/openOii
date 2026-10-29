@@ -19,7 +19,10 @@ import { useThemeStore } from "~/stores/themeStore";
 import { motionDuration } from "~/utils/motion";
 import { toast } from "~/utils/toast";
 import type { ComicWorkflowGraph } from "../../graph/types";
-import type { ComicWorkflowLayout } from "../../graph/layoutComicWorkflow";
+import {
+	SHOT_GRID_COLUMNS,
+	type ComicWorkflowLayout,
+} from "../../graph/layoutComicWorkflow";
 import { WorkflowCardView, WorkflowFrameView } from "../WorkflowCards";
 import {
 	ComicCanvasToolbar,
@@ -28,6 +31,7 @@ import {
 import {
 	frameNodeId,
 	shotReadingOrder,
+	moveShot,
 	toFlowNodes,
 	type CardFlowNode,
 	type FrameFlowNode,
@@ -219,6 +223,59 @@ function FlowInner({
 		[onSelectedNodeIdChange, onSelectedNodeIdsChange],
 	);
 
+	const SORT_HINT = "排序模式：拖动分镜，或选中一格后按 Alt + 方向键移动。";
+	const [announcement, setAnnouncement] = useState("");
+	useEffect(() => {
+		setAnnouncement(sortMode ? SORT_HINT : "");
+	}, [sortMode]);
+
+	const submitOrder = useCallback(
+		// 拖动：提示后退出排序模式；键盘：留在排序模式里继续移动，结果由 aria-live 播报
+		(items: { shot_id: number; order: number }[], message: string, fromKeyboard = false) =>
+			projectsApi
+				.reorderShots(projectId, items)
+				.then(() => {
+					void queryClient.invalidateQueries({ queryKey: projectQueryKeys.shots(projectId) });
+					if (fromKeyboard) return;
+					toast.success({ title: "九宫格已重排", message });
+					onSorted();
+				})
+				.catch((error: Error) => {
+					toast.error({ title: "重排失败", message: error.message || "请重试" });
+				}),
+		[onSorted, projectId, queryClient],
+	);
+
+	// 键盘排序：Alt + ←/→ 移一格，Alt + ↑/↓ 移一行；结果经 aria-live 播报
+	const handleKeyDown = useCallback(
+		(event: React.KeyboardEvent<HTMLDivElement>) => {
+			if (interactionMode !== "sort" || !event.altKey) return;
+			const delta = {
+				ArrowLeft: -1,
+				ArrowRight: 1,
+				ArrowUp: -SHOT_GRID_COLUMNS,
+				ArrowDown: SHOT_GRID_COLUMNS,
+			}[event.key];
+			if (!delta) return;
+			const focused = (event.target as HTMLElement)
+				.closest(".react-flow__node")
+				?.getAttribute("data-id");
+			const nodeId = focused ?? selectedRef.current[0];
+			if (!nodeId?.startsWith("shot:")) return;
+			event.preventDefault();
+			event.stopPropagation();
+			const move = moveShot(flow.getNodes(), nodeId, delta);
+			if (!move) {
+				setAnnouncement("已经到头了，无法再移动。");
+				return;
+			}
+			const message = `${move.title} 移到第 ${move.position} 格`;
+			setAnnouncement(message);
+			void submitOrder(move.items, message, true);
+		},
+		[flow, interactionMode, submitOrder],
+	);
+
 	const handleDragStop = useCallback(() => {
 		const current = flow.getNodes();
 		if (interactionMode === "layout") {
@@ -230,21 +287,8 @@ function FlowInner({
 		}
 		if (interactionMode !== "sort") return;
 		const items = shotReadingOrder(current);
-		if (!items) return;
-		projectsApi
-			.reorderShots(projectId, items)
-			.then(() => {
-				void queryClient.invalidateQueries({ queryKey: projectQueryKeys.shots(projectId) });
-				toast.success({
-					title: "九宫格已重排",
-					message: `已按阅读顺序更新 ${items.length} 格`,
-				});
-				onSorted();
-			})
-			.catch((error: Error) => {
-				toast.error({ title: "重排失败", message: error.message || "请重试" });
-			});
-	}, [flow, interactionMode, onSorted, projectId, queryClient, storageKey]);
+		if (items) void submitOrder(items, `已按阅读顺序更新 ${items.length} 格`);
+	}, [flow, interactionMode, storageKey, submitOrder]);
 
 	const handleResetLayout = useCallback(() => {
 		localStorage.removeItem(storageKey);
@@ -276,7 +320,11 @@ function FlowInner({
 	};
 
 	return (
-		<div ref={containerRef} className="infinite-canvas-container relative h-full w-full">
+		<div
+			ref={containerRef}
+			className="infinite-canvas-container relative h-full w-full"
+			onKeyDownCapture={handleKeyDown}
+		>
 			<ReactFlow<WorkflowFlowNode>
 				nodes={nodes}
 				edges={[]}
@@ -300,6 +348,16 @@ function FlowInner({
 			>
 				<Background gap={24} size={1} />
 			</ReactFlow>
+			<p
+				aria-live="polite"
+				className={
+					announcement
+						? "absolute left-1/2 top-3 z-panel m-0 -translate-x-1/2 rounded-full border border-ink/15 bg-surface px-3 py-1 text-xs text-ink shadow-panel"
+						: "sr-only"
+				}
+			>
+				{announcement}
+			</p>
 			<ComicCanvasToolbar
 				projectId={projectId}
 				onResetLayout={handleResetLayout}

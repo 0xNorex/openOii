@@ -104,3 +104,31 @@ export function shotReadingOrder(
 	if (byOrder.every((s, i) => s.id === byPosition[i].id)) return null;
 	return byPosition.map((s, i) => ({ shot_id: s.id, order: i + 1 }));
 }
+
+/**
+ * 键盘排序：把一个分镜按阅读顺序移动 delta 格（←/→ 为 ±1，↑/↓ 为 ±列数）。
+ * 越界或不是分镜时返回 null。
+ */
+export function moveShot(
+	nodes: WorkflowFlowNode[],
+	nodeId: string,
+	delta: number,
+): { items: { shot_id: number; order: number }[]; title: string; position: number } | null {
+	const shots = nodes
+		.filter((n): n is CardFlowNode => n.type === "card" && n.data.node.kind === "shot")
+		.sort((a, b) => {
+			const order = (n: CardFlowNode) => (n.data.node.kind === "shot" ? n.data.node.shot.order : 0);
+			return order(a) - order(b);
+		});
+	const from = shots.findIndex((n) => n.id === nodeId);
+	const to = from + delta;
+	if (from < 0 || to < 0 || to >= shots.length) return null;
+	const next = [...shots];
+	const [moved] = next.splice(from, 1);
+	next.splice(to, 0, moved);
+	return {
+		items: next.map((n, i) => ({ shot_id: n.data.node.entityId as number, order: i + 1 })),
+		title: moved.data.node.title,
+		position: to + 1,
+	};
+}
