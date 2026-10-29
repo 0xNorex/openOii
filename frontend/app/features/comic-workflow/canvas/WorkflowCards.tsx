@@ -664,7 +664,15 @@ export interface WorkflowFrameViewProps {
 	eyebrow: string;
 	countLabel: string;
 	draggable?: boolean;
+	empty?: boolean;
 }
+
+/** 空分区的引导：告诉第一次用的人这里会出现什么、下一步做什么 */
+const EMPTY_HINT: Partial<Record<ComicWorkflowSection, string>> = {
+	elements: "规划完成后，角色会出现在这里。",
+	shotline: "还没有分镜。点顶部「开始生成」，或在下方提示栏写下想法。",
+	output: "分镜都有了视频后，成片会出现在这里。",
+};
 
 /** 分区框（React Flow 父节点）。 */
 export function WorkflowFrameView({
@@ -673,12 +681,14 @@ export function WorkflowFrameView({
 	eyebrow,
 	countLabel,
 	draggable = true,
+	empty = false,
 }: WorkflowFrameViewProps) {
+	const hint = empty ? EMPTY_HINT[section] : undefined;
 	const style = SECTION_STYLE[section];
 	return (
 		<section
 			aria-label={title}
-			className={`h-full w-full rounded-xl border-3 border-ink/15 p-3 text-ink ${
+			className={`flex h-full w-full flex-col rounded-xl border-3 border-ink/15 p-3 text-ink ${
 				draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
 			} ${style.surface}`}
 		>
@@ -701,6 +711,11 @@ export function WorkflowFrameView({
 					</div>
 				</div>
 			</div>
+			{hint ? (
+				<p className="m-0 flex flex-1 items-center justify-center px-6 text-center text-sm text-ink-muted">
+					{hint}
+				</p>
+			) : null}
 		</section>
 	);
 }

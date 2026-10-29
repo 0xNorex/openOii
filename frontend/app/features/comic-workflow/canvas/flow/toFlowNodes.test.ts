@@ -124,6 +124,22 @@ describe("toFlowNodes", () => {
 		});
 		expect(nodes.find((n) => n.id === "frame:shotline")?.position).toEqual({ x: 5, y: 6 });
 	});
+
+	it("marks frames without cards as empty so they can show a hint", () => {
+		const graph = buildComicWorkflow({
+			project: project({}),
+			characters: [],
+			shots: [],
+			blockingClips: [],
+			isGenerating: false,
+		});
+		const nodes = toFlowNodes(graph, layoutComicWorkflow(graph), "locked");
+		const shotline = nodes.find((n) => n.id === "frame:shotline");
+		expect(shotline?.type === "frame" && shotline.data.empty).toBe(true);
+		const { graph: full, layout } = setup();
+		const filled = toFlowNodes(full, layout, "locked").find((n) => n.id === "frame:shotline");
+		expect(filled?.type === "frame" && filled.data.empty).toBe(false);
+	});
 });
 
 describe("shotReadingOrder", () => {

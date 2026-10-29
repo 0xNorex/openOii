@@ -14,6 +14,7 @@ import { toast } from "~/utils/toast";
 import type { CreateProjectPayload } from "~/types";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { getProjectStatusMeta } from "~/features/projects/statusMeta";
+import { HowItWorks } from "~/features/projects/HowItWorks";
 
 const AssetDrawer = lazy(() =>
 	import("~/components/panels/AssetDrawer").then((module) => ({ default: module.AssetDrawer })),
@@ -56,7 +57,7 @@ export function HomePage() {
 		}));
 	}, [requestedUniverseId]);
 
-	const { data: projects = [] } = useQuery({
+	const { data: projects = [], isSuccess: projectsLoaded } = useQuery({
 		queryKey: ["projects"],
 		queryFn: () => projectsApi.list(),
 	});
@@ -229,6 +230,7 @@ export function HomePage() {
 								{selectedUniverse ? <p className="m-0 text-xs text-ink-muted">将加入「{selectedUniverse.name}」宇宙 · 第 {chapterNumber} 章</p> : null}
 								{createMutation.error ? <p className="m-0 border-l-2 border-error bg-error/10 px-3 py-2 text-xs text-error-fg" role="alert">{createMutation.error.message || "创建项目失败，请重试。"}</p> : null}
 							</DeskSection>
+							{projectsLoaded ? <HowItWorks defaultOpen={projects.length === 0} /> : null}
 							{recentProjects.length > 0 ? (
 								<section aria-labelledby="recent-projects" className="flex flex-col gap-2">
 									<div className="flex items-center justify-between">

@@ -14,6 +14,7 @@ export type FrameNodeData = {
 	eyebrow: string;
 	countLabel: string;
 	draggable: boolean;
+	empty: boolean;
 };
 export type CardNodeData = { node: ComicWorkflowNode; draggable: boolean };
 
@@ -54,6 +55,7 @@ export function toFlowNodes(
 				eyebrow: section?.eyebrow ?? "",
 				countLabel: section?.countLabel ?? "",
 				draggable,
+				empty: !layout.nodes.some((n) => n.node.section === frame.section),
 			},
 		};
 	});
