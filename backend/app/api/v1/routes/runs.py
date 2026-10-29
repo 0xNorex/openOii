@@ -282,6 +282,9 @@ async def _classify_pending_feedback(
         else:
             entity_type, target_ids = explicit_type, explicit_ids
         has_targets = bool(target_ids)
+        if entity_type == "shot" and has_targets and classified_stage not in {"render_shots", "compose_videos"}:
+            # 选中分镜时的剧情类意见只作用于这几格：带着意见重画它们，不改动其他分镜。
+            classified_stage = "render_shots"
         compatible_stage = (
             classified_stage == "render_characters"
             if entity_type == "character" and has_targets

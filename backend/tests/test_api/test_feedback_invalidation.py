@@ -93,10 +93,10 @@ async def test_feedback_returns_recoverable_conflict_for_stale_active_row(
 
 
 @pytest.mark.asyncio
-async def test_feedback_rejected_for_selected_shot_is_not_left_recoverable(
+async def test_story_feedback_for_selected_shot_redraws_only_that_shot(
     async_client, test_session, monkeypatch
 ):
-    """Story-level feedback scoped to a shot is refused cleanly instead of leaving a junk run."""
+    """Story-level feedback with a shot selected is scoped to that shot instead of refused."""
     monkeypatch.setattr(
         generation_routes, "resolve_project_provider_settings_async", _resolution
     )
@@ -111,14 +111,12 @@ async def test_feedback_rejected_for_selected_shot_is_not_left_recoverable(
         f"/api/v1/projects/{project.id}/runs/feedback",
         json={"content": "这个镜头改成夜景", "entity_type": "shot", "entity_ids": [3]},
     )
-    assert response.status_code == 422
-    assert "不能只重画选中的内容" in response.text
+    assert response.status_code == 202, response.text
 
-    runs = (await test_session.execute(
-        select(AgentRun).where(AgentRun.project_id == project.id)
-    )).scalars().all()
-    assert [run.status for run in runs] == ["failed"]
-
-    current = await async_client.get(f"/api/v1/projects/{project.id}/runs/current")
-    assert current.status_code == 200
-    assert current.json() is None
+    run = await test_session.get(AgentRun, response.json()["run_id"])
+    assert run is not None
+    assert json.loads(run.patch_plan or "{}") == {
+        "version": 1,
+        "start_stage": "render_shots",
+        "scope": {"entity_type": "shot", "entity_ids": [3]},
+    }
