@@ -57,9 +57,56 @@ describe("InboxPanel", () => {
 			<InboxPanel items={[{ kind: "recoverable", id: "recoverable", title: "运行中断", detail: "可继续", resumable: true }]} actions={a} />,
 		);
 		await userEvent.click(screen.getByRole("button", { name: "继续" }));
-		await userEvent.click(screen.getByRole("button", { name: "取消" }));
 		expect(a.onResume).toHaveBeenCalledTimes(1);
+		// 取消不可逆：先确认，「先不取消」什么都不发生
+		await userEvent.click(screen.getByRole("button", { name: "取消" }));
+		await userEvent.click(screen.getByRole("button", { name: "先不取消" }));
+		expect(a.onCancel).not.toHaveBeenCalled();
+		await userEvent.click(screen.getByRole("button", { name: "取消" }));
+		await userEvent.click(screen.getByRole("button", { name: "取消运行" }));
 		expect(a.onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("names the stage on the resume button", () => {
+		render(
+			<InboxPanel
+				items={[{ kind: "recoverable", id: "recoverable", title: "运行中断于分镜脚本确认", detail: "可继续", resumable: true, stageName: "分镜脚本确认" }]}
+				actions={actions()}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "从分镜脚本确认继续" })).toBeInTheDocument();
+	});
+
+	it("shows what the gate reviews as thumbnails that focus the canvas", async () => {
+		const a = { ...actions(), onFocusNode: vi.fn() };
+		render(
+			<InboxPanel
+				items={[
+					{
+						...gate,
+						previews: [
+							{ nodeId: "character:1", label: "小曦", imageUrl: "/static/a.png" },
+							{ nodeId: "character:2", label: "店员", imageUrl: null },
+						],
+					},
+				]}
+				actions={a}
+			/>,
+		);
+		expect(screen.getByRole("img", { name: "小曦" })).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: /店员/ }));
+		expect(a.onFocusNode).toHaveBeenCalledWith("character:2");
+	});
+
+	it("offers no second regenerate path inside the outline card", () => {
+		render(
+			<InboxPanel
+				items={[{ ...gate, gate: { run_id: 1, agent: "plan", message: "", story_outline: { logline: "雨夜", genre: [], acts: [{ act: 1, title: "相遇", summary: "便利店" }] } } as never }]}
+				actions={actions()}
+			/>,
+		);
+		expect(screen.queryByRole("button", { name: /重做|重新生成/ })).not.toBeInTheDocument();
+		expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 	});
 
 	it("hides 继续 when the run cannot be resumed", () => {

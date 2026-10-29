@@ -20,6 +20,8 @@ export type InboxItem =
 			receipt?: FeedbackReceipt | null;
 			/** 意见还没处理完：先别批准，等新版本 */
 			confirmBlocked?: boolean;
+			/** 这一关要审的对象（缩略图条，点开在画布上定位） */
+			previews?: GatePreview[];
 		}
 	| {
 			kind: "recoverable";
@@ -27,11 +29,60 @@ export type InboxItem =
 			title: string;
 			detail: string;
 			resumable: boolean;
+			/** 中断所在阶段（主按钮写「从X继续」） */
+			stageName?: string | null;
 			/** 原始错误（英文/技术细节），放在「详细信息」里 */
 			rawError?: string | null;
 	  }
 	| { kind: "blocked"; id: "blocked"; title: string; clips: BlockingClip[] }
 	| { kind: "failed"; id: "failed"; title: string; detail: string };
+
+export interface GatePreview {
+	/** 画布节点 id（character:1 / shot:3） */
+	nodeId: string;
+	label: string;
+	imageUrl: string | null;
+}
+
+interface PreviewCharacter {
+	id: number;
+	name: string;
+	image_url?: string | null;
+}
+
+interface PreviewShot {
+	id: number;
+	order: number;
+	image_url?: string | null;
+}
+
+const MAX_PREVIEWS = 9;
+
+/** 审批门要审的对象：角色两关给角色，分镜两关给分镜；只有图片关才要求有图。 */
+export function gatePreviews(
+	stage: string | null | undefined,
+	characters: PreviewCharacter[] = [],
+	shots: PreviewShot[] = [],
+): GatePreview[] {
+	if (stage === "characters_approval" || stage === "character_images_approval") {
+		return characters.slice(0, MAX_PREVIEWS).map((c) => ({
+			nodeId: `character:${c.id}`,
+			label: c.name,
+			imageUrl: c.image_url ?? null,
+		}));
+	}
+	if (stage === "shots_approval" || stage === "shot_images_approval") {
+		return [...shots]
+			.sort((a, b) => a.order - b.order)
+			.slice(0, MAX_PREVIEWS)
+			.map((s) => ({
+				nodeId: `shot:${s.id}`,
+				label: `S${String(s.order).padStart(2, "0")}`,
+				imageUrl: s.image_url ?? null,
+			}));
+	}
+	return [];
+}
 
 export interface DeriveInboxInput {
 	awaitingConfirm: boolean;
@@ -42,6 +93,8 @@ export interface DeriveInboxInput {
 	projectStatus?: string | null;
 	blockingClips?: BlockingClip[] | null;
 	feedbackReceipt?: FeedbackReceipt | null;
+	characters?: PreviewCharacter[];
+	shots?: PreviewShot[];
 }
 
 /** 每个审批门审的是什么、在画布哪一块：标题写具体产物，画布平移过去。 */
@@ -108,10 +161,12 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 			gate: input.recoveryGate,
 			receipt,
 			confirmBlocked: receipt?.state === "received" || receipt?.state === "regenerating",
+			previews: gatePreviews(gateStage, input.characters, input.shots),
 		});
 	} else if (input.recoveryControl?.state === "recoverable") {
 		const summary = input.recoveryControl.recovery_summary;
-		const stage = stageTitle(summary?.current_stage) ?? "上次运行";
+		const stageName = stageTitle(summary?.current_stage);
+		const stage = stageName ?? "上次运行";
 		const kept = summary?.preserved_stages?.length ?? 0;
 		// 旧后端可能不带 available_actions：缺省时按可继续处理，不能让收件箱崩掉
 		const resumable = input.recoveryControl.available_actions?.includes("resume") !== false;
@@ -131,6 +186,7 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 			title: `运行中断于${stage}`,
 			detail,
 			resumable,
+			stageName,
 			rawError: error?.raw ?? null,
 		});
 	}

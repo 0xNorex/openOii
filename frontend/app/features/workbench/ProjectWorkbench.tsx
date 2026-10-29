@@ -271,8 +271,12 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				projectStatus: project?.status,
 				blockingClips: project?.blocking_clips,
 				feedbackReceipt: runState.feedbackReceipt,
+				characters,
+				shots,
 			}),
 		[
+			characters,
+			shots,
 			runState.feedbackReceipt,
 			runAwaitingConfirm,
 			runState.awaitingAgent,
@@ -318,6 +322,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		onCancel: handleCancel,
 		onRetry: hasContent ? () => setRegenerateOpen(true) : handleGenerate,
 		onSelectShot: (shotId) => canvasEvents.emit("select-workflow-node", { nodeId: `shot:${shotId}` }),
+		onFocusNode: (nodeId) => canvasEvents.emit("focus-workflow-node", { nodeId }),
 		retryDisabled: generatePending,
 		gatePending: gateDecisionPending,
 	};

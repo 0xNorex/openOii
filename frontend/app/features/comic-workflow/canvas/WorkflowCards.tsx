@@ -5,11 +5,7 @@ import { getStaticUrl } from "~/services/api";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import {
 	addCharacterReference,
-	approveCharacter,
-	approveShot,
 	computeCharacterEmbedding,
-	regenerateCharacter,
-	regenerateShot,
 	removeCharacterReference,
 	saveShotPatch,
 } from "./cardActions";
@@ -98,7 +94,8 @@ function InlineEditableText({
 				type="button"
 				disabled={disabled}
 				aria-label={`编辑${ariaLabel}`}
-				title={disabled ? undefined : "点击编辑"}
+				// 卡片上截成两行，完整内容放在悬停提示里
+				title={value || (disabled ? undefined : "点击编辑")}
 				onPointerDown={stopAll}
 				onClick={(e) => {
 					stopAll(e);
@@ -138,60 +135,6 @@ function InlineEditableText({
 			onBlur={() => void commit()}
 			className="w-full resize-none rounded-sm border-2 border-primary bg-paper-100 p-1.5 text-xs leading-relaxed text-ink"
 		/>
-	);
-}
-
-/** 待确认卡的动作行：通过 / 重做 直接上卡，不必逐个打开面板 */
-function ReviewActions({
-	onApprove,
-	onRedo,
-}: {
-	onApprove: () => Promise<boolean>;
-	onRedo: () => Promise<boolean>;
-}) {
-	const [busy, setBusy] = useState<"approve" | "redo" | null>(null);
-
-	const run = async (kind: "approve" | "redo", fn: () => Promise<boolean>) => {
-		setBusy(kind);
-		await fn();
-		setBusy(null);
-	};
-
-	return (
-		<div className="flex gap-1" onPointerDown={stopAll}>
-			<button
-				type="button"
-				disabled={busy !== null}
-				onClick={(e) => {
-					stopAll(e);
-					void run("approve", onApprove);
-				}}
-				className="btn-doodle touch-target-dense h-6 min-h-6 flex-1 px-1.5 text-xs bg-success text-success-content"
-			>
-				{busy === "approve" ? (
-					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
-				) : (
-					<SvgIcon name="check" size={12} />
-				)}
-				通过
-			</button>
-			<button
-				type="button"
-				disabled={busy !== null}
-				onClick={(e) => {
-					stopAll(e);
-					void run("redo", onRedo);
-				}}
-				className="btn-doodle touch-target-dense h-6 min-h-6 flex-1 px-1.5 text-xs bg-transparent text-ink hover:bg-paper-200"
-			>
-				{busy === "redo" ? (
-					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
-				) : (
-					<SvgIcon name="refresh-cw" size={12} />
-				)}
-				重做
-			</button>
-		</div>
 	);
 }
 
@@ -386,7 +329,10 @@ function CharacterCard({
 			<div className="flex min-h-0 flex-1 flex-col p-3">
 				<CardHeader node={node} icon="user" compact />
 				{node.character.description ? (
-					<p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
+					<p
+						className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted"
+						title={node.character.description}
+					>
 						{node.character.description}
 					</p>
 				) : null}
@@ -399,14 +345,6 @@ function CharacterCard({
 							<span className="inline-flex rounded-full border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs text-ink-muted">视觉笔记</span>
 					) : null}
 				</div>
-				{node.status === "review" ? (
-					<div className="pt-1.5">
-						<ReviewActions
-							onApprove={() => approveCharacter(node.entityId)}
-							onRedo={() => regenerateCharacter(node.entityId)}
-						/>
-					</div>
-				) : null}
 			</div>
 		</div>
 	);
@@ -502,14 +440,6 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 						<span className="inline-flex rounded-full border border-line bg-paper-100/80 px-1.5 py-0.5 text-xs text-ink-muted">{node.shot.camera}</span>
 					) : null}
 				</div>
-				{node.status === "review" ? (
-					<div className="pt-1.5">
-						<ReviewActions
-							onApprove={() => approveShot(node.entityId)}
-							onRedo={() => regenerateShot(node.entityId)}
-						/>
-					</div>
-				) : null}
 			</div>
 		</div>
 	);

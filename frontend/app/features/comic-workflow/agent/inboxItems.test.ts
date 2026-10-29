@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryControlRead, RunAwaitingConfirmEventData } from "~/types";
-import { deriveInboxItems, gateSection, type DeriveInboxInput } from "./inboxItems";
+import { deriveInboxItems, gatePreviews, gateSection, type DeriveInboxInput } from "./inboxItems";
 
 const base: DeriveInboxInput = {
 	awaitingConfirm: false,
@@ -150,5 +150,35 @@ describe("deriveInboxItems: one card for failed + recoverable", () => {
 	it("keeps the failed card when nothing can be resumed", () => {
 		const items = deriveInboxItems({ ...base, projectStatus: "failed" });
 		expect(items.map((item) => item.kind)).toEqual(["failed"]);
+	});
+});
+
+describe("gatePreviews", () => {
+	const characters = [
+		{ id: 1, name: "小曦", image_url: "/a.png" },
+		{ id: 2, name: "店员", image_url: null },
+	];
+	const shots = [
+		{ id: 9, order: 2, image_url: "/s2.png" },
+		{ id: 8, order: 1, image_url: null },
+	];
+
+	it("shows characters for the two character gates", () => {
+		expect(gatePreviews("character_images_approval", characters, shots).map((p) => p.nodeId)).toEqual([
+			"character:1",
+			"character:2",
+		]);
+		expect(gatePreviews("characters_approval", characters, shots)[0].label).toBe("小曦");
+	});
+
+	it("shows shots in story order with S-numbers for the shot gates", () => {
+		expect(gatePreviews("shot_images_approval", characters, shots).map((p) => p.label)).toEqual(["S01", "S02"]);
+	});
+
+	it("shows nothing for the outline and compose gates, and caps at nine", () => {
+		expect(gatePreviews("outline_approval", characters, shots)).toEqual([]);
+		expect(gatePreviews("compose_approval", characters, shots)).toEqual([]);
+		const many = Array.from({ length: 12 }, (_, i) => ({ id: i, name: `c${i}` }));
+		expect(gatePreviews("characters_approval", many)).toHaveLength(9);
 	});
 });
