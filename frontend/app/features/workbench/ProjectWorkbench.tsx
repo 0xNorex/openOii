@@ -22,6 +22,7 @@ import { ChatPanel } from "~/components/chat/ChatPanel";
 import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
 import { PromptBar, type PromptChip } from "~/features/workbench/PromptBar";
+import { KeyboardLayer } from "~/features/workbench/KeyboardLayer";
 import {
 	deriveStudioStatus,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
@@ -454,6 +455,19 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			>
 				跳到工作台
 			</a>
+			<a
+				href="#chat-message-input"
+				onClick={(event) => {
+					const input = document.getElementById("chat-message-input");
+					if (!input) return;
+					event.preventDefault();
+					input.focus();
+				}}
+				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-toast rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-content"
+			>
+				跳到输入栏
+			</a>
+			{!isMobileWorkbench ? <KeyboardLayer projectId={projectId} shots={shots} characters={characters} /> : null}
 			<TopBar
 				projectId={projectId}
 				center={

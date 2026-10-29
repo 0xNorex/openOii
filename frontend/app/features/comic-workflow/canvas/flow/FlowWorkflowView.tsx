@@ -245,9 +245,15 @@ function FlowInner({
 			canvasEvents.on("set-workflow-selection", ({ nodeIds }) =>
 				applySelection(nodeIds),
 			),
+			canvasEvents.on("focus-workflow-node", ({ nodeId }) => {
+				if (!flow.getNode(nodeId)) return;
+				applySelection([nodeId]);
+				autoFitRef.current = false;
+				void flow.fitView({ nodes: [{ id: nodeId }], maxZoom: 1, duration: motionDuration("normal") });
+			}),
 		];
 		return () => off.forEach((unsubscribe) => unsubscribe());
-	}, [applySelection]);
+	}, [applySelection, flow]);
 
 	const handleSelectionChange = useCallback(
 		({ nodes: selected }: OnSelectionChangeParams) => {
