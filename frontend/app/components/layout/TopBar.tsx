@@ -216,10 +216,17 @@ export function TopBar({ projectId, center }: TopBarProps) {
 			<div className="flex min-w-0 items-center gap-1.5">
 				<Link
 					to="/"
-					className="touch-target-dense inline-flex items-center rounded-md px-1.5 font-brand text-base tracking-wide text-primary sm:text-lg sm:font-bold sm:tracking-wider"
+					className="touch-target-dense inline-flex items-center gap-1.5 rounded-md px-1.5 text-base font-bold tracking-tight text-ink"
 					aria-label="openOii 首页"
 				>
-					openOii
+					{/* 字标：群青对位标 + 系统无衬线。识别靠字重和标记，不靠漫画字体 */}
+					<svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-primary">
+						<circle cx="8" cy="8" r="4.25" fill="none" stroke="currentColor" strokeWidth="1.75" />
+						<path d="M8 0.5v15M0.5 8h15" stroke="currentColor" strokeWidth="1.75" />
+					</svg>
+					<span>
+						open<span className="text-primary">Oii</span>
+					</span>
 				</Link>
 
 				{projectId ? (

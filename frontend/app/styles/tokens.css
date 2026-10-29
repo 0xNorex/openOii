@@ -37,7 +37,6 @@
       "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
       "Noto Sans SC", system-ui, sans-serif;
     --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
-    --font-brand: "Bangers", var(--font-sans);
     --cmyk-cyan: 0.55 0.14 180;
     --cmyk-magenta: 0.55 0.26 330;
 

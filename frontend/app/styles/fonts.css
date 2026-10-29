@@ -1,2 +1,0 @@
-/* 只打包 Bangers（字标与成片点缀）；正文用系统 CJK 字体栈（tokens.css --font-sans）。 */
-@import "@fontsource/bangers/latin-400.css";

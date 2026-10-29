@@ -37,9 +37,8 @@ colors:
   dark-warning: "#F2B35A"
   dark-error: "#FF8A80"
 typography:
-  brand:
-    fontFamily: "Bangers, var(--font-sans)"
-    note: "wordmark only"
+  wordmark:
+    note: "a ⊕ registration mark in primary plus openOii in font-sans 700, tracking-tight; no webfont"
   sans:
     fontFamily: "system CJK stack: -apple-system, PingFang SC, Microsoft YaHei, Noto Sans CJK SC, system-ui"
   mono:
@@ -93,7 +92,7 @@ components:
 
 **Authority:** `frontend/app/styles/tokens.css` is the source of truth. This document is human-readable; update it in the **same PR** when tokens change (ADR 0002).
 
-**Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents (Bangers wordmark, CMYK offset frame, halftone) only on the wordmark, the final-video card and moment, and empty states. Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
+**Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents are print-craft marks: the ⊕ registration mark in the wordmark, crop and registration marks on the canvas, and halftone in waiting states. They appear only on the wordmark, the canvas cards, the final-video card and moment, and empty states (`docs/research/craft-direction.md`). Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
 
 **Shell geometry (tokens):**
 
@@ -160,7 +159,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 
 1. **No document scroll** — `html`/`body`/`#root` overflow hidden; only `.page-body` / panel panes scroll.
 2. **Interaction soft freeze** — selection binding, the activity timeline and inbox, cell regenerate, generate/confirm/cancel keep meaning (ADR 0003).
-3. **One display face per screen** — Bangers at most once.
+3. **No display face** — the wordmark is a mark plus the system sans; `font-brand` is banned.
 4. **Dense chrome** — header/toolbar use `--touch-target-dense` for chips; primary actions keep `--touch-target-min` (44px).
 5. **Shell classes** — TopBar → `.chrome-row` + `data-shell="topbar"`; StudioControls (status pill, run actions) → TopBar `center` slot, `data-shell="studio-controls"`; pages → `.page-shell` / `.page-body`.
 6. **常驻非浮动面上限 3** — 第 4 个功能面一律走浮层/抽屉（yuuvis viewport architecture）。各面最小宽之和放不下时必须换布局模式，**不许按百分比切完再让面板重叠**。
@@ -174,8 +173,8 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 openOii is a tool for making comic videos, so the work (the storyboard) gets the screen and the chrome stays quiet.
 The workbench is a full-bleed React Flow canvas; the agent panel, the inspector and the PromptBar float over it.
 Warm grey paper and ink neutrals, one ultramarine (群青) brand hue, the system CJK font stack.
-The comic identity survives only where spec §7.6 allows it: the Bangers wordmark, the final-video card and its
-completion moment, and empty states.
+The comic identity survives only as print-craft marks: the ⊕ wordmark, crop marks on the selected panel, registration marks on
+the final-video card and its completion moment, halftone while waiting, and corner marks on empty slots.
 
 It rejects three looks: cold grey SaaS (Jira), the generic AI generator (white card grids and purple gradients),
 and heavy comic everywhere (offset shadows, halftone and display type on every surface).
@@ -212,7 +211,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 - **Sans** (`font-sans`, the default): the system CJK stack in `--font-sans`. No Chinese webfont is bundled; self-hosted installs need no font CDN.
 - **Mono** (`font-mono`): ids such as S01, durations and technical fields. Never for Chinese labels.
-- **Brand** (`font-brand`): Bangers, Latin only, for the `OPENOII` wordmark. It is the only bundled webfont.
+- **Wordmark:** a ⊕ registration mark in `primary` plus `open` + `Oii` (primary) in `font-sans` bold, tight tracking. No webfont is bundled at all.
 - Headings are `font-sans` with `font-semibold` or `font-bold`; there is no separate heading face.
 - Chinese text has no letter-spacing and no italics.
 - Numbers in `font-mono`, `kbd` and `code` are tabular by default. Uppercase mono labels get 0.06em tracking. `text-autospace` adds the CJK/Latin gap where the browser supports it.
@@ -284,7 +283,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Don't** use gradient text (`background-clip: text` with gradient). Solid colors only.
 - **Don't** use glassmorphism (blurs, glass cards) as default surface treatment.
 - **Don't** add offset hard shadows or halftone outside spec §7.6.
-- **Don't** use display fonts (Bangers) in UI labels, buttons, or data. Display is for splash, not for interaction.
+- **Don't** bring back a display font (the old Bangers wordmark) for labels, buttons or data.
 - **Don't** reinvent standard affordances (custom scrollbars, weird form controls, non-standard modals). The workbench has familiar tools.
 - **Don't** pin a fourth always-on surface over the canvas; it goes into a panel tab, a popover or a dialog.
 - **Don't** put text under 12px anywhere, including canvas labels.

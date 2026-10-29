@@ -44,7 +44,7 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\bleading-(?:[0-9]|\[)/, "脱离 leading 三档：leading-tight(1.15) / snug(1.35) / normal(1.5)"],
 	[/\btext-(?:default|inherit)\b/, "字体尺寸必须来自 type scale"],
 	[/\bshadow-(?:brutal|comic)/, "硬偏移阴影已删除：浮层用 shadow-panel，成片卡用 comic-frame"],
-	[/\bfont-(?:heading|comic|sketch)\b/, "字体只有 font-sans / font-mono / font-brand（字标）"],
+	[/\bfont-(?:heading|comic|sketch|brand)\b/, "字体只有 font-sans / font-mono；字标是对位标 + 系统无衬线"],
 	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
 	// polish pass（docs/research/polish-pass.md）
 	[/\brounded-xl\b/, "卡片/面板用 rounded-lg（xl 与 lg 同值，只留一种写法）"],
@@ -148,11 +148,6 @@ describe("Design Contract: 弹层统一走 ui/Dialog", () => {
 			)
 			.map(({ file }) => file);
 		expect(hits).toEqual([]);
-	});
-
-	it("font-brand 只用于字标", () => {
-		const hits = sources.filter(({ text }) => /\bfont-brand\b/.test(text)).map(({ file }) => file);
-		expect(hits).toEqual(["app/components/layout/TopBar.tsx"]);
 	});
 
 	it.each(HAND_ROLLED_DIALOG)("源码不含 %s（%s）", (pattern) => {
