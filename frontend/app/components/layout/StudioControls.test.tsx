@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -62,6 +62,23 @@ describe("StudioControls", () => {
 		expect(screen.queryByRole("button", { name: /开始生成|重新生成/ })).toBeNull();
 		await user.click(screen.getByRole("button", { name: "停止" }));
 		expect(onCancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("says why 开始生成 is busy, and admits it is slow after 10 s", () => {
+		vi.useFakeTimers();
+		try {
+			renderControls({ generatePending: true, generateDisabled: true });
+			const button = screen.getByRole("button", { name: /正在创建/ });
+			expect(button).toBeDisabled();
+			expect(button.parentElement).toHaveAttribute("title", "正在创建运行");
+			act(() => {
+				vi.advanceTimersByTime(12_000);
+			});
+			expect(screen.getByRole("button", { name: /仍在连接模型… 12s/ })).toBeInTheDocument();
+			expect(screen.getByText(/刷新页面后重试/)).toBeInTheDocument();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it("offers the right generate label per state", () => {

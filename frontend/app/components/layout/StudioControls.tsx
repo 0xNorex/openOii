@@ -9,6 +9,23 @@ import { useEffect, useRef, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 
+/** 创建运行在途的秒数；不在途时为 0。超过 10 秒就要说清楚还在等什么（P1-1）。 */
+function usePendingSeconds(pending: boolean): number {
+	const [seconds, setSeconds] = useState(0);
+	useEffect(() => {
+		if (!pending) {
+			setSeconds(0);
+			return;
+		}
+		const started = Date.now();
+		const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+		return () => window.clearInterval(timer);
+	}, [pending]);
+	return seconds;
+}
+
+const SLOW_START_SECONDS = 10;
+
 interface StudioControlsProps {
 	isGenerating: boolean;
 	studioStatus: StudioStatus;
@@ -75,6 +92,7 @@ export function StudioControls({
 	previousDownloadUrl = null,
 }: StudioControlsProps) {
 	const [toolsOpen, setToolsOpen] = useState(false);
+	const pendingSeconds = usePendingSeconds(Boolean(generatePending));
 	const toolsRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
 		if (!toolsOpen) return;
@@ -96,6 +114,13 @@ export function StudioControls({
 	);
 	// 成片可用时：下载是主操作，重新生成退为次要
 	const finished = studioStatus.state === "ready" && Boolean(downloadUrl) && !isGenerating;
+	const generateDisabledReason = generatePending
+		? pendingSeconds >= SLOW_START_SECONDS
+			? "模型响应较慢，运行还没建好：可以继续等，或刷新页面后重试"
+			: "正在创建运行"
+		: generateDisabled
+			? "已有运行在进行中"
+			: undefined;
 	// 步骤只在运行活跃时出现：按六步计数，不再显示会卡在 50% 的百分比
 	const pillText = studioStatusText(studioStatus);
 
@@ -234,21 +259,34 @@ export function StudioControls({
 					</Button>
 				) : null}
 				{showMainGenerate && onGenerate ? (
-					<Button
-						variant={finished ? "secondary" : "primary"}
-						size="sm"
-						className={chromeBtn}
-						onClick={onGenerate}
-						disabled={generateDisabled || generatePending}
-						aria-busy={generatePending}
-					>
+					// 禁用的按钮收不到 hover：原因挂在外层，悬停也能看到
+					<span className="inline-flex" title={generateDisabledReason}>
+						<Button
+							variant={finished ? "secondary" : "primary"}
+							size="sm"
+							className={chromeBtn}
+							onClick={onGenerate}
+							disabled={generateDisabled || generatePending}
+							aria-busy={generatePending}
+							aria-describedby={generatePending ? "generate-pending-reason" : undefined}
+						>
+							{generatePending ? (
+								<span className="spinner-doodle h-3.5 w-3.5" aria-hidden="true" />
+							) : (
+								<SvgIcon name="sparks" size={14} />
+							)}
+							{generatePending
+								? pendingSeconds >= SLOW_START_SECONDS
+									? `仍在连接模型… ${pendingSeconds}s`
+									: "正在创建…"
+								: generateLabel}
+						</Button>
 						{generatePending ? (
-							<span className="spinner-doodle h-3.5 w-3.5" aria-hidden="true" />
-						) : (
-							<SvgIcon name="sparks" size={14} />
-						)}
-						{generatePending ? "正在创建…" : generateLabel}
-					</Button>
+							<span id="generate-pending-reason" className="sr-only">
+								{generateDisabledReason}
+							</span>
+						) : null}
+					</span>
 				) : null}
 				{finished && downloadUrl ? (
 					<a

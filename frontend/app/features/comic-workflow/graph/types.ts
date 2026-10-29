@@ -21,6 +21,8 @@ export interface ComicWorkflowNodeBase {
 export type WorkflowNodeStatus =
 	| "draft"
 	| "generating"
+	/** 质量审查在看已经生成的图：图已经在了，不是"生成中" */
+	| "reviewing"
 	| "review"
 	| "unconfirmed"
 	| "approved"

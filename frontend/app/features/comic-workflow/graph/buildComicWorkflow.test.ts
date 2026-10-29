@@ -265,6 +265,7 @@ describe("node status follows the step the run is on", () => {
 		expect(statusOf("render_shots")).toEqual({ character: "unconfirmed", shot: "generating" });
 		expect(statusOf("render_characters")).toEqual({ character: "generating", shot: "unconfirmed" });
 		expect(statusOf("compose_merge")).toEqual({ character: "unconfirmed", shot: "unconfirmed" });
+		expect(statusOf("critique_shot_images")).toEqual({ character: "unconfirmed", shot: "reviewing" });
 	});
 
 	it("keeps the old behaviour when the step is unknown", () => {

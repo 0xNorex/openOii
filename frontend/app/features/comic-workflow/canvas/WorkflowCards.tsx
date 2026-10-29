@@ -33,6 +33,8 @@ const SECTION_STYLE = {
 const STATUS_COPY: Record<WorkflowNodeStatus, { label: string; cls: string }> = {
 	draft: { label: "待生成", cls: "bg-paper-200 text-ink-muted" },
 	generating: { label: "生成中", cls: "bg-info-bg text-info-fg" },
+	// 审查只是在看：中性色，不催用户
+	reviewing: { label: "审查中", cls: "bg-paper-200 text-ink" },
 	// 待确认是要你动手的事：用品牌色，和「生成中」（信息色）、「需重合成」（警告色）分开
 	review: { label: "待确认", cls: "bg-primary/10 text-primary" },
 	unconfirmed: { label: "未确认", cls: "bg-paper-200 text-ink-muted" },

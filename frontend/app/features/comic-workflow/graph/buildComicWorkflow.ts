@@ -37,22 +37,26 @@ export interface BuildComicWorkflowInput {
 const CHARACTER_STAGES: ReadonlySet<StageId> = new Set<StageId>(["plan_characters", "render_characters", "critique_character_images"]);
 const SHOT_STAGES: ReadonlySet<StageId> = new Set<StageId>(["plan_shots", "render_shots", "critique_shot_images", "compose_videos"]);
 
-function stepTouches(kind: "character" | "shot", currentStep: StageId | null | undefined): boolean {
-	if (currentStep == null) return true;
-	return (kind === "character" ? CHARACTER_STAGES : SHOT_STAGES).has(currentStep);
+const CRITIQUE_STAGES: ReadonlySet<StageId> = new Set<StageId>(["critique_character_images", "critique_shot_images"]);
+
+/** 当前步骤对这类卡片做什么：产出（生成中）、审查（审查中），或不碰它。 */
+function stepTouches(kind: "character" | "shot", currentStep: StageId | null | undefined): "generating" | "reviewing" | null {
+	if (currentStep == null) return "generating";
+	if (!(kind === "character" ? CHARACTER_STAGES : SHOT_STAGES).has(currentStep)) return null;
+	return CRITIQUE_STAGES.has(currentStep) ? "reviewing" : "generating";
 }
 
 function nodeStatusFromApproval(
 	approvalState: "draft" | "approved" | "superseded",
 	isGenerating: boolean,
 	awaitingConfirm: boolean,
-	touched = true,
+	touched: "generating" | "reviewing" | null = "generating",
 ): WorkflowNodeStatus {
 	if (approvalState === "approved") return "approved";
 	if (approvalState === "superseded") return "superseded";
 	if (awaitingConfirm) return "review";
 	// 运行在做别的步骤时，已经产出的草稿只是"未确认"，不是"生成中"
-	return isGenerating && touched ? "generating" : "unconfirmed";
+	return isGenerating && touched ? touched : "unconfirmed";
 }
 
 export function sortShots(shots: Shot[]): Shot[] {
@@ -177,6 +181,7 @@ function sectionStatus(
 	if (sectionNodes.some((node) => node.status === "generating")) {
 		return "generating";
 	}
+	if (sectionNodes.some((node) => node.status === "reviewing")) return "reviewing";
 	if (sectionNodes.some((node) => node.status === "review")) return "review";
 	return "unconfirmed";
 }
