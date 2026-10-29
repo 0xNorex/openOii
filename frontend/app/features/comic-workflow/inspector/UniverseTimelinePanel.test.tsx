@@ -5,6 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
 import type { UniverseTimelineRead } from "~/types";
 
+/** 文本被 MonoRuns 拆成多段时，按元素整体 textContent 匹配最内层元素 */
+const mixed = (want: string | RegExp) => (_: string, el: Element | null) => {
+	const hit = (e: Element) => (typeof want === "string" ? e.textContent === want : want.test(e.textContent ?? ""));
+	return !!el && hit(el) && ![...el.children].some(hit);
+};
+
 let queryState: {
 	data: UniverseTimelineRead | undefined;
 	isLoading: boolean;
@@ -89,7 +95,7 @@ describe("UniverseTimelinePanel", () => {
 	it("有编号章节仍显示「第N章」并标记当前", () => {
 		renderPanel();
 
-		expect(screen.getByText(/第1章/)).toBeInTheDocument();
+		expect(screen.getByText(mixed(/第1章/))).toBeInTheDocument();
 		expect(screen.getByText(/· 当前/)).toBeInTheDocument();
 	});
 });

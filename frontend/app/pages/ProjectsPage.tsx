@@ -15,6 +15,7 @@ import type { Project } from "~/types";
 import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 import { IconButton } from "../components/ui/IconButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 
 
 function formatDate(value: string | null | undefined) {
@@ -333,8 +334,8 @@ function ProjectRow({
 					{status.label}
 				</span>
 
-				<span className="font-mono text-xs tabular-nums text-ink-muted">
-					{formatDate(project.updated_at)}
+				<span className="text-xs text-ink-muted">
+					<MonoRuns text={formatDate(project.updated_at)} />
 				</span>
 			</div>
 

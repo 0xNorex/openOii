@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 
 /**
  * 桌面区块：全站统一的区块语法。
@@ -43,8 +44,8 @@ export function DeskSection({
 						{title}
 					</h2>
 					{meta ? (
-						<span className="font-mono text-xs tabular-nums text-ink-muted">
-							{meta}
+						<span className="text-xs text-ink-muted">
+							{typeof meta === "string" ? <MonoRuns text={meta} /> : meta}
 						</span>
 					) : null}
 				</div>

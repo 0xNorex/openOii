@@ -21,6 +21,24 @@ function fakeLayout(el: HTMLElement, { scrollHeight, clientHeight }: { scrollHei
 }
 
 describe("ActivityTimeline", () => {
+	it("中文消息与细节不落在等宽/大写/字距容器里，只有数字走 mono", () => {
+		const { container } = render(
+			<ActivityTimeline
+				entries={[entry("z", { kind: "message", title: "开始生成 8 个分镜视频…", detail: "剩余约 12 秒", durationMs: 1200 })]}
+			/>,
+		);
+		const bad = /\b(font-mono|label-caps|uppercase|tracking-wid[a-z]*)\b/;
+		const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+			if (!/[\u4e00-\u9fff]/.test(n.textContent ?? "")) continue;
+			for (let el = n.parentElement; el && el !== container; el = el.parentElement) {
+				expect(el.className, `「${n.textContent}」`).not.toMatch(bad);
+			}
+		}
+		expect(screen.getByText("1.2s")).toHaveClass("font-mono");
+		expect(screen.getByText("12")).toHaveClass("font-mono");
+	});
+
 	it("renders steps with duration and expandable details", async () => {
 		render(
 			<ActivityTimeline

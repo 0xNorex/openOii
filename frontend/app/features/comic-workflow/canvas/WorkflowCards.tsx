@@ -444,8 +444,8 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm bg-ink px-1 font-mono text-xs font-bold text-paper-100">
 					{cell}
 				</span>
-				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-sm border border-line bg-paper-100/90 px-1.5 py-0.5 font-mono text-xs">
-					{node.shot.duration ? `${node.shot.duration}s` : "未定时长"}
+				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-sm border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs">
+					{node.shot.duration ? <span className="font-mono">{node.shot.duration}s</span> : "未定时长"}
 				</span>
 				<div className="absolute right-2 top-2">
 					<MediaPreviewButton

@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { UniverseCard } from "./UniverseCard";
 import type { Universe } from "~/types";
 
+/** 文本被 MonoRuns 拆成多段时，按元素整体 textContent 匹配最内层元素 */
+const mixed = (want: string | RegExp) => (_: string, el: Element | null) => {
+	const hit = (e: Element) => (typeof want === "string" ? e.textContent === want : want.test(e.textContent ?? ""));
+	return !!el && hit(el) && ![...el.children].some(hit);
+};
+
 const buildUniverse = (overrides: Partial<Universe> = {}): Universe => ({
 	id: 1,
 	name: "赛博修仙录",
@@ -33,7 +39,7 @@ describe("UniverseCard", () => {
 
 		expect(screen.getByText(/universe\s*\/\s*1/i)).toBeInTheDocument();
 		expect(screen.queryByText(/ip cosmos/i)).toBeNull();
-		expect(screen.getByText(/^更新 /)).toBeInTheDocument();
+		expect(screen.getByText(mixed(/^更新 /))).toBeInTheDocument();
 	});
 
 	it("有封面时渲染封面图", () => {
@@ -46,7 +52,7 @@ describe("UniverseCard", () => {
 	it("updated_at 非法时更新时间兜底为「未知」", () => {
 		renderCard(buildUniverse({ updated_at: "not-a-date" }));
 
-		expect(screen.getByText("更新 未知")).toBeInTheDocument();
+		expect(screen.getByText(mixed("更新 未知"))).toBeInTheDocument();
 	});
 
 	it("量词使用「章节」", () => {

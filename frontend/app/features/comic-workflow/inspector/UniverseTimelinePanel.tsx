@@ -124,9 +124,9 @@ export function UniverseTimelinePanel({
 							}`}
 						>
 							<div className="flex items-center justify-between gap-1">
-								<span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-primary">
+								<span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
 									{ch.chapter_number != null ? (
-										`第${ch.chapter_number}章`
+										<>第<span className="font-mono">{ch.chapter_number}</span>章</>
 									) : (
 											<span className="inline-flex rounded-full border border-line bg-paper-200 px-1.5 py-0.5 text-xs font-normal text-ink-muted">
 											未编号
@@ -134,8 +134,8 @@ export function UniverseTimelinePanel({
 									)}
 									{ch.is_current ? " · 当前" : ""}
 								</span>
-								<span className="font-mono text-xs text-ink-muted">
-									{ch.shot_count}格 · {ch.character_count}角
+								<span className="text-xs text-ink-muted">
+									<span className="font-mono">{ch.shot_count}</span> 格 · <span className="font-mono">{ch.character_count}</span> 角
 									{ch.has_video ? " · 成片" : ""}
 								</span>
 							</div>

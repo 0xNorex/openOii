@@ -90,7 +90,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 							>
 								<span className="min-w-0 flex-1 truncate">{p.title}</span>
 								<span
-									className={`ml-1.5 flex-shrink-0 font-mono text-xs tabular-nums ${st.textCls}`}
+									className={`ml-1.5 flex-shrink-0 text-xs ${st.textCls}`}
 								>
 									{st.label}
 								</span>

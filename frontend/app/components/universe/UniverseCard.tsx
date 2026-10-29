@@ -4,6 +4,7 @@ import { Card } from "~/components/ui/Card";
 import type { Universe } from "~/types";
 import { IconButton } from "../../components/ui/IconButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 
 interface UniverseCardProps {
 	universe: Universe;
@@ -48,7 +49,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 
 					{/* 更新时间留作轻量元信息，封面统一承接宇宙识别。 */}
 					<p className="m-0 label text-ink-muted">
-						更新 {formatDate(universe.updated_at)}
+						更新 <MonoRuns text={formatDate(universe.updated_at)} />
 					</p>
 					<h2 className="m-0 mt-0.5 text-md font-bold leading-snug">
 						{universe.name}

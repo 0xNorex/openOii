@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { clsx } from "clsx";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 
 /**
  * Shared dense page header for list/detail desks (projects, universes, home sections).
@@ -49,8 +50,8 @@ export function PageHeader({
 						{title}
 					</h1>
 					{meta ? (
-						<div className="pb-0.5 font-mono text-xs tabular-nums text-ink-muted">
-							{meta}
+						<div className="pb-0.5 text-xs text-ink-muted">
+							{typeof meta === "string" ? <MonoRuns text={meta} /> : meta}
 						</div>
 					) : null}
 				</div>

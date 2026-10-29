@@ -5,6 +5,7 @@ import { PlainButton } from "~/components/ui/PlainButton";
 import type { ActivityEntry } from "./activityTimeline";
 import { formatDuration } from "./activityTimeline";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;
@@ -60,7 +61,11 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 				>
 					{entry.title}
 				</p>
-				{entry.detail ? <p className="m-0 font-mono text-xs text-ink-muted">{entry.detail}</p> : null}
+				{entry.detail ? (
+					<p className="m-0 text-xs text-ink-muted">
+						<MonoRuns text={entry.detail} />
+					</p>
+				) : null}
 				{entry.children.length > 0 ? (
 					<>
 						<PlainButton

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "~/types";
-import { deriveActivityTimeline, formatDuration, formatEta } from "./activityTimeline";
+import { deriveActivityTimeline, formatDuration, formatEta, tidyEllipsis } from "./activityTimeline";
 
 const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
 const msg = (role: string, content: string, s: number, extra: Partial<AgentMessage> = {}): AgentMessage => ({
@@ -124,5 +124,14 @@ describe("formatEta", () => {
 		expect(formatEta(400)).toBe("约 1 秒");
 		expect(formatEta(42_000)).toBe("约 42 秒");
 		expect(formatEta(150_000)).toBe("约 3 分钟");
+	});
+});
+
+describe("tidyEllipsis", () => {
+	it("把 ... / . . . / 。。。 统一成 …", () => {
+		expect(tidyEllipsis("正在生成故事大纲...")).toBe("正在生成故事大纲…");
+		expect(tidyEllipsis("开始生成 8 个分镜视频 . . .")).toBe("开始生成 8 个分镜视频…");
+		expect(tidyEllipsis("处理中。。。")).toBe("处理中…");
+		expect(tidyEllipsis("评分 8.5/10")).toBe("评分 8.5/10");
 	});
 });

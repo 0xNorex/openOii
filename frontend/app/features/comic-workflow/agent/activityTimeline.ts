@@ -57,6 +57,11 @@ function childContent(msg: AgentMessage): string {
 	return msg.content?.trim() ?? "";
 }
 
+/** 三个半角句点（可夹空格）或「。。。」→「…」 */
+export function tidyEllipsis(text: string): string {
+	return text.replace(/ ?\.(?: ?\.){2}|。{3}/g, "…");
+}
+
 /** 「正在生成视频 (3/8)」这类进度行：同一前缀只保留一行，原地更新。 */
 const PROGRESS = /^(.*?)\s*[（(](\d+)\s*\/\s*(\d+)[）)]\s*$/;
 
@@ -160,6 +165,12 @@ export function deriveActivityTimeline(
 			push({ ...base, kind: "message", title, status: msg.isLoading ? "running" : "done" }, msg);
 		}
 	});
+
+	// 历史消息里的三个句点统一成省略号
+	for (const entry of entries) {
+		entry.title = tidyEllipsis(entry.title);
+		for (const child of entry.children) child.content = tidyEllipsis(child.content);
+	}
 
 	// 剩余时间只给仍在跑的最后一条进度
 	for (const entry of progressEntries) {

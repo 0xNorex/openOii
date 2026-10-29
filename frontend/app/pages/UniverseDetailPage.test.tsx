@@ -7,6 +7,12 @@ import { UniverseDetailPage } from "./UniverseDetailPage";
 import { ApiError } from "~/types/errors";
 import type { SharedCharacterRead, UniverseDetail } from "~/types";
 
+/** 文本被 MonoRuns 拆成多段时，按元素整体 textContent 匹配最内层元素 */
+const mixed = (want: string | RegExp) => (_: string, el: Element | null) => {
+	const hit = (e: Element) => (typeof want === "string" ? e.textContent === want : want.test(e.textContent ?? ""));
+	return !!el && hit(el) && ![...el.children].some(hit);
+};
+
 const invalidateQueries = vi.fn();
 const importCharacterMock = vi.fn();
 
@@ -230,7 +236,7 @@ describe("UniverseDetailPage", () => {
 	it("量词统一为「章节」", () => {
 		renderPage();
 
-		expect(screen.getByText("2 章节")).toBeInTheDocument();
+		expect(screen.getByText(mixed("2 章节"))).toBeInTheDocument();
 	});
 
 	it("非 404 错误显示错误面板，重试触发 invalidateQueries", async () => {
