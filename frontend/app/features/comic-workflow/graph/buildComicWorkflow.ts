@@ -14,10 +14,11 @@ const SECTION_COPY: Record<
 	ComicWorkflowSection,
 	{ title: string; eyebrow: string }
 > = {
-	brief: { title: "Brief", eyebrow: "01 / STORY" },
-	elements: { title: "Elements", eyebrow: "02 / CAST" },
-	shotline: { title: "九宫格分镜", eyebrow: "03 / GRID 3×N" },
-	output: { title: "Output", eyebrow: "04 / FINAL" },
+	// 眉标只做等宽序号，名称交给中文标题
+	brief: { title: "故事", eyebrow: "01" },
+	elements: { title: "角色", eyebrow: "02" },
+	shotline: { title: "九宫格分镜", eyebrow: "03" },
+	output: { title: "成片", eyebrow: "04" },
 };
 
 export interface BuildComicWorkflowInput {
@@ -172,11 +173,11 @@ function sectionCountLabel(
 	nodes: ComicWorkflowNode[],
 ): string {
 	if (section === "brief") {
-		return nodes.some((node) => node.kind === "brief") ? "1 brief" : "0 brief";
+		return nodes.some((node) => node.kind === "brief") ? "1 份" : "0 份";
 	}
 	if (section === "elements") {
 		const count = nodes.filter((node) => node.kind === "character").length;
-		return count === 1 ? "1 element" : `${count} elements`;
+		return `${count} 个`;
 	}
 	if (section === "shotline") {
 		const count = nodes.filter((node) => node.kind === "shot").length;
@@ -184,7 +185,7 @@ function sectionCountLabel(
 		const rows = Math.ceil(count / 3);
 		return `${count} 格 · ${Math.min(3, count)}×${rows}`;
 	}
-	return nodes.some((node) => node.kind === "output") ? "final cut" : "0 final";
+	return nodes.some((node) => node.kind === "output") ? "1 条" : "0 条";
 }
 
 export function buildComicWorkflow({

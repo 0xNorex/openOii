@@ -75,9 +75,7 @@ export function MobileWorkbenchPreview({
 						data-testid="mobile-final-video"
 					/>
 					<div className="flex items-center justify-between gap-2 p-2">
-						<span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
-							final cut
-						</span>
+						<span className="text-xs font-semibold text-ink-muted">成片</span>
 						<a
 							href={downloadUrl ?? undefined}
 							download

@@ -200,6 +200,8 @@ function ReviewActions({
 }
 
 function statusBadge(status: WorkflowNodeStatus) {
+	// 空闲时的草稿不再挂「未确认」：审批门过了之后它只是噪音，待确认 / 已批准才需要提示
+	if (status === "unconfirmed") return null;
 	const copy = STATUS_COPY[status] ?? STATUS_COPY.draft;
 	return (
 		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs font-medium ${copy.cls}`}>

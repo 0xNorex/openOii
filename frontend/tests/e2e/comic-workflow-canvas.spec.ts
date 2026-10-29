@@ -247,9 +247,9 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
 
 	// Brief 不在画布上：它是右栏 Inspector 的项目级上下文
-	await expect(page.getByRole("region", { name: "Elements" })).toBeAttached();
+	await expect(page.getByRole("region", { name: "角色" })).toBeAttached();
 	await expect(page.getByRole("region", { name: "九宫格分镜" })).toBeVisible();
-	await expect(page.getByRole("region", { name: "Brief" })).toHaveCount(0);
+	await expect(page.getByRole("region", { name: "故事" })).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "一致性评估" })).toHaveCount(0);
 
 	// 窄于 1440px 时 Agent 面板默认收起成胶囊，不挡画布

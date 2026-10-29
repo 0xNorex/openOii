@@ -198,12 +198,12 @@ export function HomePage() {
 												return (
 													<PlainButton
 														key={mode.value}
-														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary text-primary-content" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
+														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgb(var(--color-primary))]" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>
-														<span className="inline-flex items-center gap-1.5 font-semibold text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}{active ? <span aria-hidden="true">✓</span> : null}</span>
-														<span className={"text-left text-xs font-normal " + (active ? "text-primary-content" : "text-ink-muted")}>{mode.description}</span>
+														<span className="inline-flex items-center gap-1.5 font-semibold text-sm"><SvgIcon name={mode.icon as "check" | "zap"} size={14} />{mode.label}</span>
+														<span className={"text-left text-xs font-normal " + (active ? "text-ink" : "text-ink-muted")}>{mode.description}</span>
 													</PlainButton>
 												);
 											})}

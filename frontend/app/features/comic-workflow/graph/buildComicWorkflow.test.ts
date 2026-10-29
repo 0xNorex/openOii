@@ -168,10 +168,10 @@ describe("buildComicWorkflow", () => {
 			"output",
 		]);
 		expect(graph.sections.map((section) => section.countLabel)).toEqual([
-			"0 brief",
-			"0 elements",
+			"0 份",
+			"0 个",
 			"0 格",
-			"0 final",
+			"0 条",
 		]);
 		expect(graph.nodes).toEqual([]);
 		expect(graph.orderedShotIds).toEqual([]);
