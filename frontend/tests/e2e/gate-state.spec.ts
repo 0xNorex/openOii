@@ -274,6 +274,8 @@ test("stale run state reconciles with the server after events and reconnects", a
 	// one card: resumable, with the reason; no 生成中 / 停止 left behind
 	await expect(page.getByRole("button", { name: /继续$/ })).toHaveCount(1);
 	await expect(page.getByText(/超时/).first()).toBeVisible();
+	// the interrupted pill names the gate it stopped at, not a bare 规划
+	await expect(page.getByRole("button", { name: /^状态：/ })).toContainText("可恢复 · 故事大纲确认");
 	await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
 	await page.getByRole("tab", { name: "活动" }).click();
 	await expect(page.getByTestId("sync-status")).toHaveAttribute("data-tone", "ok");
@@ -307,4 +309,21 @@ test("the character-image gate shows what it reviews, and canvas cards carry no 
 	await expect(strip.getByText("小曦")).toBeVisible();
 	await expect(page.getByRole("button", { name: "通过" })).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
+
+	// one vocabulary: pill, panel header and PromptBar chip all name the same step
+	await expect(page.getByRole("button", { name: /^状态：/ })).toContainText("待确认 · 角色形象");
+	await expect(page.getByRole("button", { name: /^状态：/ })).not.toContainText("%");
+	await expect(page.getByText("角色形象 · 待确认").first()).toBeVisible();
+	await expect(page.getByText("规划阶段")).toHaveCount(0);
+});
+
+test("mobile names the step and shows where it is in the six", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	const stageSummary = { ...summary, current_stage: "shots_approval", next_stage: "render_characters" };
+	const gate = { ...gatePayload(), agent: "storyboard", current_stage: "shots_approval", stage: "shots_approval", recovery_summary: stageSummary };
+	await mockServer(page, control("waiting_for_approval", { awaiting_gate: gate, recovery_summary: stageSummary }));
+	await page.goto("/project/7");
+
+	await expect(page.getByRole("heading", { name: "待确认 · 分镜脚本" })).toBeVisible();
+	await expect(page.getByLabel("第 3 步，共 6 步")).toBeVisible();
 });

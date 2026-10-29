@@ -53,6 +53,20 @@ describe("MobileWorkbenchPreview", () => {
 		).toBeInTheDocument();
 	});
 
+	it("names the step and shows a six-segment meter while running", () => {
+		renderPreview({
+			studioStatus: { ...getStudioStatusMeta("generating"), step: { index: 4, label: "分镜画面", atGate: false } },
+		});
+
+		expect(screen.getByText("生成中 · 分镜画面 · 5/6")).toBeInTheDocument();
+		expect(screen.getByLabelText("第 5 步，共 6 步")).toBeInTheDocument();
+	});
+
+	it("hides the meter when there is no step", () => {
+		renderPreview();
+		expect(screen.queryByLabelText(/共 6 步/)).toBeNull();
+	});
+
 	it("puts the inbox right after the status and the activity at the end", () => {
 		renderPreview({
 			inbox: <p>INBOX</p>,
