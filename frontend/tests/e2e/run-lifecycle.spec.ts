@@ -304,7 +304,10 @@ test("the interruption card names the gate, speaks Chinese, and 取消 clears it
 	await page.getByText("详细信息").click();
 	await expect(raw).toBeVisible();
 
+	await expect(page.getByRole("button", { name: "从分镜脚本确认继续" })).toBeVisible();
 	await page.getByRole("button", { name: "取消", exact: true }).click();
+	// 取消不可逆，先过一次确认
+	await page.getByRole("dialog").getByRole("button", { name: "取消运行" }).click();
 	await expect.poll(() => server.cancelCalls).toBe(1);
 	await expect(page.getByText("运行中断于分镜脚本确认")).toHaveCount(0);
 

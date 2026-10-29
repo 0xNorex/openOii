@@ -117,7 +117,7 @@ async function installMockWebSocket(page: Page) {
 	});
 }
 
-async function mockServer(page: Page, current: Json): Promise<Server> {
+async function mockServer(page: Page, current: Json, characters: Json = []): Promise<Server> {
 	const server: Server = { current, confirmCalls: 0, feedback: [], currentReads: 0 };
 	await page.route("**/api/v1/**", async (route) => {
 		const { pathname: path } = new URL(route.request().url());
@@ -127,8 +127,8 @@ async function mockServer(page: Page, current: Json): Promise<Server> {
 		if (path === "/api/v1/config") return json([]);
 		if (path === "/api/v1/projects" && method === "GET") return json({ items: [project], total: 1 });
 		if (path === "/api/v1/projects/7") return json(project);
-		if (["/api/v1/projects/7/characters", "/api/v1/projects/7/shots", "/api/v1/projects/7/messages"].includes(path))
-			return json([]);
+		if (path === "/api/v1/projects/7/characters") return json(characters);
+		if (["/api/v1/projects/7/shots", "/api/v1/projects/7/messages"].includes(path)) return json([]);
 		if (path === "/api/v1/projects/7/runs/current") {
 			server.currentReads += 1;
 			return json(server.current);
@@ -272,7 +272,7 @@ test("stale run state reconciles with the server after events and reconnects", a
 	await expect(page.getByRole("tab", { name: /待处理/ })).toHaveAttribute("aria-selected", "true", { timeout: 15_000 });
 
 	// one card: resumable, with the reason; no 生成中 / 停止 left behind
-	await expect(page.getByRole("button", { name: "继续", exact: true })).toHaveCount(1);
+	await expect(page.getByRole("button", { name: /继续$/ })).toHaveCount(1);
 	await expect(page.getByText(/超时/).first()).toBeVisible();
 	await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
 	await page.getByRole("tab", { name: "活动" }).click();
@@ -281,5 +281,30 @@ test("stale run state reconciles with the server after events and reconnects", a
 	// a terminal event clears it, even when the event itself is the only signal
 	server.current = null;
 	await push(page, { type: "run_cancelled", data: { run_id: RUN, project_id: 7 } });
-	await expect(page.getByRole("button", { name: "继续", exact: true })).toHaveCount(0);
+	await expect(page.getByRole("button", { name: /继续$/ })).toHaveCount(0);
+});
+
+test("the character-image gate shows what it reviews, and canvas cards carry no approve buttons", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	const stageSummary = { ...summary, current_stage: "character_images_approval", next_stage: "shots" };
+	const gate = { ...gatePayload(), agent: "character_artist", current_stage: "character_images_approval", stage: "character_images_approval", recovery_summary: stageSummary };
+	const characters = [1, 2].map((id) => ({
+		id,
+		project_id: 7,
+		name: id === 1 ? "小曦" : "店员",
+		description: "雨夜里的便利店常客，总在凌晨两点出现，买一罐热咖啡然后站在门口看雨很久很久",
+		image_url: null,
+		approval_state: "draft",
+		revision: 1,
+	}));
+	await mockServer(page, control("waiting_for_approval", { awaiting_gate: gate, recovery_summary: stageSummary }), characters);
+	await page.goto("/project/7");
+	await openPanel(page);
+
+	const strip = page.getByRole("list", { name: "本关要审的内容" });
+	await expect(strip).toBeVisible();
+	await expect(strip.getByRole("button")).toHaveCount(2);
+	await expect(strip.getByText("小曦")).toBeVisible();
+	await expect(page.getByRole("button", { name: "通过" })).toHaveCount(0);
+	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 });

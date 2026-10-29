@@ -399,11 +399,11 @@ test("recovery card keeps plan_approval checkpoint as resume target", async ({ p
 
 	await page.getByRole("button", { name: /开始生成|重新生成/ }).click();
 
-	await expect(page.getByRole("button", { name: "继续", exact: true })).toBeVisible();
+	await expect(page.getByRole("button", { name: /继续$/ })).toBeVisible();
 
 	await expect.poll(() => routes.resumeCalls).toBe(0);
 
-	await page.getByRole("button", { name: "继续", exact: true }).click();
+	await page.getByRole("button", { name: /继续$/ }).click();
 
 	await expect.poll(() => routes.generateCalls).toBe(1);
 	await expect.poll(() => routes.resumeCalls).toBe(1);
