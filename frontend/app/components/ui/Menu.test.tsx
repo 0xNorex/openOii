@@ -33,6 +33,16 @@ describe("MenuButton", () => {
 		expect(screen.getByRole("menuitem", { name: "丙" })).toHaveFocus();
 	});
 
+	it("gives items a pressed tint instead of a scale, and none when disabled", async () => {
+		const user = userEvent.setup();
+		renderMenu();
+		await user.click(screen.getByRole("button", { name: "更多" }));
+		const item = screen.getByRole("menuitem", { name: "甲" });
+		expect(item).toHaveClass("active:bg-ink/10", "duration-press");
+		expect(item).not.toHaveClass("press");
+		expect(screen.getByRole("menuitem", { name: "乙" })).toHaveClass("disabled:active:bg-transparent");
+	});
+
 	it("closes on Escape and returns focus to the trigger", async () => {
 		const user = userEvent.setup();
 		renderMenu();

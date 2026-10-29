@@ -105,6 +105,16 @@ describe("HomePage", () => {
 		expect(yolo).toHaveAttribute("aria-pressed", "true");
 	});
 
+	it("gives mode cards room and press feedback without the dense touch floor", () => {
+		renderHomePage();
+		for (const name of [/逐步确认/, /自动确认/]) {
+			const card = screen.getByRole("button", { name });
+			// touch-target-dense 会把 min-height 压回 32px，盖掉 min-h-14
+			expect(card).not.toHaveClass("touch-target-dense");
+			expect(card).toHaveClass("min-h-14", "py-2.5", "press");
+		}
+	});
+
 	it("creates an interactive project and starts it on the workbench", async () => {
 		renderHomePage();
 		fireEvent.change(screen.getByLabelText("输入你的故事创意"), {

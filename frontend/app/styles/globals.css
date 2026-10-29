@@ -247,6 +247,23 @@
     transform: scale(0.97);
     transition-duration: var(--duration-press);
   }
+  /* 可选卡片（模式卡、示例提示等大面积可点项）：同一套按压配方，面积大所以只缩到 .98 */
+  .press {
+    transition-property: background-color, border-color, color, transform;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-standard);
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.98);
+    transition-duration: var(--duration-press);
+  }
+  /* 减少动画：按下不缩放（按钮和卡片都一样），只留颜色反馈 */
+  @media (prefers-reduced-motion: reduce) {
+    .btn-doodle:active:not(:disabled),
+    .press:active:not(:disabled) {
+      transform: none;
+    }
+  }
   /* 触感按钮（rareui.com 的 inset 处理）：顶部 1px 内高光 + 底部 1px 内暗边，读作“凸起的键”；
    * 按下时换成顶部内阴影，读作“压进纸里”，配合 .97 缩放。不用外投影。 */
   .btn-tactile {

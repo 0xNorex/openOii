@@ -22,7 +22,7 @@ import { SvgIcon, type IconName } from "./SvgIcon";
  */
 const MenuClose = createContext<() => void>(() => {});
 
-const ITEM = "flex w-full touch-target-dense items-center gap-2 rounded-md px-2 text-left text-xs text-ink hover:bg-paper-200 focus-visible:bg-paper-200 disabled:cursor-not-allowed disabled:opacity-50";
+const ITEM = "flex w-full touch-target-dense items-center gap-2 rounded-md px-2 text-left text-xs text-ink hover:bg-paper-200 focus-visible:bg-paper-200 active:bg-ink/10 transition-colors duration-press disabled:cursor-not-allowed disabled:active:bg-transparent disabled:opacity-50";
 
 function items(root: HTMLElement | null): HTMLElement[] {
 	return root ? Array.from(root.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])')) : [];

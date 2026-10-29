@@ -174,7 +174,7 @@ export function HomePage() {
 											{EXAMPLE_PROMPTS.map((prompt) => (
 												<PlainButton
 													key={prompt}
-													className="touch-target-dense rounded-md border border-line px-3 py-2 text-left text-sm text-ink-muted transition-colors duration-fast hover:border-primary hover:text-ink"
+													className="press touch-target-dense rounded-md border border-line px-3 py-2 text-left text-sm text-ink-muted hover:border-primary hover:text-ink"
 													onClick={() => setStory(prompt)}
 												>
 													{prompt}
@@ -197,7 +197,7 @@ export function HomePage() {
 												return (
 													<PlainButton
 														key={mode.value}
-														className={"touch-target-dense flex min-h-14 min-w-0 flex-col items-start justify-center gap-1 rounded-md border px-2 text-left text-xs font-bold transition-colors duration-fast sm:px-3 " + (active ? "border-primary bg-primary/10 text-primary ring-1 ring-inset ring-primary" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
+														className={"press flex min-h-14 min-w-0 flex-col items-start justify-center gap-0.5 rounded-md border px-2.5 py-2.5 text-left text-xs font-bold sm:px-3 " + (active ? "border-primary bg-primary/10 text-primary ring-1 ring-inset ring-primary" : "border-line bg-surface text-ink-muted hover:border-primary/40")}
 														onClick={() => setCreationMode(mode.value as "review" | "quick")}
 														aria-pressed={active}
 													>

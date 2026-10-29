@@ -7,6 +7,7 @@ import { SharedCharacterCard } from "~/components/universe/SharedCharacterCard";
 import { EmptyState } from "~/components/ui/EmptyState";
 import { DeskSection } from "~/components/layout/DeskSection";
 import { Button } from "~/components/ui/Button";
+import { ButtonLink } from "~/components/ui/ButtonLink";
 import { Input } from "~/components/ui/Input";
 import { Modal } from "~/components/ui/Modal";
 import { Select } from "~/components/ui/Select";
@@ -141,9 +142,7 @@ export function UniverseDetailPage() {
 				<TopBar />
 				<div className="flex flex-1 flex-col items-center justify-center gap-3">
 					<p className="m-0 text-sm text-ink-muted">宇宙不存在</p>
-					<Link to="/universes">
-						<Button size="sm" variant="secondary">返回宇宙列表</Button>
-					</Link>
+					<ButtonLink to="/universes" size="sm" variant="secondary">返回宇宙列表</ButtonLink>
 				</div>
 			</PageShell>
 		);
@@ -172,9 +171,7 @@ export function UniverseDetailPage() {
 							>
 								重试
 							</Button>
-							<Link to="/universes">
-								<Button size="sm" variant="ghost">返回宇宙列表</Button>
-							</Link>
+							<ButtonLink to="/universes" size="sm" variant="ghost">返回宇宙列表</ButtonLink>
 						</div>
 					</div>
 				</div>
@@ -235,22 +232,17 @@ export function UniverseDetailPage() {
 					meta={`${u.chapters.length} 章节 · ${u.shared_characters.length} 角色`}
 					actions={
 						<>
-							<Link
-								to="/universes"
-								className="btn-doodle bg-transparent border-transparent shadow-none hover:bg-paper-200 touch-target-dense h-8 min-h-8 gap-1.5 px-2.5 text-sm"
-							>
+							<ButtonLink to="/universes" size="sm" variant="ghost">
 								← 列表
-							</Link>
+							</ButtonLink>
 							<Button size="sm" variant="ghost" onClick={openEdit}>
 								<SvgIcon name="pencil" size={14} />
 								编辑
 							</Button>
-							<Link to={createChapterHref}>
-								<Button size="sm">
-									<SvgIcon name="plus" size={14} />
-									新建章节
-								</Button>
-							</Link>
+							<ButtonLink to={createChapterHref} size="sm">
+								<SvgIcon name="plus" size={14} />
+								新建章节
+							</ButtonLink>
 						</>
 					}
 				/>
@@ -301,9 +293,7 @@ export function UniverseDetailPage() {
 								title="还没有章节"
 								description="章节是宇宙里的一部作品，创建后进入画布开始生成"
 								action={
-									<Link to={createChapterHref}>
-										<Button size="sm">新建章节</Button>
-									</Link>
+									<ButtonLink to={createChapterHref} size="sm">新建章节</ButtonLink>
 								}
 							/>
 						) : (

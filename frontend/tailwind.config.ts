@@ -50,6 +50,7 @@ export default {
         fast: "var(--duration-fast)",
         normal: "var(--duration-normal)",
         slow: "var(--duration-slow)",
+        press: "var(--duration-press)",
       },
       colors: {
         // Owned semantic palette; values live in styles/tokens.css.

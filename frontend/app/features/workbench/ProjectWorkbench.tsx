@@ -9,10 +9,10 @@ import {
 	useState,
 	useSyncExternalStore,
 } from "react";
-import { Link } from "react-router-dom";
 import { TopBar } from "~/components/layout/TopBar";
 import { StudioControls } from "~/components/layout/StudioControls";
 import { Button } from "~/components/ui/Button";
+import { ButtonLink } from "~/components/ui/ButtonLink";
 import { Card } from "~/components/ui/Card";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { buildComicWorkflow } from "~/features/comic-workflow/graph/buildComicWorkflow";
@@ -462,9 +462,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 							<SvgIcon name="refresh-cw" size={16} />
 							重试
 						</Button>
-						<Link to="/">
-							<Button variant="ghost">返回首页</Button>
-						</Link>
+						<ButtonLink to="/" variant="ghost">返回首页</ButtonLink>
 					</div>
 				</Card>
 			</div>
@@ -479,9 +477,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					<h1 className="mb-4 text-xl font-bold text-pretty">
 						项目未找到
 					</h1>
-					<Link to="/">
-						<Button variant="primary">返回首页</Button>
-					</Link>
+					<ButtonLink to="/" variant="primary">返回首页</ButtonLink>
 				</Card>
 			</div>
 		);

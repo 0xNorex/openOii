@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ButtonLink } from "~/components/ui/ButtonLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "~/components/layout/TopBar";
 import { Button } from "~/components/ui/Button";
@@ -143,12 +144,10 @@ export function ProjectsPage() {
 					eyebrow="openoii / library / projects"
 					title="项目库"
 					description="继续制作中的故事，或从新想法开始一部漫剧。"
+					// 数据归标题（和宇宙页的「N 个」同一处、同一样式），右侧只放动作
+					meta={visibleProjects.length > 0 ? `${visibleProjects.length} 个 · ${completedCount} 部成片` : undefined}
 					actions={
 						<>
-							<div className="grid grid-cols-2 gap-1.5">
-								<Metric label="全部" value={visibleProjects.length} />
-								<Metric label="成片" value={completedCount} />
-							</div>
 							<Button
 								variant="secondary"
 								size="sm"
@@ -158,12 +157,10 @@ export function ProjectsPage() {
 							>
 								{selecting ? "完成" : "选择"}
 							</Button>
-							<Link to="/">
-								<Button size="sm">
-									<SvgIcon name="plus" size={14} />
-									新建
-								</Button>
-							</Link>
+							<ButtonLink to="/" size="sm">
+								<SvgIcon name="plus" size={14} />
+								新建
+							</ButtonLink>
 						</>
 					}
 				/>
@@ -251,19 +248,6 @@ export function ProjectsPage() {
 				isLoading={deleteMutation.isPending}
 			/>
 		</PageShell>
-	);
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-	return (
-		<div className="border-l-2 border-primary bg-paper-200 px-2 py-1.5">
-			<p className="m-0 label text-ink-muted">
-				{label}
-			</p>
-			<p className="m-0 text-md font-bold leading-none tabular-nums">
-				{value}
-			</p>
-		</div>
 	);
 }
 
@@ -386,12 +370,10 @@ function EmptyState() {
 				title="暂无项目"
 				description="开始创作你的第一个故事"
 				action={
-					<Link to="/">
-						<Button size="sm">
-							<SvgIcon name="plus" size={14} />
-							新建项目
-						</Button>
-					</Link>
+					<ButtonLink to="/" size="sm">
+						<SvgIcon name="plus" size={14} />
+						新建项目
+					</ButtonLink>
 				}
 			/>
 		</div>

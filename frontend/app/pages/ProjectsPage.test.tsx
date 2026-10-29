@@ -225,6 +225,28 @@ describe('ProjectsPage', () => {
     });
   });
 
+  it('puts the counts in the header meta and keeps only actions on the right', () => {
+    render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+
+    // MonoRuns 把数字拆进等宽 span，按整段文字匹配
+    expect(
+      screen.getAllByText((_, el) => el?.textContent === '2 个 · 1 部成片').length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('成片')).not.toBeInTheDocument();
+    const create = screen.getByRole('link', { name: '新建' });
+    expect(create).toHaveAttribute('href', '/');
+    expect(create.querySelector('button')).toBeNull();
+  });
+
+  it('hides the header meta and offers a single create link when empty', () => {
+    queryState = { data: [], isLoading: false, error: null };
+    render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+
+    expect(document.body.textContent).not.toContain('部成片');
+    const create = screen.getByRole('link', { name: '新建项目' });
+    expect(create.querySelector('button')).toBeNull();
+  });
+
   it('shows the empty state when there are no projects', () => {
     queryState = {
       data: [],
