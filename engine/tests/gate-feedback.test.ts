@@ -59,7 +59,8 @@ describe("planGateFeedback", () => {
     expect(parseGateFeedback(JSON.stringify({ content: "  " }))).toBeNull();
     expect(
       parseGateFeedback(JSON.stringify({ id: "a", content: " x ", entity_type: "shot", entity_ids: [1, -2, "3"] })),
-    ).toEqual({ id: "a", content: "x", entityType: "shot", entityIds: [1] });
+    ).toEqual({ id: "a", content: "x", entityType: "shot", entityIds: [1], round: null });
+    expect(parseGateFeedback(JSON.stringify({ id: "a", content: "x", round: 3 }))?.round).toBe(3);
   });
 });
 
@@ -117,8 +118,20 @@ describe("request changes at a gate (fake providers, manual mode)", () => {
 
     // Script: what the user does at the n-th time the run waits at a gate.
     let firstShotId = 0;
+    // What the gateway does: assign the round from persisted receipts and write
+    // the receipt row up front, so it sorts before the redo output.
+    const gatewayFeedback = (content: string, round: number) => {
+      const id = `gw-${round}`;
+      edb.db
+        .prepare(
+          `INSERT INTO message (project_id, run_id, agent, role, content, summary, progress, is_loading, created_at)
+           VALUES (?, ?, 'outline', 'feedback_receipt', ?, ?, NULL, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
+        )
+        .run(projectId, runId, JSON.stringify({ id, round, state: "received", content, stage: "outline_approval" }), id);
+      shared.updateRun(runId, { gate_feedback: JSON.stringify({ id, content, round }) });
+    };
     const script: Array<(gate: Awaiting) => void> = [
-      () => requestChanges("结局更温暖一些"), // outline v1 → changes
+      () => gatewayFeedback("结局更温暖一些", 2), // outline v1 → changes (round 2: an earlier round was persisted)
       () => approve(), // outline v2
       () => requestChanges("主角改成短发"), // characters v1 → changes
       () => approve(),
@@ -211,5 +224,27 @@ describe("request changes at a gate (fake providers, manual mode)", () => {
     expect(shotGateApproved).toBeGreaterThan(0);
     expect(firstVideo === -1 || firstVideo > shotGateApproved).toBe(true);
     expect(shared.getRun(runId)?.gate_feedback ?? null).toBeNull();
+
+    // Receipts are in the timeline table, one row per feedback, final state in place.
+    const rows = edb.db
+      .prepare("SELECT summary, content FROM message WHERE run_id = ? AND role = 'feedback_receipt' ORDER BY id")
+      .all(runId) as Array<{ summary: string; content: string }>;
+    const persisted = rows.map((row) => ({ id: row.summary, ...(JSON.parse(row.content) as { round: number; state: string; stage: string }) }));
+    expect(persisted.map((r) => [r.id, r.stage, r.round, r.state])).toEqual([
+      ["gw-2", "outline_approval", 2, "revised"],
+      ["fb-主角改成短发", "characters_approval", 1, "revised"],
+      ["fb-这个镜头太暗", "character_images_approval", 1, "not_applied"],
+      ["fb-画面更亮", "shot_images_approval", 1, "revised"],
+      ["fb-整体节奏快一点", "compose_approval", 1, "not_applied"],
+    ]);
+    expect(seen[1]!.feedback?.round).toBe(2);
+    // The receipt row comes before the redo's own output.
+    const firstReceipt = edb.db
+      .prepare("SELECT id FROM message WHERE run_id = ? AND role = 'feedback_receipt' ORDER BY id LIMIT 1")
+      .get(runId) as { id: number };
+    const laterOutput = edb.db
+      .prepare("SELECT COUNT(*) AS n FROM message WHERE run_id = ? AND id > ? AND role != 'feedback_receipt'")
+      .get(runId, firstReceipt.id) as { n: number };
+    expect(laterOutput.n).toBeGreaterThan(0);
   }, 60_000);
 });

@@ -1051,7 +1051,6 @@ export class PipelineRunner {
     const currentStage = stage;
     const nextStage = NEXT_STAGE[stage];
     let lastFeedback: GateFeedbackOutcome | null = null;
-    let round = 0;
 
     // A gate only ever leaves on approval (or cancel/timeout). "Request changes"
     // redoes the gate's own stage with the feedback and comes back here.
@@ -1116,7 +1115,10 @@ export class PipelineRunner {
         return;
       }
 
-      round += 1;
+      // The round comes from the persisted receipts (assigned by the gateway),
+      // not from a counter that a restart or resume would reset.
+      const round =
+        decision.feedback.round ?? this.shared.countFeedbackReceipts(request.runId, currentStage) + 1;
       lastFeedback = await this.applyGateFeedback(stage, request, ctx, decision.feedback, round);
       if (this.shouldCancel(request.runId)) return;
     }
@@ -1146,7 +1148,20 @@ export class PipelineRunner {
       entity_type: feedback.entityType,
       entity_ids: feedback.entityIds.length ? feedback.entityIds : null,
     });
-    const emitReceipt = (outcome: GateFeedbackOutcome) =>
+    const emitReceipt = (outcome: GateFeedbackOutcome) => {
+      if (outcome.id) {
+        this.shared.upsertFeedbackReceipt(request.projectId, request.runId, gateAgent, {
+          id: outcome.id,
+          round: outcome.round,
+          state: outcome.state,
+          content: outcome.content,
+          reason: outcome.reason,
+          gate: gateAgent,
+          stage: gate,
+          entity_type: outcome.entity_type,
+          entity_ids: outcome.entity_ids,
+        });
+      }
       ctx.emitter.emit("run_feedback", {
         run_id: request.runId,
         project_id: request.projectId,
@@ -1160,6 +1175,7 @@ export class PipelineRunner {
         entity_type: outcome.entity_type,
         entity_ids: outcome.entity_ids,
       });
+    };
     const finish = (outcome: GateFeedbackOutcome): GateFeedbackOutcome => {
       this.shared.clearGateFeedback(request.runId);
       emitReceipt(outcome);

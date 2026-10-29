@@ -55,6 +55,23 @@ export interface GateFeedbackSignal {
   content: string;
   entityType: "character" | "shot" | null;
   entityIds: number[];
+  /** Round number assigned by the gateway from persisted receipts. */
+  round?: number | null;
+}
+
+/** Timeline row role for a persisted gate feedback receipt. */
+export const FEEDBACK_RECEIPT_ROLE = "feedback_receipt";
+
+export interface FeedbackReceiptRecord {
+  id: string;
+  round: number;
+  state: string;
+  content: string;
+  reason: string | null;
+  gate: string | null;
+  stage: string | null;
+  entity_type: string | null;
+  entity_ids: number[] | null;
 }
 
 export function parseGateFeedback(raw: string): GateFeedbackSignal | null {
@@ -78,6 +95,7 @@ export function parseGateFeedback(raw: string): GateFeedbackSignal | null {
     content,
     entityType: entityIds.length ? entityType : null,
     entityIds: entityType ? entityIds : [],
+    round: Number.isInteger(record.round) && (record.round as number) > 0 ? (record.round as number) : null,
   };
 }
 
@@ -670,6 +688,41 @@ export class SharedDb {
         progress ?? null,
         isLoading ? 1 : 0,
       );
+  }
+
+  /**
+   * Write the current state of a gate feedback receipt into the timeline.
+   * The gateway inserts the row when the feedback arrives (so it sorts before
+   * the redo output); later states update that same row in place.
+   */
+  upsertFeedbackReceipt(projectId: number, runId: number, agent: string, receipt: FeedbackReceiptRecord): void {
+    this.assertExecutionFence();
+    const content = JSON.stringify(receipt);
+    const existing = this.db
+      .prepare("SELECT id FROM message WHERE run_id = ? AND role = ? AND summary = ? ORDER BY id LIMIT 1")
+      .get(runId, FEEDBACK_RECEIPT_ROLE, receipt.id) as { id: number } | undefined;
+    if (existing) {
+      this.db.prepare("UPDATE message SET content = ? WHERE id = ?").run(content, existing.id);
+      return;
+    }
+    this.insertMessage(projectId, runId, agent, FEEDBACK_RECEIPT_ROLE, content, receipt.id);
+  }
+
+  /** Rounds of "request changes" this run already had at a gate stage. */
+  countFeedbackReceipts(runId: number, stage: string): number {
+    const rows = this.db
+      .prepare("SELECT content FROM message WHERE run_id = ? AND role = ?")
+      .all(runId, FEEDBACK_RECEIPT_ROLE) as Array<{ content: string }>;
+    let count = 0;
+    for (const row of rows) {
+      try {
+        const data = JSON.parse(row.content) as { stage?: unknown };
+        if (data && data.stage === stage) count += 1;
+      } catch {
+        // ignore unreadable rows
+      }
+    }
+    return count;
   }
 
   insertAgentMessage(runId: number, agent: string, role: string, content: string): void {
