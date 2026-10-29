@@ -5,6 +5,7 @@ import type {
   RunAwaitingConfirmEventData,
   WorkflowStage,
 } from "~/types";
+import type { LiveStream } from "~/features/comic-workflow/agent/liveStream";
 import { appQueryClient } from "./client";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -30,6 +31,8 @@ export interface RunState {
   recoveryControl: RecoveryControlRead | null;
   recoverySummary: RecoverySummaryRead | null;
   recoveryGate: RunAwaitingConfirmEventData | null;
+  /** LLM call in flight (llm_stream), or the one that just failed. */
+  liveStream: LiveStream | null;
 }
 
 export const INITIAL_RUN_STATE: RunState = {
@@ -45,6 +48,7 @@ export const INITIAL_RUN_STATE: RunState = {
   recoveryControl: null,
   recoverySummary: null,
   recoveryGate: null,
+  liveStream: null,
 };
 
 export function readRunState(projectId: number): RunState {

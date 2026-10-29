@@ -109,6 +109,15 @@ export class EngineDatabase {
     return Number(info.lastInsertRowid);
   }
 
+  /** Keep only the final frame of one `llm_stream` (see pipeline/llm-stream.ts). */
+  compactStreamEvents(runId: number, streamId: string, keepSeq: number): void {
+    this.db
+      .prepare(
+        "DELETE FROM engine_run_events WHERE run_id = ? AND type = 'llm_stream' AND seq < ? AND json_extract(payload, '$.stream_id') = ?",
+      )
+      .run(runId, keepSeq, streamId);
+  }
+
   eventsForRun(runId: number, afterSeq = 0): RunEventRow[] {
     return this.db
       .prepare(

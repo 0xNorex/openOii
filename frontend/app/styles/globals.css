@@ -317,6 +317,32 @@
     to { background-position: -150% 0, 0 0; }
   }
 
+  /* 流式输出：固定高度的窗口只露最新几行，顶部渐隐；行高增长到上限后不再推挤布局 */
+  .stream-window {
+    display: flex;
+    max-height: 5rem;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .stream-window[data-overflow] {
+    mask-image: linear-gradient(to bottom, transparent, #000 1.25rem);
+  }
+  /* 光标：主色细竖线，跟输入框 caret-color 一致；reduced-motion 下常亮不闪 */
+  .stream-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 1px;
+    vertical-align: -0.125em;
+    border-radius: 1px;
+    background: rgb(var(--color-primary));
+    animation: caret-blink 1.06s steps(1, end) infinite;
+  }
+  @keyframes caret-blink {
+    50% { opacity: 0; }
+  }
+
   /* 还没有内容的媒体位：静止的稀疏网点，读作“空版”，不是灰块 */
   .media-blank {
     background:

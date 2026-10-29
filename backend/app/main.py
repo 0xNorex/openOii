@@ -320,7 +320,8 @@ def create_app() -> FastAPI:
                         event_type=etype,
                         data=data if isinstance(data, dict) else {},
                     )
-                await asyncio.sleep(0.4)
+                # Short enough that live llm_stream previews (200ms frames) read as streaming.
+                await asyncio.sleep(0.25)
         except asyncio.CancelledError:
             return
         except Exception:  # noqa: BLE001

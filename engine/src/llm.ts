@@ -1,7 +1,18 @@
 /** Text LLM service built on pi-ai with immutable per-run provider/context selection. */
-import { complete, getModels, type Api, type Model, type ThinkingLevel } from "@mariozechner/pi-ai";
+import {
+  fauxAssistantMessage,
+  fauxText,
+  fauxThinking,
+  getModels,
+  registerFauxProvider,
+  stream,
+  type Api,
+  type FauxProviderRegistration,
+  type Model,
+  type ThinkingLevel,
+} from "@mariozechner/pi-ai";
 import type { EngineDatabase } from "./db.js";
-import { fakeRespond } from "./fake-stream.js";
+import { FAKE_STREAM_ERROR_TOKEN, fakeRespond, fakeThinking } from "./fake-stream.js";
 import {
   AiOperationError,
   assertOperationInFlight,
@@ -48,6 +59,64 @@ export interface LlmRequest {
    * rather than only a bare abort signal.
    */
   operation?: AiOperation;
+  /**
+   * Called on every thinking/text delta with the text accumulated so far.
+   * Real providers and the fake provider stream through the same pi-ai path.
+   */
+  onStream?: (update: LlmStreamUpdate) => void;
+}
+
+export interface LlmStreamUpdate {
+  thinking: string;
+  text: string;
+}
+
+/**
+ * The fake provider is pi-ai's own faux provider, so fake runs go through the
+ * same `stream()` call, event shapes and abort handling as real providers.
+ * `OPENOII_FAKE_STREAM_MS` is the average delay per chunk (chunks are 1–3
+ * pi-ai "tokens", i.e. 4–12 characters, so delays jitter with chunk size);
+ * 0 streams without delay.
+ */
+let fauxRegistration: FauxProviderRegistration | null = null;
+export const DEFAULT_FAKE_STREAM_MS = 30;
+
+function fakeStreamMs(): number {
+  const raw = Number(process.env.OPENOII_FAKE_STREAM_MS ?? DEFAULT_FAKE_STREAM_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : 0;
+}
+
+function fakeModel(system: string, prompt: string): Model<Api> {
+  if (!fauxRegistration) {
+    const ms = fakeStreamMs();
+    fauxRegistration = registerFauxProvider({
+      provider: "fake",
+      models: [{ id: "fake", name: "Fake", reasoning: true }],
+      tokenSize: { min: 1, max: 3 },
+      // average chunk = 2 tokens, so 2 tokens per `ms`
+      tokensPerSecond: ms > 0 ? 2000 / ms : undefined,
+    });
+  }
+  // Fixture errors (e.g. too many shots) still throw here, before any request.
+  fakeRespond(system, prompt);
+  // The response queue is shared, so the factory rebuilds the reply from the
+  // context it is handed; concurrent fake calls cannot swap answers.
+  fauxRegistration.appendResponses([
+    (context) => {
+      const sys = context.systemPrompt ?? "";
+      const first = context.messages[0];
+      const input = first?.role === "user" && typeof first.content === "string" ? first.content : "";
+      const text = fakeRespond(sys, input);
+      const thinking = fauxThinking(fakeThinking(sys));
+      return input.includes(FAKE_STREAM_ERROR_TOKEN)
+        ? fauxAssistantMessage([thinking, fauxText(text.slice(0, Math.ceil(text.length / 2)))], {
+            stopReason: "error",
+            errorMessage: "fake 流式输出中断（测试用）",
+          })
+        : fauxAssistantMessage([thinking, fauxText(text)]);
+    },
+  ]);
+  return fauxRegistration.getModel() as unknown as Model<Api>;
 }
 
 export interface LlmResponse {
@@ -268,14 +337,15 @@ export class TextLlmService {
     const prompt = this.promptWithRunContext(req.prompt);
     // Fail fast on a cancelled or expired operation before spending a request.
     if (req.operation) assertOperationInFlight(req.operation);
+    let model: Model<Api>;
     if (resolved.key === "fake") {
-      return { text: fakeRespond(req.system, prompt), provider: "fake", model: resolved.model };
+      model = fakeModel(req.system, prompt);
+    } else {
+      if (!resolved.baseUrl) {
+        throw new Error(`provider ${resolved.key} needs a base URL in the run context snapshot`);
+      }
+      model = this.buildModel(resolved.key, resolved.model, resolved.baseUrl, resolved.reasoning);
     }
-    if (!resolved.baseUrl) {
-      throw new Error(`provider ${resolved.key} needs a base URL in the run context snapshot`);
-    }
-
-    const model = this.buildModel(resolved.key, resolved.model, resolved.baseUrl, resolved.reasoning);
 
     const context = {
       systemPrompt: req.system,
@@ -292,8 +362,8 @@ export class TextLlmService {
         "gen_ai.operation.name": "chat",
         "gen_ai.request.model": resolved.model,
       },
-      async (span): Promise<Awaited<ReturnType<typeof complete>>> => {
-        const result = await complete(model, context, {
+      async (span) => {
+        const events = stream(model, context, {
           apiKey: resolved.apiKey,
           maxTokens: req.maxTokens ?? 4096,
           reasoning: resolved.reasoning,
@@ -307,6 +377,15 @@ export class TextLlmService {
           // wait for the response to come back before the run actually stops.
           signal: req.signal ?? op?.signal,
         });
+        let thinking = "";
+        let text = "";
+        for await (const event of events) {
+          if (event.type === "thinking_delta") thinking += event.delta;
+          else if (event.type === "text_delta") text += event.delta;
+          else continue;
+          req.onStream?.({ thinking, text });
+        }
+        const result = await events.result();
         // Reported on the span that actually made the call, so token and cost
         // accounting lines up with the provider request in the trace.
         recordUsage(span, {

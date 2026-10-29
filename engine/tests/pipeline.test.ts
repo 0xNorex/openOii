@@ -124,6 +124,18 @@ describe("pipeline runner (fake providers, auto-mode)", () => {
       expect(types, `missing ${expected}`).toContain(expected);
     }
 
+    // Every LLM call streamed; only its final frame is kept in the event log.
+    const streams = edb
+      .eventsForRun(runId)
+      .filter((e) => e.type === "llm_stream")
+      .map((e) => JSON.parse(e.payload) as { stream_id: string; status: string; thinking: string });
+    expect(streams.length).toBeGreaterThan(0);
+    expect(new Set(streams.map((e) => e.stream_id)).size).toBe(streams.length);
+    for (const frame of streams) {
+      expect(frame.status).toBe("done");
+      expect(frame.thinking.length).toBeGreaterThan(0);
+    }
+
     const messageCount = Number(
       (edb.db.prepare("SELECT COUNT(*) AS n FROM message WHERE run_id = ?").get(runId) as {
         n: number;

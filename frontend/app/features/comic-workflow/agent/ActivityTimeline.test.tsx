@@ -93,4 +93,23 @@ describe("ActivityTimeline", () => {
 		expect(scroller.scrollTop).toBe(1000);
 		expect(screen.queryByRole("button", { name: "跳到最新" })).not.toBeInTheDocument();
 	});
+
+	it("流式行：先显示思考，有正文后显示正文和光标，出错时去掉光标并给出原因", () => {
+		const live = { streamId: "s1", agent: "outline", status: "streaming" as const, thinking: "先读故事", text: "", chars: 0 };
+		const { rerender } = render(<ActivityTimeline entries={[entry("a")]} live={live} />);
+		const row = screen.getByTestId("live-stream");
+		expect(row).toHaveTextContent("大纲 · 正在思考");
+		expect(row.querySelector(".stream-caret")).not.toBeNull();
+
+		rerender(<ActivityTimeline entries={[entry("a")]} live={{ ...live, text: "午后的猫", chars: 42 }} />);
+		expect(row).toHaveTextContent("大纲 · 正在输出");
+		expect(row).toHaveTextContent("42 字符");
+
+		rerender(
+			<ActivityTimeline entries={[entry("a")]} live={{ ...live, status: "error", text: "午后", error: "连接断开" }} />,
+		);
+		expect(screen.getByTestId("live-stream")).toHaveAttribute("data-status", "error");
+		expect(screen.getByRole("alert")).toHaveTextContent("连接断开");
+		expect(screen.getByTestId("live-stream").querySelector(".stream-caret")).toBeNull();
+	});
 });

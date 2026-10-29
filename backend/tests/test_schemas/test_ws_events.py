@@ -18,6 +18,7 @@ from app.schemas.ws import (
     CritiqueResultEventData,
     DataClearedEventData,
     ErrorEventData,
+    LlmStreamEventData,
     OutlineUpdatedEventData,
     ProjectUpdatedEventData,
     RunAwaitingConfirmEventData,
@@ -133,6 +134,7 @@ class TestWsEventSchemaRegistry:
             ("run_progress", RunProgressEventData),
             ("run_message", RunMessageEventData),
             ("agent_thinking", AgentThinkingEventData),
+            ("llm_stream", LlmStreamEventData),
             ("run_completed", RunCompletedEventData),
             ("run_failed", RunFailedEventData),
             ("run_awaiting_confirm", RunAwaitingConfirmEventData),
@@ -171,6 +173,19 @@ def _frontend_ws_event_types() -> set[str]:
     )
     assert match is not None, "frontend WsEventType union not found"
     return set(re.findall(r'"([^"]+)"', match.group("body")))
+
+class TestLlmStreamEventData:
+    def test_snapshot_frame(self):
+        frame = LlmStreamEventData.model_validate(
+            {"stream_id": "s1", "agent": "outline", "status": "streaming", "thinking": "想", "text": "猫", "chars": 12}
+        )
+        assert frame.error is None
+        assert frame.chars == 12
+
+    def test_rejects_unknown_status(self):
+        with pytest.raises(ValueError):
+            LlmStreamEventData.model_validate({"stream_id": "s1", "agent": "outline", "status": "paused"})
+
 
 class TestRunStartedEventData:
     def test_valid_full(self):

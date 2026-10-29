@@ -10,6 +10,7 @@ from starlette.websockets import WebSocketState
 from app.schemas.export import ExportCompletedEventData
 from app.schemas.ws import (
     AgentThinkingEventData,
+    LlmStreamEventData,
     AudioGeneratedEventData,
     BibleUpdatedEventData,
     CharacterCreatedEventData,
@@ -62,6 +63,7 @@ _EVENT_DATA_MODELS: dict[str, type[Any]] = {
     "critique_result": CritiqueResultEventData,
     "bible_updated": BibleUpdatedEventData,
     "agent_thinking": AgentThinkingEventData,
+    "llm_stream": LlmStreamEventData,
     "audio_generated": AudioGeneratedEventData,
     "version_created": VersionCreatedEventData,
     "version_rollback": VersionRollbackEventData,

@@ -4,6 +4,7 @@ import type { RunMode } from "~/stores/editorStore";
 import type {
 	AgentMessage,
 	AgentThinkingEventData,
+	LlmStreamEventData,
 	VersionCreatedEventData,
 	VersionRollbackEventData,
 	CritiqueResultEventData,
@@ -120,7 +121,7 @@ export function applyWsEvent(
 			patchRunState(projectId, { currentRunId: d.run_id });
 			patchRunState(projectId, { currentAgent: d.current_agent ?? null });
 			patchRunState(projectId, { awaitingConfirm: false, awaitingAgent: null });
-			patchRunState(projectId, { recoveryGate: null });
+			patchRunState(projectId, { recoveryGate: null, liveStream: null });
 			applyStage(projectId, event.data);
 			if (d.recovery_summary) patchRunState(projectId, { recoverySummary: d.recovery_summary });
 			if (Object.hasOwn(d, "provider_snapshot")) {
@@ -176,6 +177,31 @@ export function applyWsEvent(
 				timestamp: new Date().toISOString(),
 				phase: td.phase,
 				details: td.details ?? undefined,
+			});
+			break;
+		}
+
+		case "llm_stream": {
+			const frame = event.data as unknown as LlmStreamEventData;
+			if (frame.status === "done") {
+				// A finished call leaves no row; its result arrives as normal messages.
+				if (readRunState(projectId).liveStream?.streamId === frame.stream_id) {
+					patchRunState(projectId, { liveStream: null });
+				}
+				break;
+			}
+			// Frames queued before a stop can land after it; a stopped run has no live row.
+			if (!readRunState(projectId).isGenerating) break;
+			patchRunState(projectId, {
+				liveStream: {
+					streamId: frame.stream_id,
+					agent: frame.agent,
+					status: frame.status,
+					thinking: frame.thinking ?? "",
+					text: frame.text ?? "",
+					chars: frame.chars ?? 0,
+					error: frame.error ?? undefined,
+				},
 			});
 			break;
 		}
@@ -246,7 +272,10 @@ export function applyWsEvent(
 			clearLoadingStates(projectId);
 			cleanupStaleMessages(projectId);
 			const d = event.data as unknown as RunFailedEventData;
+			// Keep the interrupted output on screen next to the failure.
+			const interrupted = readRunState(projectId).liveStream;
 			resetRunState(projectId);
+			if (interrupted?.status === "error") patchRunState(projectId, { liveStream: interrupted });
 			appendMessage(projectId, {
 				id: generateMessageId(),
 				agent: "system",

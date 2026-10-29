@@ -107,13 +107,29 @@ async function callLlm(
   prompt: string,
   maxTokens = 8192,
 ): Promise<Record<string, unknown>> {
-  const res = await ctx.llm.generate({
-    system,
-    prompt,
-    maxTokens,
-    signal: ctx.signal,
-    operation: ctx.operation ?? undefined,
-  });
+  const live = ctx.emitter.llmStream(agent);
+  let res: Awaited<ReturnType<typeof ctx.llm.generate>>;
+  try {
+    res = await ctx.llm.generate({
+      system,
+      prompt,
+      maxTokens,
+      signal: ctx.signal,
+      operation: ctx.operation ?? undefined,
+      onStream: live.update,
+    });
+  } catch (error) {
+    // A cancelled run is cleared by run_cancelled; only real failures show.
+    if (!ctx.signal?.aborted) {
+      try {
+        live.end("error", error instanceof Error ? error.message : String(error));
+      } catch {
+        // lost the execution fence; the original error is what matters
+      }
+    }
+    throw error;
+  }
+  live.end("done");
   ctx.shared.insertAgentMessage(ctx.runId, agent, "assistant", res.text);
   return extractJson(res.text);
 }

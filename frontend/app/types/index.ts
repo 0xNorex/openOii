@@ -411,6 +411,7 @@ export type WsEventType =
 	| "run_progress"
 	| "run_message"
 	| "agent_thinking"
+	| "llm_stream"
 	| "run_completed"
 	| "run_failed"
 	| "run_awaiting_confirm"
@@ -433,6 +434,16 @@ export type WsEventType =
 	| "audio_generated"
 	| "export_completed"
 	| "consistency_eval_completed";
+
+export interface LlmStreamEventData {
+	stream_id: string;
+	agent: string;
+	status: "streaming" | "done" | "error";
+	thinking?: string;
+	text?: string;
+	chars?: number;
+	error?: string | null;
+}
 
 export interface WsEvent {
 	type: WsEventType;

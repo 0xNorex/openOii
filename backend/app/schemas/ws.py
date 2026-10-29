@@ -22,6 +22,7 @@ WsEventType = Literal[
     "run_progress",
     "run_message",
     "agent_thinking",
+    "llm_stream",
     "run_completed",
     "run_failed",
     "run_awaiting_confirm",
@@ -252,6 +253,22 @@ class AgentThinkingEventData(BaseModel):
     phase: Literal["reasoning", "decision", "planning", "reviewing"]
     content: str
     details: str | None = None
+
+
+class LlmStreamEventData(BaseModel):
+    """Live preview of one LLM call: tails of the thinking and readable text.
+
+    Frames are snapshots, not deltas, so a client that joins mid-stream only
+    needs the latest one. The engine keeps only the final frame per stream.
+    """
+
+    stream_id: str
+    agent: str
+    status: Literal["streaming", "done", "error"]
+    thinking: str = ""
+    text: str = ""
+    chars: int = Field(default=0, ge=0)
+    error: str | None = None
 
 
 class VersionCreatedEventData(BaseModel):

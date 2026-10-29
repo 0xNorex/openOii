@@ -9,6 +9,7 @@
 import { progressForStage } from "../contract.js";
 import type { EngineDatabase } from "../db.js";
 import type { SharedDb } from "../shared-db.js";
+import { LlmStreamSink } from "./llm-stream.js";
 
 export interface EmitterConfig {
   thinkingChainEnabled: boolean;
@@ -33,6 +34,20 @@ export class PipelineEmitter {
   emit(type: string, data: Record<string, unknown>): void {
     this.shared.assertExecutionFence();
     this.db.appendEvent(this.runId, this.projectId, type, data);
+  }
+
+  /** Live `llm_stream` preview for one LLM call. */
+  llmStream(agent: string): LlmStreamSink {
+    return new LlmStreamSink(
+      {
+        publish: (event) => {
+          this.shared.assertExecutionFence();
+          return this.db.appendEvent(this.runId, this.projectId, "llm_stream", event);
+        },
+        compact: (streamId, keepSeq) => this.db.compactStreamEvents(this.runId, streamId, keepSeq),
+      },
+      agent,
+    );
   }
 
   /**

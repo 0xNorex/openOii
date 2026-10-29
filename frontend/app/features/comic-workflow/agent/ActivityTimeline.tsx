@@ -6,6 +6,8 @@ import type { ActivityEntry } from "./activityTimeline";
 import { formatDuration } from "./activityTimeline";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MonoRuns } from "~/components/ui/MonoRuns";
+import type { LiveStream } from "./liveStream";
+import { LiveStreamRow } from "./LiveStreamRow";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;
@@ -97,7 +99,13 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 /**
  * 步骤时间线。默认跟随最新；用户上滑后停止跟随，出现“跳到最新”。
  */
-export function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
+export function ActivityTimeline({
+	entries,
+	live = null,
+}: {
+	entries: ActivityEntry[];
+	live?: LiveStream | null;
+}) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [following, setFollowing] = useState(true);
 
@@ -108,7 +116,16 @@ export function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
 
 	useLayoutEffect(() => {
 		if (following) scrollToBottom();
-	}, [entries, following]);
+	}, [entries, live, following]);
+
+	// 流式文字逐帧长高时也跟随；用户上滑后（following=false）不打扰
+	useEffect(() => {
+		const el = scrollRef.current?.firstElementChild;
+		if (!el || !following || typeof ResizeObserver === "undefined") return;
+		const observer = new ResizeObserver(() => scrollToBottom());
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [following]);
 
 	// 内容变化（如展开细节）不影响跟随判断；只看用户滚动
 	useEffect(() => {
@@ -132,6 +149,7 @@ export function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
 					{entries.map((entry) => (
 						<EntryRow key={entry.id} entry={entry} />
 					))}
+					{live ? <LiveStreamRow key={live.streamId} stream={live} /> : null}
 				</ol>
 			</div>
 			{following ? null : (

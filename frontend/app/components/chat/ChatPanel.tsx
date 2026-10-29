@@ -42,6 +42,7 @@ export function ChatPanel({
     currentAgent,
     awaitingConfirm,
     currentStage,
+    liveStream,
   } = useRunState(projectId);
 
   // The chat feed is server state, so it is read from the query cache rather
@@ -102,7 +103,7 @@ export function ChatPanel({
         </div>
       )}
 
-      {entries.length === 0 && !isGenerating ? (
+      {entries.length === 0 && !isGenerating && !liveStream ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 text-center">
           <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
             <SvgIcon name={stageIcon} size={14} className="text-primary" />
@@ -112,7 +113,7 @@ export function ChatPanel({
           </p>
         </div>
       ) : (
-        <ActivityTimeline entries={entries} />
+        <ActivityTimeline entries={entries} live={liveStream} />
       )}
 
     </div>

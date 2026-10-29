@@ -97,3 +97,27 @@ export function fakeRespond(system: string, prompt: string): string {
   }
   return JSON.stringify({ text: "Fake 文本响应。" });
 }
+
+/**
+ * 假推理过程：让 fake 模式也有 thinking_delta，界面能按真实模型的样子流式显示。
+ * 内容按 agent 区分，只是演示文案，不参与解析。
+ */
+export function fakeThinking(system: string): string {
+  if (/^\s*You are a character visual design assistant\b/i.test(system)) {
+    return "先看角色描述里最容易辨认的部分：发型、服装颜色和一件标志性配饰。把它们写成画面提示，保证换角度时仍然认得出来。";
+  }
+  const agent = /^\s*You are (OutlineAgent|PlanAgent|CriticAgent)\b/i.exec(system)?.[1]?.toLowerCase();
+  if (agent === "outlineagent") {
+    return "先读故事梗概，找出主角想要什么、挡在面前的是什么。三幕里第一幕交代处境，第二幕让阻碍升级，第三幕给出一个清楚的结果。语气保持轻快，视觉上用暖色工作台统一。";
+  }
+  if (agent === "planagent") {
+    return "按大纲拆成角色和镜头。每个角色要有一眼能认出的外形；镜头之间注意景别变化，中景、近景、全景交替，节奏先慢后快，最后一个镜头留给情绪落点。";
+  }
+  if (agent === "criticagent") {
+    return "对照角色设定检查一致性：脸型、发色、服装是否和设定相符；再看构图是否把主体放在视觉中心，最后检查画面质量有没有明显瑕疵。";
+  }
+  return "整理输入，生成结构化结果。";
+}
+
+/** 故事里写 `[fake:stream-error]` 时，fake 模型输出到一半中断，用来验证流式出错的界面。 */
+export const FAKE_STREAM_ERROR_TOKEN = "[fake:stream-error]";
