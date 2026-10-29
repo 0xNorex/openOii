@@ -85,6 +85,7 @@
 做了 4 个字标方向和 6 组标题字体对比（对比图在 `.devdata/screens/logo-options.png`、`display-type-options.png`），选定：
 
 - **字标 C「套版错位」（第四轮已换掉）：** 只有「Oii」印成青、群青两版并错开 0.042em，「open」保持单色。这样小到顶栏 16px 高时「open」仍然清楚，错位只落在品牌名的那半边。favicon 用同样的两版错位圆环。
+- **2026-10 更新：** 标题字体换成得意黑 Smiley Sans（子集改名 openOii Display），中文和拉丁同一族；理由和字号下限见 DESIGN.md §3。下面是 P5 的原始记录。
 - **标题字体 P5：** 拉丁用 Unbounded 700，中文用站酷庆科黄油体。两者都是方正、宽、带一点圆角的几何字，放在一起像同一套印刷标题字。
   - 中文只子集化标题用到的字（约 70 字，18.2 KB），字表在 `public/fonts/display-cjk.chars.txt`，测试会拦住缺字的新标题。
   - 只给固定文案用；含用户内容的标题用 `plainTitle` 退回正文字体，避免缺字时混出两种中文字形。

@@ -43,7 +43,7 @@ export function DeskSection({
 							{icon}
 						</span>
 					) : null}
-					<h2 className={clsx("m-0 text-md font-bold leading-tight", !plainTitle && "display")}>
+					<h2 className={clsx("m-0 text-lg font-bold leading-tight", !plainTitle && "display")}>
 						{title}
 					</h2>
 					{meta ? (

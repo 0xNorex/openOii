@@ -39,10 +39,13 @@ colors:
 typography:
   wordmark:
     note: "openOii in Instrument Serif Italic, inlined as SVG outlines (open = ink, Oii = primary); no webfont load"
+  display:
+    fontFamily: "openOii Display (Smiley Sans 得意黑 subset, CJK + Latin), sans fallback"
+    note: "fixed headings only, text-lg (18px) and up, weight 400, no tracking"
   sans:
-    fontFamily: "system CJK stack: -apple-system, PingFang SC, Microsoft YaHei, Noto Sans CJK SC, system-ui"
+    fontFamily: "Schibsted Grotesk (Latin/numerals) → system CJK stack: PingFang SC, Hiragino, Microsoft YaHei, Noto Sans CJK SC"
   mono:
-    fontFamily: "ui-monospace, SF Mono, Menlo, Consolas, Noto Sans Mono CJK SC"
+    fontFamily: "IBM Plex Mono 400/500 → ui-monospace, SF Mono, Menlo, Consolas"
     note: "ids (S01), durations, technical fields only"
 rounded:
   sm: "4px"
@@ -215,11 +218,11 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 - **Sans** (`font-sans`, the default): **Schibsted Grotesk** (variable 400–900, SIL OFL 1.1) for Latin and numerals, falling back to the system CJK stack (PingFang SC → Hiragino → YaHei → Source Han / Noto Sans CJK). It is a grotesque designed for a newspaper house, so it has more bite than Inter or Geist and holds its weight next to CJK. A metric-matched local fallback (`"Schibsted Grotesk Fallback"`: Arial / Helvetica / Liberation Sans with `size-adjust: 104.92%`, `ascent-override: 93.07%`, `descent-override: 24.57%`, derived from the woff2 with fontTools) sits right behind it, so the swap does not reflow lines.
 - **Chinese labels** use `.label` (sans, xs, 500, no tracking, no uppercase). Only Latin or numeric parts get `font-mono` (for example `格 <span class="font-mono">{n}</span>`); `.label-caps` is for Latin-only eyebrows. The design contract test fails on literal CJK inside `label-caps` / `font-mono` / `uppercase` / `tracking-wide*`. It cannot see dynamic `{label}` text. For runtime text that mixes numbers and Chinese (meta lines, dates, progress ETA, activity detail), render the container in sans and use `<MonoRuns text={…} />`, which puts only the Latin/numeric runs in `font-mono`. Legacy feed messages with three periods are normalised to `…` in `deriveActivityTimeline`.
-- **Display** (`.display`, `--font-display`): **Unbounded** 700 (Latin/numerals) + **ZCOOL QingKe HuangYou 站酷庆科黄油体** (Chinese), both SIL OFL 1.1, neither with a Reserved Font Name. Only for fixed headings: `PageHeader` / `DeskSection` / `EmptyState` titles (on by default), canvas frame titles, the version-compare and outline-review headings. Titles that carry user content (a universe name) pass `plainTitle` and fall back to sans. The Chinese face ships only the characters listed in `public/fonts/display-cjk.chars.txt`; `app/styles/displayGlyphs.test.ts` collects every fixed `.display` / header title string from the source and fails if a character is missing, and also fails on new dynamic text inside `.display`. To add a heading with new characters: add them to the chars file and run `python3 scripts/subset-display-fonts.py` (fontTools + brotli; it refuses if the font lacks a glyph). Weight 700, `letter-spacing: -0.01em`, `font-synthesis: none`. Unbounded is wide: keep display text to short labels and let long titles truncate.
+- **Display** (`.display`, `--font-display`): **Smiley Sans 得意黑** 2.0.1 (SIL OFL 1.1, © atelierAnchor), one family for Chinese *and* Latin/numerals. The licence reserves the names "Smiley" and "得意黑", so the subset ships renamed as **`openOii Display`** (`public/fonts/oii-display.woff2`; name table, file and CSS family; OFL §3), with the original licence in `OFL-SmileySans.txt`. Why: it is a slanted, narrow title face made for posters and video titles, which is what 漫剧 headings are, and its forward lean rhymes with the Instrument Serif *italic* wordmark, so brand voice is one gesture (italic wordmark + oblique headings) instead of three unrelated faces (serif wordmark, wide geometric Unbounded, rounded 庆科黄油体). It also cut 12 KB. **Size floor: `.display` only at `text-lg` (18px) and above**; at 12–16px the strokes clot, so small titles (EmptyState, card heads) use sans 600. Only for fixed headings: `PageHeader` and `DeskSection` titles (on by default), canvas frame titles, the version-compare and outline-review headings. Titles that carry user content (a universe name) pass `plainTitle` and fall back to sans. The face ships only the characters listed in `public/fonts/display-cjk.chars.txt` plus Basic Latin; `app/styles/displayGlyphs.test.ts` collects every fixed `.display` / header title string from the source and fails if a character is missing, fails on new dynamic text inside `.display`, and fails if a `.display` className has no size or one below `text-lg`. To add a heading with new characters: add them to the chars file and run `python3 scripts/subset-display-fonts.py` (fontTools + brotli; it refuses if the font lacks a glyph). Single weight: `font-weight` 400, no tracking, `font-synthesis: none` (never fake bold or a second slant).
 - **Mono** (`font-mono`): **IBM Plex Mono** (400 / 500, SIL OFL 1.1) for frame numbers, timecodes, durations and ids. Never for Chinese labels.
-- **Files:** self-hosted in `public/fonts`, subset to Basic Latin, Latin-1 and common punctuation, with `font-display: swap` and `unicode-range`. Sans and mono 400 are preloaded in `index.html`. Licences: `public/fonts/OFL-*.txt`. The two display faces are not preloaded (they swap in after first paint).
-- **Budget:** at most 120 KB of woff2 in total (87.4 KB today: sans 36.4 + mono 11.4 + 11.7 + display 9.8 + 18.2). `scripts/check-bundle-budget.mjs` enforces it on `pnpm build`.
-- **No CJK body webfont:** a subset of even ~300 glyphs would cost ~75 KB, and user text would then mix two CJK faces. Body text uses the system stack; only the fixed display headings use the small HuangYou subset.
+- **Files:** self-hosted in `public/fonts`, subset to Basic Latin, Latin-1 and common punctuation, with `font-display: swap` and `unicode-range`. Sans and mono 400 are preloaded in `index.html`. Licences: `public/fonts/OFL-*.txt`. The display face is not preloaded (it swaps in after first paint).
+- **Budget:** at most 120 KB of woff2 in total (75.4 KB today: sans 36.4 + mono 11.4 + 11.7 + display 15.9). `scripts/check-bundle-budget.mjs` enforces it on `pnpm build`.
+- **No CJK body webfont:** a subset of even ~300 glyphs would cost ~75 KB, and user text would then mix two CJK faces. Body text uses the system stack; only the fixed display headings use the small `openOii Display` subset.
 - **Scale and tracking:**
   - `text-xl` and `text-2xl` use `--tracking-display` (−0.022em);
   - h1–h6 use `--tracking-heading` (−0.012em) at weight 600;
@@ -240,7 +243,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
   - `storyboard`: 2×2 panels with caption lines;
   - `render`: a film frame with sprocket holes and play;
   - `approve-gate`: posts, a beam and a check;
-  - `registration`, `crop` (also used for fit view) and `screentone`;
+  - `registration`, `crop` and `screentone` (fit view uses Iconoir `expand`, not `crop`);
   - `stop`, `layers` and `arrow-down-to-line`.
 - **Canvas card headers:** brief `lightbulb`, character `user`, shot `shot`, output `render`. The project switcher uses `storyboard`.
 - Icon sheet: `.devdata/screens/craft2-icon-sheet.png`.

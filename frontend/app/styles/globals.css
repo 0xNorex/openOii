@@ -134,12 +134,12 @@
     text-transform: uppercase;
   }
 
-  /* 标题字体：Unbounded（拉丁/数字）+ 庆科黄油体（中文子集）。只用于固定文案；
-     Unbounded 很宽，拉丁部分收一点字距，避免顶栏/卡片标题溢出 */
+  /* 标题字体：得意黑（openOii Display，中+拉丁同一族）。只用于固定文案、字号 ≥ text-lg；
+     单字重、自带斜势：不加字距，不合成粗体/斜体 */
   .display {
     font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-weight: 400;
+    letter-spacing: 0;
     font-synthesis: none;
     font-variant-numeric: lining-nums;
   }
