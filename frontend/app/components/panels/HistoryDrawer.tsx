@@ -283,7 +283,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 						<div className="py-8 text-center text-xs text-ink-muted">
 							<SvgIcon
 								name="clapperboard"
-								size={22}
+								size={24}
 								className="mx-auto mb-2 text-ink-faint"
 							/>
 							<p className="m-0">还没有项目</p>

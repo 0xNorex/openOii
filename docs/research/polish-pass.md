@@ -21,5 +21,5 @@ Rule of thumb: **one way to do each thing**, and the way lives in `tokens.css` â
 ## PRs
 1. tokens + guard + this doc (borders/radii/text colour/arbitrary values onto tokens).
 2. states & motion: pressed, hover unification, focus fixes, panel/menu transitions.
-3. media placeholders + canvas card states + spinner unification.
+3. media placeholders (`ui/media.ts`) + canvas card states + icon-size scale (guarded in `designContract.test.ts`).
 4. final detect/critique + screenshots (`.devdata/screens/polish-*.png`).

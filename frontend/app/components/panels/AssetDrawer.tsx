@@ -1,3 +1,4 @@
+import { MEDIA, imageReady } from "~/components/ui/media";
 import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetsApi, getStaticUrl } from "~/services/api";
@@ -250,7 +251,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 									}}
 									aria-label="移除图片"
 								>
-									<SvgIcon name="x" size={10} />
+									<SvgIcon name="x" size={12} />
 								</IconButton>
 							</div>
 						) : (
@@ -339,8 +340,9 @@ function AssetCard({
 					<img
 						src={getStaticUrl(asset.image_url) ?? undefined}
 						alt={asset.name}
-						className="w-full h-full object-cover"
+						className={`${MEDIA} w-full h-full object-cover`}
 						loading="lazy"
+						{...imageReady}
 					/>
 				) : (
 					<div className="flex items-center justify-center w-full h-full text-ink-faint">
@@ -376,7 +378,7 @@ function AssetCard({
 								disabled={isUsing}
 								title="添加到当前项目"
 							>
-								<SvgIcon name="plus" size={10} className="mr-0.5" />
+								<SvgIcon name="plus" size={12} className="mr-0.5" />
 								使用
 							</Button>
 						)}
@@ -537,9 +539,9 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 									<p>还没有保存的资产</p>
 									<p className="text-ink-subtle mt-1">
 										点击{" "}
-										<SvgIcon name="plus" size={10} className="inline" />{" "}
+										<SvgIcon name="plus" size={12} className="inline" />{" "}
 										新建，或在画布角色卡片点击{" "}
-										<SvgIcon name="star" size={10} className="inline" />{" "}
+										<SvgIcon name="star" size={12} className="inline" />{" "}
 										可添加
 									</p>
 								</>

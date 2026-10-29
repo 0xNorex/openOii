@@ -138,6 +138,21 @@
     @apply flex items-center gap-2 rounded-md border-2 px-3 py-2;
   }
 
+  /* 媒体占位（ui/media.ts）：加载前 paper 微光，就绪后淡入 */
+  .media-placeholder:not([data-ready]) {
+    background: linear-gradient(100deg, rgb(var(--color-paper-200)) 35%, rgb(var(--color-paper-300)) 50%, rgb(var(--color-paper-200)) 65%) 0 0 / 300% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  .media-placeholder[data-ready="true"] {
+    animation: fade-in var(--duration-slow) var(--ease-standard);
+  }
+  .media-placeholder[data-ready="error"] {
+    background: rgb(var(--color-paper-300));
+  }
+  @keyframes shimmer {
+    to { background-position: -150% 0; }
+  }
+
   .spinner-doodle {
     @apply inline-block animate-spin rounded-full border-2 border-current border-r-transparent;
   }

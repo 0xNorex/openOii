@@ -48,7 +48,7 @@ export function WorkflowInspector({
 		return (
 			<EmptyState
 				compact
-				icon={<SvgIcon name="layers" size={22} />}
+				icon={<SvgIcon name="layers" size={24} />}
 				title="选择画布卡片"
 				description="可多选分镜格 · 批量重做本格"
 				className="h-full"

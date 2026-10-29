@@ -1,3 +1,4 @@
+import { MEDIA, imageReady, videoReady } from "~/components/ui/media";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { useMemo, type ReactNode } from "react";
 import { getStaticUrl } from "~/services/api";
@@ -69,7 +70,8 @@ export function MobileWorkbenchPreview({
 						playsInline
 						preload="metadata"
 						src={videoSrc}
-						className="aspect-video w-full bg-neutral object-contain"
+						className={`${MEDIA} aspect-video w-full object-contain`}
+						{...videoReady}
 						data-testid="mobile-final-video"
 					/>
 					<div className="flex items-center justify-between gap-2 p-2">
@@ -112,8 +114,9 @@ export function MobileWorkbenchPreview({
 										<img
 											src={imageUrl}
 											alt={`分镜 ${shot.order}`}
-											className="h-full w-full object-cover"
+											className={`${MEDIA} h-full w-full object-cover`}
 											loading="lazy"
+											{...imageReady}
 										/>
 									) : (
 										<span className="flex h-full items-center justify-center text-xs text-ink-muted">
@@ -153,8 +156,9 @@ export function MobileWorkbenchPreview({
 											<img
 												src={avatarUrl}
 												alt=""
-												className="h-full w-full object-cover"
+												className={`${MEDIA} h-full w-full object-cover`}
 												loading="lazy"
+												{...imageReady}
 											/>
 										) : (
 											<span

@@ -58,7 +58,7 @@ export function ActionButton({
 			loading={loading}
 			onClick={onClick}
 		>
-			<SvgIcon name={icon} size={13} />
+			<SvgIcon name={icon} size={12} />
 			{label}
 		</Button>
 	);

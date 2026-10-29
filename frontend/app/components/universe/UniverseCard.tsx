@@ -1,3 +1,4 @@
+import { MEDIA, imageReady } from "~/components/ui/media";
 import { Link } from "react-router-dom";
 import { Card } from "~/components/ui/Card";
 import type { Universe } from "~/types";
@@ -31,7 +32,8 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 							<img
 								src={universe.cover_image_url}
 								alt={universe.name}
-								className="h-full w-full object-cover"
+								className={`${MEDIA} h-full w-full object-cover`}
+							{...imageReady}
 								width={320}
 								height={80}
 								loading="lazy"

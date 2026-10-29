@@ -1,3 +1,4 @@
+import { MEDIA, imageReady, videoReady } from "~/components/ui/media";
 import { useRef, useState } from "react";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { getStaticUrl } from "~/services/api";
@@ -174,7 +175,7 @@ function ReviewActions({
 				{busy === "approve" ? (
 					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 				) : (
-					<SvgIcon name="check" size={11} />
+					<SvgIcon name="check" size={12} />
 				)}
 				通过
 			</button>
@@ -190,7 +191,7 @@ function ReviewActions({
 				{busy === "redo" ? (
 					<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 				) : (
-					<SvgIcon name="refresh-cw" size={11} />
+					<SvgIcon name="refresh-cw" size={12} />
 				)}
 				重做
 			</button>
@@ -202,7 +203,7 @@ function statusBadge(status: WorkflowNodeStatus) {
 	const copy = STATUS_COPY[status] ?? STATUS_COPY.draft;
 	return (
 		<span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-xs font-medium ${copy.cls}`}>
-			<span className="h-2 w-2 rounded-full bg-current opacity-60" />
+			<span className={`h-2 w-2 rounded-full bg-current ${status === "generating" ? "animate-pulse" : "opacity-60"}`} />
 			{copy.label}
 		</span>
 	);
@@ -234,15 +235,19 @@ function MediaPreviewButton({
 				}
 			}}
 		>
-			<SvgIcon name={type === "image" ? "image" : "play"} size={17} />
+			<SvgIcon name={type === "image" ? "image" : "play"} size={16} />
 		</button>
 	);
 }
 
-function EmptyMedia({ label }: { label: string }) {
+function EmptyMedia({ label, busy = false }: { label: string; busy?: boolean }) {
+	// 生成中：同一套媒体微光占位，告诉用户“图正在来”而不是“没有图”
 	return (
-		<div className="flex h-full w-full items-center justify-center bg-paper-300 text-xs text-ink-muted">
-			{label}
+		<div
+			className={`flex h-full w-full items-center justify-center text-xs text-ink-muted ${busy ? MEDIA : "bg-paper-300"}`}
+			data-busy={busy || undefined}
+		>
+			{busy ? "生成中…" : label}
 		</div>
 	);
 }
@@ -277,8 +282,9 @@ function CharacterRefStrip({
 						<img
 							src={getStaticUrl(url) ?? url}
 							alt={`参考图 ${index + 1}`}
-							className="h-7 w-7 rounded-sm border border-line-strong object-cover"
+							className={`${MEDIA} h-7 w-7 rounded-sm border border-line-strong object-cover`}
 							draggable={false}
+							{...imageReady}
 						/>
 						<button
 							type="button"
@@ -338,7 +344,7 @@ function CharacterRefStrip({
 					{busy === "embed" ? (
 						<span className="spinner-doodle h-3 w-3" aria-hidden="true" />
 					) : (
-						<SvgIcon name="refresh-cw" size={11} />
+						<SvgIcon name="refresh-cw" size={12} />
 					)}
 				</button>
 			) : null}
@@ -369,10 +375,11 @@ function CharacterCard({
 						draggable={false}
 						decoding="async"
 						loading="lazy"
-						className="h-full w-full object-cover"
+						className={`${MEDIA} h-full w-full object-cover`}
+						{...imageReady}
 					/>
 				) : (
-					<EmptyMedia label="等待角色图" />
+					<EmptyMedia label="等待角色图" busy={node.status === "generating"} />
 				)}
 				<div className="absolute right-2 top-2">
 					<MediaPreviewButton src={imageUrl} title={node.title} type="image" />
@@ -429,10 +436,11 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 						{...(isFirstShot
 							? ({ fetchpriority: "high" } as { fetchpriority: "high" })
 							: {})}
-						className="h-full w-full object-cover"
+						className={`${MEDIA} h-full w-full object-cover`}
+						{...imageReady}
 					/>
 				) : (
-					<EmptyMedia label="等待分镜图" />
+					<EmptyMedia label="等待分镜图" busy={node.status === "generating"} />
 				)}
 				{/* 九宫格 cell index */}
 				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border border-line-strong bg-info px-1 font-mono text-xs font-bold text-info-content">
@@ -531,7 +539,8 @@ function OutputCard({
 				{videoUrl ? (
 					<video
 						src={videoUrl}
-						className="h-full w-full object-cover"
+						className={`${MEDIA} h-full w-full object-cover`}
+						{...videoReady}
 						controls
 						preload="metadata"
 						playsInline
@@ -565,7 +574,7 @@ function OutputCard({
 							}}
 							className="btn-doodle touch-target-dense h-7 min-h-7 flex-1 px-2 text-xs bg-transparent text-ink hover:bg-paper-200"
 						>
-							<SvgIcon name="refresh-cw" size={11} />
+							<SvgIcon name="refresh-cw" size={12} />
 							重新合成
 						</button>
 					) : null}
@@ -603,7 +612,7 @@ function OutputCard({
 								onClick={stopAll}
 								className="flex items-center gap-1 truncate text-xs text-ink-muted transition-colors duration-fast hover:text-ink"
 							>
-								<SvgIcon name="arrow-down-to-line" size={11} />
+								<SvgIcon name="arrow-down-to-line" size={12} />
 								<span className="truncate">
 									{url.split("/").pop() ?? `导出 ${index + 1}`}
 								</span>
@@ -720,6 +729,13 @@ export function WorkflowFrameView({
 	);
 }
 
+/** 卡片边框随状态：默认 hairline，悬停加深；生成中/阻塞用状态色提示。 */
+const CARD_TONE: Partial<Record<WorkflowNodeStatus, string>> & { draft: string } = {
+	draft: "border-line hover:border-border-strong",
+	generating: "border-warning/50",
+	blocked: "border-error/50",
+};
+
 /** 业务卡片（React Flow 节点）。选中由 React Flow 管理。 */
 export function WorkflowCardView({
 	node,
@@ -733,9 +749,10 @@ export function WorkflowCardView({
 	return (
 		<article
 			aria-label={node.title}
-			className={`h-full select-none overflow-hidden rounded-lg bg-paper-100 text-ink ${
-				node.kind === "output" ? "comic-frame" : "border border-paper-300"
-			} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-paper-50" : ""}`}
+			data-status={node.status}
+			className={`h-full select-none overflow-hidden rounded-lg bg-paper-100 text-ink transition duration-fast ease-standard ${
+				node.kind === "output" ? "comic-frame" : `border ${CARD_TONE[node.status] ?? CARD_TONE.draft}`
+			} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-paper-100" : ""}`}
 		>
 			{node.kind === "character" ? <CharacterCard node={node} /> : null}
 			{node.kind === "shot" ? <ShotCard node={node} /> : null}

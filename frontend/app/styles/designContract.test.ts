@@ -116,6 +116,20 @@ describe("Design Contract: 任意值只来自白名单", () => {
 	});
 });
 
+describe("Design Contract: 图标尺寸走刻度", () => {
+	// 12 行内元信息 · 14 密集 chrome · 16 默认 · 20 醒目 · 24/32 空状态；8 只给 14px 角标
+	const ICON_SCALE = new Set([8, 12, 14, 16, 20, 24, 32]);
+	it("SvgIcon size 只取刻度值", () => {
+		const bad: string[] = [];
+		for (const { file, text } of sources) {
+			for (const m of text.matchAll(/<SvgIcon\b[^>]*\bsize=\{(\d+)\}/g)) {
+				if (!ICON_SCALE.has(Number(m[1]))) bad.push(`${file}: size=${m[1]}`);
+			}
+		}
+		expect(bad).toEqual([]);
+	});
+});
+
 describe("Design Contract: 弹层统一走 ui/Dialog", () => {
 	it("comic-frame 只出现在白名单文件", () => {
 		const hits = sources

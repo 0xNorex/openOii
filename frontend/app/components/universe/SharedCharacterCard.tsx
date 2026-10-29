@@ -1,3 +1,4 @@
+import { MEDIA, imageReady } from "~/components/ui/media";
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import type { SharedCharacterRead } from "~/types";
@@ -31,7 +32,8 @@ export function SharedCharacterCard({
 						<img
 							src={imageUrl}
 							alt={character.name}
-							className="h-full w-full object-cover"
+							className={`${MEDIA} h-full w-full object-cover`}
+							{...imageReady}
 							width={40}
 							height={40}
 							loading="lazy"
