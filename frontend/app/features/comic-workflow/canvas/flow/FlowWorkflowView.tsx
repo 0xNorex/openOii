@@ -271,20 +271,47 @@ function FlowInner({
 		setAnnouncement(sortMode ? SORT_HINT : "");
 	}, [sortMode]);
 
+	const graphRef = useRef(graph);
+	graphRef.current = graph;
+
 	const submitOrder = useCallback(
 		// 拖动：提示后退出排序模式；键盘：留在排序模式里继续移动，结果由 aria-live 播报
-		(items: { shot_id: number; order: number }[], message: string, fromKeyboard = false) =>
-			projectsApi
+		(items: { shot_id: number; order: number }[], message: string, fromKeyboard = false) => {
+			const previous = previousShotOrder(graphRef.current);
+			const refresh = () =>
+				queryClient.invalidateQueries({ queryKey: projectQueryKeys.shots(projectId) });
+			return projectsApi
 				.reorderShots(projectId, items)
 				.then(() => {
-					void queryClient.invalidateQueries({ queryKey: projectQueryKeys.shots(projectId) });
+					void refresh();
 					if (fromKeyboard) return;
-					toast.success({ title: "九宫格已重排", message });
+					// 单步撤销：把重排前的顺序原样写回
+					toast.success({
+						title: "九宫格已重排",
+						message,
+						duration: 6000,
+						actions: [
+							{
+								label: "撤销",
+								onClick: () =>
+									void projectsApi
+										.reorderShots(projectId, previous)
+										.then(() => {
+											void refresh();
+											toast.info({ title: "已撤销", message: "恢复了重排前的顺序" });
+										})
+										.catch((error: Error) =>
+											toast.error({ title: "撤销失败", message: error.message || "请重试" }),
+										),
+							},
+						],
+					});
 					onSorted();
 				})
 				.catch((error: Error) => {
 					toast.error({ title: "重排失败", message: error.message || "请重试" });
-				}),
+				});
+		},
 		[onSorted, projectId, queryClient],
 	);
 
@@ -411,5 +438,14 @@ function FlowInner({
 				controls={controls}
 			/>
 		</div>
+	);
+}
+
+/** 重排前的分镜顺序，供「撤销」写回。 */
+export function previousShotOrder(
+	graph: ComicWorkflowGraph,
+): { shot_id: number; order: number }[] {
+	return graph.nodes.flatMap((node) =>
+		node.kind === "shot" ? [{ shot_id: node.shot.id, order: node.shot.order }] : [],
 	);
 }

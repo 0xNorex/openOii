@@ -3,7 +3,7 @@ import type { Project, Shot } from "~/types";
 import { buildComicWorkflow } from "../../graph/buildComicWorkflow";
 import { layoutComicWorkflow } from "../../graph/layoutComicWorkflow";
 import { moveShot, shotReadingOrder, toFlowNodes, type CardFlowNode } from "./toFlowNodes";
-import { boardViewport } from "./FlowWorkflowView";
+import { boardViewport, previousShotOrder } from "./FlowWorkflowView";
 
 function project(overrides: Partial<Project> = {}): Project {
 	return {
@@ -219,5 +219,24 @@ describe("moveShot", () => {
 		const nodes = toFlowNodes(graph, layout, "sort");
 		expect(moveShot(nodes, "shot:10", -1)).toBeNull();
 		expect(moveShot(nodes, "shot:11", 3)).toBeNull();
+	});
+});
+
+describe("previousShotOrder", () => {
+	it("captures the current order so a reorder can be undone", () => {
+		const graph = buildComicWorkflow({
+			project: project({}),
+			characters: [],
+			shots: [shot(10, 2), shot(11, 1)],
+			blockingClips: [],
+			isGenerating: false,
+		});
+		expect(previousShotOrder(graph)).toEqual(
+			expect.arrayContaining([
+				{ shot_id: 10, order: 2 },
+				{ shot_id: 11, order: 1 },
+			]),
+		);
+		expect(previousShotOrder(graph)).toHaveLength(2);
 	});
 });
