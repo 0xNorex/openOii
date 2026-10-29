@@ -386,7 +386,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		return (
 			<div className="page-shell items-center justify-center gap-3 bg-paper-100">
 				<SvgIcon name="refresh-cw" size={20} className="animate-pulse text-ink-muted" />
-				<p className="font-mono text-sm text-ink-muted">正在加载项目…</p>
+				<p className="text-sm text-ink-muted">正在加载项目…</p>
 			</div>
 		);
 	}

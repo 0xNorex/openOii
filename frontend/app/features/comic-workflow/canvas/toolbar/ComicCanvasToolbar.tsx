@@ -128,7 +128,7 @@ export function ComicCanvasToolbar({
 				labelText={filling ? "补齐中" : "补首帧"}
 				onClick={() => handleFillEmpty("image")}
 			>
-				<span className="font-mono text-xs font-bold">图</span>
+				<span className="text-xs font-bold">图</span>
 			</ToolButton>
 			<ToolButton
 				disabled={fillDisabled || filling}
@@ -137,7 +137,7 @@ export function ComicCanvasToolbar({
 				labelText={filling ? "补齐中" : "补视频"}
 				onClick={() => handleFillEmpty("video")}
 			>
-				<span className="font-mono text-xs font-bold">视</span>
+				<span className="text-xs font-bold">视</span>
 			</ToolButton>
 			{onOpenAssets ? (
 				<>

@@ -18,7 +18,7 @@ export function FieldList({ items }: { items: Array<[string, string | number]> }
 					key={label}
 					className="flex items-start justify-between gap-3 border-b border-line pb-1.5 text-sm"
 				>
-					<span className="font-mono text-xs uppercase text-ink-muted">
+					<span className="label text-ink-muted">
 						{label}
 					</span>
 					<span className="min-w-0 text-right text-ink-muted">{value}</span>
@@ -123,7 +123,7 @@ export function TextInput({
 }) {
 	return (
 		<label className="block">
-			<span className="mb-1 block text-xs font-mono uppercase text-ink-muted">
+			<span className="mb-1 block label text-ink-muted">
 				{label}
 			</span>
 			<input
@@ -146,7 +146,7 @@ export function NumberInput({
 }) {
 	return (
 		<label className="block">
-			<span className="mb-1 block text-xs font-mono uppercase text-ink-muted">
+			<span className="mb-1 block label text-ink-muted">
 				{label}
 			</span>
 			<input
@@ -176,7 +176,7 @@ export function TextArea({
 }) {
 	return (
 		<label className="block">
-			<span className="mb-1 block text-xs font-mono uppercase text-ink-muted">
+			<span className="mb-1 block label text-ink-muted">
 				{label}
 			</span>
 			<textarea

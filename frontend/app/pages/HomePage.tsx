@@ -187,7 +187,7 @@ export function HomePage() {
 
 								<div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
 									<div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-label="创作模式">
-										<span className="font-mono text-xs uppercase text-ink-muted">选择创作模式</span>
+										<span className="label text-ink-muted">选择创作模式</span>
 										<div className="grid grid-cols-2 gap-2">
 											{[
 												{ value: "review", label: "逐步确认", description: "每个阶段由你确认", icon: "check" },

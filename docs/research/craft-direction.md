@@ -102,3 +102,14 @@
 
   画布卡片头、项目切换和「适配视图」都换成了这些领域图标，不再借用星星、灯泡、场记板这类通用隐喻。
 
+- **中文标签不走等宽大写：** 中文没有大小写，等宽字体和字距只会把字撑散。
+  - 中文标签用 `.label`：无衬线、不加字距；
+  - 只有数字或拉丁部分包 `font-mono`，比如「格 {n}」；
+  - 设计契约测试会拦住写死在 `label-caps` / `font-mono` / `uppercase` / `tracking-wide*` 里的中文。动态 `{label}` 拦不到，靠评审。
+- **字体换入不跳行：** Schibsted Grotesk 后面紧跟一个按其量度校准的本地兜底（Arial / Helvetica / Liberation Sans）：
+  - `size-adjust: 104.92%`
+  - `ascent-override: 93.07%`
+  - `descent-override: 24.57%`
+  - `line-gap-override: 0%`
+
+  数值用 fontTools 从 woff2 算出，方法同 capsize：按英文字频加权平均字宽，0.463em 对 0.441em。

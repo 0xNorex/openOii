@@ -211,7 +211,7 @@ export function ProjectsPage() {
 					) : (
 						<div className="overflow-hidden rounded-lg border border-line bg-surface">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
-							<div className={"hidden border-b border-line bg-paper-200/70 py-1.5 font-mono text-xs uppercase text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
+							<div className={"hidden border-b border-line bg-paper-200/70 py-1.5 label text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
 								{selecting ? <span /> : null}
 								<span>项目</span>
 								<span>状态</span>
@@ -256,7 +256,7 @@ export function ProjectsPage() {
 function Metric({ label, value }: { label: string; value: number }) {
 	return (
 		<div className="border-l-2 border-primary bg-paper-200 px-2 py-1.5">
-			<p className="m-0 font-mono text-xs uppercase text-ink-muted">
+			<p className="m-0 label text-ink-muted">
 				{label}
 			</p>
 			<p className="m-0 text-md font-bold leading-none tabular-nums">

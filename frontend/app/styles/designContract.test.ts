@@ -46,6 +46,7 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\bshadow-(?:brutal|comic)/, "硬偏移阴影已删除：浮层用 shadow-panel，成片卡用 comic-frame"],
 	[/\bfont-(?:heading|comic|sketch|brand)\b/, "字体只有 font-sans / font-mono；字标是对位标 + 系统无衬线"],
 	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
+	[/className="[^"]*\b(?:label-caps|font-mono|uppercase|tracking-wid[a-z]*)\b[^"]*"[^>]*(?<!=)>[^<{]*[\u4e00-\u9fff]/, "中文标签不用等宽、不转大写、不加字距：用 .label，数字部分再包 font-mono"],
 	[/@heroicons\//, "图标只走 SvgIcon（Iconoir + 自绘领域图标），不再引 Heroicons"],
 	[/[\u4e00-\u9fff]\.\.\.|"\.\.\."/, "三个点：文案里的省略用 …（Vercel guidelines）"],
 	// polish pass（docs/research/polish-pass.md）

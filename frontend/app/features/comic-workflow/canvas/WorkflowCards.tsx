@@ -271,8 +271,8 @@ function CharacterRefStrip({
 
 	return (
 		<div className="mt-1.5 flex items-center gap-1" onPointerDown={stopAll}>
-			<span className="shrink-0 font-mono text-xs uppercase text-ink-muted">
-				参考 {refs.length}
+			<span className="shrink-0 label text-ink-muted">
+				参考 <span className="font-mono">{refs.length}</span>
 			</span>
 			<div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
 				{refs.slice(0, 3).map((url, index) => (
@@ -457,8 +457,8 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
 				<CardHeader node={node} icon="shot" compact />
-				<p className="m-0 mt-1 label-caps text-ink-muted">
-					格 {cell}
+				<p className="m-0 mt-1 label text-ink-muted">
+					格 <span className="font-mono">{cell}</span>
 				</p>
 				<div className="mt-1.5">
 					<InlineEditableText
@@ -584,8 +584,8 @@ function OutputCard({
 
 			{node.blockingClips.length > 0 ? (
 				<div className="mt-2 min-h-0 overflow-y-auto rounded-lg border border-warning/25 bg-warning/10 p-2">
-					<p className="m-0 font-mono text-xs uppercase text-warning-fg">
-						阻塞项 {node.blockingClips.length}
+					<p className="m-0 label text-warning-fg">
+						阻塞项 <span className="font-mono">{node.blockingClips.length}</span>
 					</p>
 					<ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-xs leading-relaxed text-ink">
 						{node.blockingClips.map((clip) => (
@@ -601,8 +601,8 @@ function OutputCard({
 
 			{node.exports.length > 0 ? (
 				<div className="mt-auto pt-2" onPointerDown={stopAll}>
-					<p className="m-0 font-mono text-xs uppercase text-ink-muted">
-						导出记录 {node.exports.length}
+					<p className="m-0 label text-ink-muted">
+						导出记录 <span className="font-mono">{node.exports.length}</span>
 					</p>
 					<div className="mt-1 flex flex-col gap-0.5">
 						{node.exports.slice(-3).map((url, index) => (
@@ -655,7 +655,7 @@ function CardHeader({
 					</p>
 					{statusBadge(node.status)}
 				</div>
-				<p className="m-0 truncate font-mono text-xs uppercase text-ink-muted">
+				<p className="m-0 truncate label text-ink-muted">
 					{node.subtitle}
 				</p>
 			</div>
@@ -726,7 +726,7 @@ export function WorkflowFrameView({
 				</span>
 				<p className="m-0 truncate text-md font-bold leading-tight">{title}</p>
 				{countLabel ? (
-					<p className="m-0 ml-auto shrink-0 font-mono text-xs uppercase text-ink-muted">{countLabel}</p>
+					<p className="m-0 ml-auto shrink-0 label text-ink-muted">{countLabel}</p>
 				) : null}
 			</div>
 			{hint ? (
