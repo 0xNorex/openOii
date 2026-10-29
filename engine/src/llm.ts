@@ -8,7 +8,9 @@ import {
   stream,
   type Api,
   type FauxProviderRegistration,
+  type ImageContent,
   type Model,
+  type TextContent,
   type ThinkingLevel,
 } from "@mariozechner/pi-ai";
 import type { EngineDatabase } from "./db.js";
@@ -64,7 +66,28 @@ export interface LlmRequest {
    * Real providers and the fake provider stream through the same pi-ai path.
    */
   onStream?: (update: LlmStreamUpdate) => void;
+  /**
+   * Images the model must actually see (pi-ai image content blocks), e.g. the
+   * render a critic is reviewing. Never pass image URLs as prompt text: a
+   * text-only model cannot fetch them and invents (or omits) a verdict.
+   */
+  images?: LlmImageInput[];
+  /**
+   * Shape check for the structured output of this operation. Returns an error
+   * message when the object does not have the shape the caller consumes. Both
+   * the first answer and the repaired answer must pass it.
+   */
+  validate?: (data: Record<string, unknown>) => string | null;
 }
+
+export interface LlmImageInput {
+  /** base64 payload, without the data: prefix */
+  data: string;
+  mimeType: string;
+}
+
+/** Default output budget for structured workflow calls (and their repair). */
+export const DEFAULT_MAX_TOKENS = 8192;
 
 export interface LlmStreamUpdate {
   thinking: string;
@@ -105,7 +128,15 @@ function fakeModel(system: string, prompt: string): Model<Api> {
     (context) => {
       const sys = context.systemPrompt ?? "";
       const first = context.messages[0];
-      const input = first?.role === "user" && typeof first.content === "string" ? first.content : "";
+      const input =
+        first?.role === "user"
+          ? typeof first.content === "string"
+            ? first.content
+            : first.content
+                .filter((block): block is TextContent => block.type === "text")
+                .map((block) => block.text)
+                .join("")
+          : "";
       const text = fakeRespond(sys, input);
       const thinking = fauxThinking(fakeThinking(sys));
       return input.includes(FAKE_STREAM_ERROR_TOKEN)
@@ -213,6 +244,7 @@ export class TextLlmService {
     apiKey?: string;
     model: string;
     reasoning?: ThinkingLevel;
+    endpoint?: string;
   } {
     if (this.pinned?.provider) {
       const raw = this.pinned.provider;
@@ -234,7 +266,13 @@ export class TextLlmService {
           this.pinned.model ||
           (key === "anthropic" ? "claude-sonnet-4-5-20250929" : "deepseek-chat"),
       };
-      return key === "openai" ? { ...resolved, reasoning: this.reasoningEffort() } : resolved;
+      return key === "openai"
+        ? {
+            ...resolved,
+            reasoning: this.reasoningEffort(),
+            endpoint: this.pinned.endpoint ?? undefined,
+          }
+        : resolved;
     }
 
     const raw = this.db.configValue("TEXT_PROVIDER", "TEXT_PROVIDER", "anthropic") ?? "anthropic";
@@ -264,6 +302,7 @@ export class TextLlmService {
       apiKey: this.db.configValue("TEXT_API_KEY", "TEXT_API_KEY") ?? "",
       model: this.db.configValue("TEXT_MODEL", "TEXT_MODEL", "deepseek-chat"),
       reasoning: this.reasoningEffort(),
+      endpoint: this.db.configValue("TEXT_ENDPOINT", "TEXT_ENDPOINT") ?? undefined,
     };
   }
 
@@ -285,6 +324,7 @@ export class TextLlmService {
     modelId: string,
     baseUrl: string,
     reasoning?: ThinkingLevel,
+    vision = false,
   ): Model<Api> {
     if (provider === "fake") {
       throw new Error("the fake provider does not build a real pi-ai model");
@@ -314,7 +354,10 @@ export class TextLlmService {
         provider: "openai",
         baseUrl,
         reasoning: supportsReasoning,
-        input: ["text"],
+        // A custom OpenAI-compatible id has no registry entry; when the caller
+        // sends images, the operator configured it for a vision task, so the
+        // image blocks must reach the provider instead of pi-ai's placeholder.
+        input: vision ? ["text", "image"] : ["text"],
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 32768,
         maxTokens: 8192,
@@ -332,9 +375,14 @@ export class TextLlmService {
     return { ...known, baseUrl } as Model<Api>;
   }
 
-  private async generateOnce(req: LlmRequest): Promise<LlmResponse> {
+  private async generateOnce(
+    req: LlmRequest,
+    opts: { withRunContext?: boolean } = {},
+  ): Promise<LlmResponse> {
     const resolved = this.resolveProvider();
-    const prompt = this.promptWithRunContext(req.prompt);
+    const prompt =
+      opts.withRunContext === false ? req.prompt : this.promptWithRunContext(req.prompt);
+    const images = req.images ?? [];
     // Fail fast on a cancelled or expired operation before spending a request.
     if (req.operation) assertOperationInFlight(req.operation);
     let model: Model<Api>;
@@ -344,12 +392,30 @@ export class TextLlmService {
       if (!resolved.baseUrl) {
         throw new Error(`provider ${resolved.key} needs a base URL in the run context snapshot`);
       }
-      model = this.buildModel(resolved.key, resolved.model, resolved.baseUrl, resolved.reasoning);
+      model = this.buildModel(
+        resolved.key,
+        resolved.model,
+        resolved.key === "openai"
+          ? openAiCompatibleBaseUrl(resolved.baseUrl, resolved.endpoint)
+          : resolved.baseUrl,
+        resolved.reasoning,
+        images.length > 0,
+      );
     }
 
+    const content: string | (TextContent | ImageContent)[] = images.length
+      ? [
+          { type: "text", text: prompt },
+          ...images.map((image): ImageContent => ({
+            type: "image",
+            data: image.data,
+            mimeType: image.mimeType,
+          })),
+        ]
+      : prompt;
     const context = {
       systemPrompt: req.system,
-      messages: [{ role: "user" as const, content: prompt, timestamp: Date.now() }],
+      messages: [{ role: "user" as const, content, timestamp: Date.now() }],
     };
     const op = req.operation;
     // One provider span per LLM call, nested under the stage span, carrying the
@@ -365,7 +431,7 @@ export class TextLlmService {
       async (span) => {
         const events = stream(model, context, {
           apiKey: resolved.apiKey,
-          maxTokens: req.maxTokens ?? 4096,
+          maxTokens: req.maxTokens ?? DEFAULT_MAX_TOKENS,
           reasoning: resolved.reasoning,
           onPayload: resolved.model.toLowerCase().startsWith("deepseek")
             ? (payload) => ({
@@ -416,32 +482,82 @@ export class TextLlmService {
    * Workflow LLM calls are structured-output calls. One bounded repair is
    * allowed for provider formatting mistakes; a second invalid response fails
    * the stage explicitly instead of flowing downstream as `{}`.
+   *
+   * The repair call keeps the caller's operation (activity, deadline, abort)
+   * and output budget, is sent without the run context (the model must not
+   * see, and echo back, anything but the broken output), and its result must
+   * pass the same shape check as a first answer would.
    */
   async generate(req: LlmRequest): Promise<LlmResponse> {
     const first = await withAiActivity(req.operation, "文本生成", () => this.generateOnce(req));
+    let firstError: unknown;
     try {
-      parseJsonObjectText(first.text);
+      checkStructuredOutput(parseJsonObjectText(first.text), req.validate);
       return first;
-    } catch (firstError) {
-      const repair = await withAiActivity(req.operation, "修复结构化输出", () =>
-        this.generateOnce({
+    } catch (error) {
+      firstError = error;
+    }
+    const repair = await withAiActivity(req.operation, "修复结构化输出", () =>
+      this.generateOnce(
+        {
           system:
-            "Repair the supplied model output into one valid JSON object. Preserve the original data and meaning. Return JSON only, with no markdown or explanation.",
-          prompt: JSON.stringify({ invalid_output: first.text }),
-          maxTokens: req.maxTokens ?? 4096,
+            "Repair the supplied model output into one valid JSON object. Preserve the original data and meaning, and keep the original top-level keys. Return only the repaired object itself, with no wrapper, markdown or explanation." +
+            (firstError instanceof StructuredOutputError ? ` The object was rejected because: ${firstError.message}` : ""),
+          prompt: first.text,
+          maxTokens: req.maxTokens ?? DEFAULT_MAX_TOKENS,
           signal: req.signal,
-        }),
+          operation: req.operation,
+        },
+        { withRunContext: false },
+      ),
+    );
+    try {
+      const parsed = parseJsonObjectText(repair.text);
+      checkStructuredOutput(parsed, req.validate);
+      return { ...repair, text: JSON.stringify(parsed) };
+    } catch (repairError) {
+      const firstMessage = firstError instanceof Error ? firstError.message : String(firstError);
+      const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
+      throw new Error(
+        `structured LLM output invalid after one repair (${firstMessage}; ${repairMessage})`,
       );
-      try {
-        const parsed = parseJsonObjectText(repair.text);
-        return { ...repair, text: JSON.stringify(parsed) };
-      } catch (repairError) {
-        const firstMessage = firstError instanceof Error ? firstError.message : String(firstError);
-        const repairMessage = repairError instanceof Error ? repairError.message : String(repairError);
-        throw new Error(
-          `structured LLM output invalid after one repair (${firstMessage}; ${repairMessage})`,
-        );
-      }
     }
   }
+}
+
+export class StructuredOutputError extends Error {}
+
+/** Keys a model echoes back when it mistakes the request envelope for the answer. */
+const ECHO_KEYS = ["invalid_output", "run_context"];
+
+function checkStructuredOutput(
+  data: Record<string, unknown>,
+  validate: LlmRequest["validate"],
+): void {
+  const echoed = ECHO_KEYS.filter((key) => key in data);
+  if (echoed.length) {
+    throw new StructuredOutputError(`output echoes the request envelope (${echoed.join(", ")})`);
+  }
+  const problem = validate?.(data) ?? null;
+  if (problem) throw new StructuredOutputError(problem);
+}
+
+/**
+ * pi-ai's OpenAI client posts to `${baseUrl}/chat/completions`. Deployments
+ * configure the full path as base + TEXT_ENDPOINT (same join as the Python
+ * backend: base without trailing slash, endpoint with a leading one), so the
+ * client base is everything before `/chat/completions`.
+ */
+export function openAiCompatibleBaseUrl(baseUrl: string, endpoint?: string | null): string {
+  const base = baseUrl.replace(/\/+$/, "");
+  const raw = (endpoint ?? "").trim();
+  if (!raw) return base;
+  const path = (raw.startsWith("/") ? raw : `/${raw}`).replace(/\/+$/, "");
+  const suffix = "/chat/completions";
+  if (!path.endsWith(suffix)) {
+    throw new Error(
+      `TEXT_ENDPOINT must end with ${suffix} for an OpenAI-compatible text provider (got ${raw})`,
+    );
+  }
+  return `${base}${path.slice(0, -suffix.length)}`;
 }

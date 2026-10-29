@@ -27,6 +27,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { promisify } from "node:util";
 import type { EngineDatabase } from "../db.js";
 import {
@@ -311,6 +313,123 @@ function promptLabel(prompt: string): string {
   return `local prompt ${digest}`;
 }
 
+/**
+ * Join a provider base URL and endpoint path the way the Python services do
+ * (`base.rstrip("/") + "/" + endpoint`). `new URL("/v1/x", "https://h/api")`
+ * would drop the base path, so a base of `…/v1` lost its `/v1`.
+ */
+export function joinEndpoint(baseUrl: string, endpoint: string): string {
+  const trimmed = endpoint.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const base = baseUrl.replace(/\/+$/, "");
+  if (!trimmed) return base;
+  return `${base}${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
+}
+
+/**
+ * Providers return media URLs relative to their own host (`/v1/media/x.webp`)
+ * or to the API base. Anything that is not already absolute is resolved
+ * against the provider base URL.
+ */
+export function absoluteMediaUrl(url: string, baseUrl: string): string {
+  if (/^(https?:|data:)/i.test(url)) return url;
+  const base = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL(url, base).toString();
+}
+
+/** Identify an image by its magic bytes; providers often serve octet-stream. */
+export function sniffImageMime(bytes: Buffer): string | null {
+  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  if (bytes.length >= 6 && /^GIF8[79]a$/.test(bytes.toString("ascii", 0, 6))) return "image/gif";
+  const head = bytes.subarray(0, 512).toString("utf8").trimStart();
+  if (head.startsWith("<svg") || (head.startsWith("<?xml") && head.includes("<svg"))) return "image/svg+xml";
+  return null;
+}
+
+const IMAGE_EXTENSIONS: Record<string, string> = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/svg+xml": ".svg",
+};
+
+/**
+ * Whole seconds for every video provider (an OpenAI-compatible endpoint may
+ * reject `4.5`); doubao only accepts 5 or 10.
+ */
+export function normalizeVideoDuration(provider: string, duration: number): number {
+  const seconds = Math.max(1, Math.round(Number.isFinite(duration) ? duration : 5));
+  if (provider === "doubao") return seconds === 10 ? 10 : 5;
+  return seconds;
+}
+
+const VIDEO_TASK_PENDING = new Set([
+  "",
+  "queued",
+  "pending",
+  "submitted",
+  "created",
+  "running",
+  "processing",
+  "in_progress",
+]);
+const VIDEO_TASK_DONE = new Set(["completed", "succeeded", "success", "done"]);
+const VIDEO_TASK_FAILED = new Set(["failed", "error", "cancelled", "canceled"]);
+
+/** First media URL in a provider result: `url`, `video_url`, `data[0].url`, `result.url`… */
+export function extractMediaUrl(body: Record<string, unknown>): string | null {
+  const pick = (value: unknown): string | null =>
+    typeof value === "string" && value.trim() ? value.trim() : null;
+  for (const key of ["video_url", "url", "output_url", "result_url"]) {
+    const found = pick(body[key]);
+    if (found) return found;
+  }
+  for (const key of ["output", "result", "video", "data", "content"]) {
+    const container = body[key];
+    const item = Array.isArray(container) ? container[0] : container;
+    if (item && typeof item === "object") {
+      for (const inner of ["url", "video_url"]) {
+        const found = pick((item as Record<string, unknown>)[inner]);
+        if (found) return found;
+      }
+    }
+  }
+  return null;
+}
+
+function extractTaskId(body: Record<string, unknown>): string | null {
+  for (const key of ["id", "task_id", "request_id"]) {
+    const value = body[key];
+    if (typeof value === "string" && value) return value;
+  }
+  return null;
+}
+
+/**
+ * Where to poll an async video task created at `endpoint`: the OpenAI-style
+ * resource (`/v1/videos/{id}` for `/v1/videos/generations`, the Python
+ * backend's convention) first, then the create path itself plus the id.
+ */
+export function videoTaskPollUrls(baseUrl: string, endpoint: string, taskId: string): string[] {
+  const create = joinEndpoint(baseUrl, endpoint).replace(/\/+$/, "");
+  const id = encodeURIComponent(taskId);
+  const urls: string[] = [];
+  if (create.endsWith("/video/create")) {
+    urls.push(`${create.slice(0, -"/create".length)}/query?id=${id}`);
+  } else if (create.includes("/generations")) {
+    urls.push(`${create.split("/generations")[0]}/${id}`);
+  }
+  urls.push(`${create}/${id}`);
+  return [...new Set(urls)];
+}
+
 export class MediaService {
   private idempotencyKey: string | null = null;
   private abortSignal: AbortSignal | null = null;
@@ -524,14 +643,15 @@ export class MediaService {
 
     if (!this.settings.imageApiKey) throw new Error("IMAGE_API_KEY is required");
     this.throwIfAborted();
-    const endpoint = new URL(this.settings.imageEndpoint, this.settings.imageBaseUrl).toString();
+    const endpoint = joinEndpoint(this.settings.imageBaseUrl, this.settings.imageEndpoint);
     const payload: Record<string, unknown> = {
       model: this.settings.imageModel,
       prompt,
       size: args.size ?? "1024x1024",
     };
     if (args.imageBytes && this.settings.enableImageToImage) {
-      payload.image = `data:image/png;base64,${args.imageBytes.toString("base64")}`;
+      const mime = sniffImageMime(args.imageBytes) ?? "image/png";
+      payload.image = `data:${mime};base64,${args.imageBytes.toString("base64")}`;
     }
     const response = await fetch(
       endpoint,
@@ -548,9 +668,103 @@ export class MediaService {
     if (!response.ok) throw new Error(`image provider failed: ${response.status}`);
     const body = (await response.json()) as Record<string, unknown>;
     const data = Array.isArray(body.data) ? body.data[0] : null;
-    const url = data && typeof data === "object" ? (data as Record<string, unknown>).url : null;
+    const item = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+    if (item && typeof item.b64_json === "string" && item.b64_json) {
+      const bytes = Buffer.from(item.b64_json, "base64");
+      return this.persistBytes(bytes, IMAGE_EXTENSIONS[sniffImageMime(bytes) ?? ""] ?? ".png");
+    }
+    const url = item?.url;
     if (typeof url !== "string" || !url) throw new Error("image provider returned no URL");
-    return url;
+    return this.persistProviderMedia(
+      absoluteMediaUrl(url, this.settings.imageBaseUrl),
+      "image",
+      this.settings.imageBaseUrl,
+    );
+  }
+
+  /**
+   * Keep generated media on our side at generation time. Provider URLs expire,
+   * may be relative, served as octet-stream, or (behind fake-IP DNS) fail the
+   * public-address check when compose downloads them much later. A URL on the
+   * provider's own host is fetched directly (it is the endpoint the operator
+   * configured); any other host goes through the public-address guard.
+   * If the copy fails the remote URL is kept, as before.
+   */
+  private async persistProviderMedia(
+    url: string,
+    kind: "image" | "video",
+    providerBaseUrl: string,
+  ): Promise<string> {
+    if (url.startsWith("/static/")) return url;
+    if (url.startsWith("data:")) {
+      const comma = url.indexOf(",");
+      if (comma > 0 && url.slice(0, comma).endsWith(";base64")) {
+        const bytes = Buffer.from(url.slice(comma + 1), "base64");
+        return this.persistBytes(bytes, kind === "video" ? ".mp4" : IMAGE_EXTENSIONS[sniffImageMime(bytes) ?? ""] ?? ".png");
+      }
+      return url;
+    }
+    if (!this.registerMedia) return url;
+    let tempDir: string | null = null;
+    try {
+      tempDir = mkdtempSync(join(this.managedMediaDirectory(), `.${kind}-`));
+      const destination = join(tempDir, "download");
+      const sameHost = sameOrigin(url, providerBaseUrl);
+      const maxBytes = kind === "video" ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+      if (sameHost) {
+        await this.downloadTrusted(url, destination, maxBytes);
+      } else {
+        await downloadPublicMedia(url, destination, Date.now() + MAX_DOWNLOAD_MS, 0, this.abortSignal ?? undefined, maxBytes);
+      }
+      this.throwIfAborted();
+      let extension = ".mp4";
+      if (kind === "image") {
+        const head = readFileSync(destination).subarray(0, 512);
+        const mime = sniffImageMime(head);
+        if (!mime) throw new Error("downloaded file is not an image");
+        extension = IMAGE_EXTENSIONS[mime] ?? ".png";
+      }
+      return this.publishManagedFile(destination, extension);
+    } catch (error) {
+      if (this.abortSignal?.aborted) throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`media: keeping remote ${kind} URL, local copy failed: ${message.slice(0, 200)}`);
+      return url;
+    } finally {
+      if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  private persistBytes(bytes: Buffer, extension: string): string {
+    if (!this.registerMedia) {
+      // No execution fence (direct service use): hand the bytes back inline.
+      const mime = sniffImageMime(bytes) ?? (extension === ".mp4" ? "video/mp4" : "image/png");
+      return `data:${mime};base64,${bytes.toString("base64")}`;
+    }
+    const tempDir = mkdtempSync(join(this.managedMediaDirectory(), ".inline-"));
+    try {
+      const destination = join(tempDir, `file${extension}`);
+      writeFileSync(destination, bytes, { flag: "wx" });
+      return this.publishManagedFile(destination, extension);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  private async downloadTrusted(url: string, destination: string, maxBytes: number): Promise<void> {
+    const timeout = AbortSignal.timeout(MAX_DOWNLOAD_MS);
+    const signal = this.abortSignal ? AbortSignal.any([this.abortSignal, timeout]) : timeout;
+    const response = await fetch(url, { signal });
+    if (!response.ok || !response.body) throw new Error(`media download failed: ${response.status}`);
+    const declared = Number(response.headers.get("content-length") ?? 0);
+    if (declared > maxBytes) throw new Error("media exceeds download size limit");
+    let bytes = 0;
+    const source = Readable.fromWeb(response.body as never);
+    source.on("data", (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > maxBytes) source.destroy(new Error("media exceeds download size limit"));
+    });
+    await pipeline(source, createWriteStream(destination, { flags: "wx" }));
   }
 
   async generateVideoUrl(args: {
@@ -592,7 +806,7 @@ export class MediaService {
       const payload: Record<string, unknown> = {
         model: this.settings.doubaoVideoModel,
         content: [{ type: "text", text: prompt }],
-        duration: args.duration ?? this.settings.doubaoVideoDuration,
+        duration: normalizeVideoDuration("doubao", args.duration ?? this.settings.doubaoVideoDuration),
         ratio: this.settings.doubaoVideoRatio,
       };
       if (args.imageUrl && this.settings.enableImageToVideo) {
@@ -636,7 +850,7 @@ export class MediaService {
           const videoUrl =
             content && typeof content.video_url === "string" ? content.video_url : null;
           if (!videoUrl) throw new Error("doubao returned no video URL");
-          return videoUrl;
+          return this.persistProviderMedia(videoUrl, "video", "https://ark.cn-beijing.volces.com");
         }
         if (["failed", "cancelled"].includes(status)) {
           throw new Error(`doubao task ${status}: ${String(state.error ?? "unknown")}`);
@@ -647,11 +861,12 @@ export class MediaService {
 
     if (!this.settings.videoApiKey) throw new Error("VIDEO_API_KEY is required");
     this.throwIfAborted();
-    const endpoint = new URL(this.settings.videoEndpoint, this.settings.videoBaseUrl).toString();
+    const endpoint = joinEndpoint(this.settings.videoBaseUrl, this.settings.videoEndpoint);
     const payload: Record<string, unknown> = {
       model: this.settings.videoModel,
       prompt,
-      duration: args.duration,
+      duration:
+        args.duration === undefined ? undefined : normalizeVideoDuration("openai", args.duration),
     };
     if (args.imageUrl && this.settings.enableImageToVideo) {
       payload.image_url = await this.videoImageUrl(args.imageUrl);
@@ -669,25 +884,87 @@ export class MediaService {
       }),
     );
     if (!response.ok) throw new Error(`video provider failed: ${response.status}`);
-    const body = (await response.json()) as Record<string, unknown>;
-    const directUrl = typeof body.url === "string" ? body.url : null;
-    const data = Array.isArray(body.data) ? body.data[0] : null;
-    const nestedUrl =
-      data && typeof data === "object" ? (data as Record<string, unknown>).url : null;
-    const url = directUrl ?? (typeof nestedUrl === "string" ? nestedUrl : null);
+    let body = (await response.json()) as Record<string, unknown>;
+    let url = extractMediaUrl(body);
+    const taskId = extractTaskId(body);
+    if (!url && taskId && VIDEO_TASK_PENDING.has(String(body.status ?? "").toLowerCase())) {
+      body = await this.pollVideoTask(taskId);
+      url = extractMediaUrl(body);
+    }
     if (!url) throw new Error("video provider returned no URL");
-    return url;
+    return this.persistProviderMedia(
+      absoluteMediaUrl(url, this.settings.videoBaseUrl),
+      "video",
+      this.settings.videoBaseUrl,
+    );
   }
 
+  /** Poll an async OpenAI-compatible video task until it finishes. */
+  private async pollVideoTask(taskId: string): Promise<Record<string, unknown>> {
+    const candidates = videoTaskPollUrls(this.settings.videoBaseUrl, this.settings.videoEndpoint, taskId);
+    let candidate = 0;
+    let failures = 0;
+    const deadline = Date.now() + VIDEO_TASK_MAX_WAIT_MS;
+    while (Date.now() < deadline) {
+      await this.wait(videoTaskPollMs());
+      this.throwIfAborted();
+      const pollUrl = candidates[candidate]!;
+      let poll: Response;
+      try {
+        poll = await fetch(
+          pollUrl,
+          this.requestInit({ headers: { Authorization: `Bearer ${this.settings.videoApiKey}` } }),
+        );
+      } catch (error) {
+        if (this.abortSignal?.aborted) throw error;
+        if (++failures >= 5) throw error;
+        continue;
+      }
+      if ((poll.status === 404 || poll.status === 405) && candidate < candidates.length - 1) {
+        candidate += 1;
+        continue;
+      }
+      if (!poll.ok) {
+        if (poll.status >= 500 && ++failures < 5) continue;
+        throw new Error(`video task poll failed: ${poll.status}`);
+      }
+      failures = 0;
+      const state = (await poll.json()) as Record<string, unknown>;
+      const status = String(state.status ?? "").toLowerCase();
+      if (VIDEO_TASK_DONE.has(status)) return state;
+      if (VIDEO_TASK_FAILED.has(status)) {
+        const error = state.error;
+        const detail =
+          error && typeof error === "object"
+            ? String((error as Record<string, unknown>).message ?? JSON.stringify(error))
+            : String(error ?? "unknown");
+        throw new Error(`video task ${status}: ${detail}`);
+      }
+      if (!VIDEO_TASK_PENDING.has(status) && extractMediaUrl(state)) return state;
+    }
+    throw new Error(`video task ${taskId} timed out`);
+  }
+
+  /**
+   * The reference frame goes to the provider inline whenever we can read it:
+   * a `/static` file is not reachable from the provider at all, and a remote
+   * URL (often the image provider's own media URL, served as octet-stream)
+   * may be rejected by a different provider. The MIME type is sniffed so a
+   * webp is not labelled png.
+   */
   private async videoImageUrl(url: string): Promise<string> {
     if (url.startsWith("data:image/")) return url;
-    if (!url.startsWith("/static/")) return url;
-    if (this.settings.videoInlineLocalImages) {
-      return `data:image/png;base64,${(await this.readImageBytes(url)).toString("base64")}`;
+    const local = url.startsWith("/static/");
+    if (local && !this.settings.videoInlineLocalImages) {
+      return this.settings.publicBaseUrl ? new URL(url, this.settings.publicBaseUrl).toString() : url;
     }
-    return this.settings.publicBaseUrl
-      ? new URL(url, this.settings.publicBaseUrl).toString()
-      : url;
+    try {
+      const bytes = await this.readImageBytes(url);
+      return `data:${sniffImageMime(bytes) ?? "image/png"};base64,${bytes.toString("base64")}`;
+    } catch (error) {
+      if (local || this.abortSignal?.aborted) throw error;
+      return url;
+    }
   }
 
   private async ensureDefaultFakeClip(prompt: string, durationArg?: number): Promise<string> {
@@ -795,6 +1072,21 @@ export class MediaService {
 }
 
 const MAX_VIDEO_BYTES = 1024 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+/** Async video task poll interval; OPENOII_VIDEO_POLL_MS overrides it (tests, slow providers). */
+function videoTaskPollMs(): number {
+  const raw = Number(process.env.OPENOII_VIDEO_POLL_MS ?? 5_000);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 5_000;
+}
+const VIDEO_TASK_MAX_WAIT_MS = 15 * 60_000;
+
+function sameOrigin(url: string, baseUrl: string): boolean {
+  try {
+    return new URL(url).origin === new URL(baseUrl).origin;
+  } catch {
+    return false;
+  }
+}
 const MAX_VIDEO_TOTAL_BYTES = 2 * 1024 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 const MAX_DOWNLOAD_MS = 120_000;
@@ -815,6 +1107,10 @@ function publicAddress(address: string): boolean {
 }
 
 async function downloadPublicVideo(url: string, destination: string, deadline: number, previouslyDownloaded: number, signal?: AbortSignal): Promise<number> {
+  return downloadPublicMedia(url, destination, deadline, previouslyDownloaded, signal, MAX_VIDEO_BYTES);
+}
+
+async function downloadPublicMedia(url: string, destination: string, deadline: number, previouslyDownloaded: number, signal: AbortSignal | undefined, maxBytes: number): Promise<number> {
   let current = new URL(url);
   for (let redirects = 0; ; redirects++) {
     if ((current.protocol !== "http:" && current.protocol !== "https:") || current.username || current.password) throw new Error("Video URL must be public HTTP or HTTPS");
@@ -840,12 +1136,12 @@ async function downloadPublicVideo(url: string, destination: string, deadline: n
         }
         if (res.statusCode !== 200) { res.resume(); reject(new Error(`Video server returned HTTP ${res.statusCode ?? 0}`)); return; }
         const declared = Number(res.headers["content-length"] ?? 0);
-        if (declared > MAX_VIDEO_BYTES) { res.resume(); reject(new Error("Video exceeds download size limit")); return; }
+        if (declared > maxBytes) { res.resume(); reject(new Error("Video exceeds download size limit")); return; }
         let bytes = 0;
         const out = createWriteStream(destination, { flags: "wx" });
         res.on("data", (chunk: Buffer) => {
           bytes += chunk.length;
-          if (bytes > MAX_VIDEO_BYTES || previouslyDownloaded + bytes > MAX_VIDEO_TOTAL_BYTES) res.destroy(new Error("Video exceeds download size limit"));
+          if (bytes > maxBytes || previouslyDownloaded + bytes > MAX_VIDEO_TOTAL_BYTES) res.destroy(new Error("Video exceeds download size limit"));
           else if (Date.now() > deadline) res.destroy(new Error("Video download timed out"));
         });
         res.pipe(out);

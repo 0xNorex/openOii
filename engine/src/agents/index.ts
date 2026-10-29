@@ -14,8 +14,13 @@ import {
   type CharacterRow,
   type ShotRow,
 } from "../shared-db.js";
-import type { TextLlmService } from "../llm.js";
-import type { MediaService } from "../media/media.js";
+import {
+  DEFAULT_MAX_TOKENS,
+  type LlmImageInput,
+  type LlmRequest,
+  type TextLlmService,
+} from "../llm.js";
+import { normalizeVideoDuration, sniffImageMime, type MediaService } from "../media/media.js";
 import type { MediaSettings } from "../media/media.js";
 import {
   buildCharacterPrompt,
@@ -103,12 +108,18 @@ export function extractJson(text: string): Record<string, unknown> {
   }
 }
 
+interface CallLlmOptions {
+  validate?: LlmRequest["validate"];
+  images?: LlmImageInput[];
+}
+
 async function callLlm(
   ctx: StageContext,
   agent: string,
   system: string,
   prompt: string,
-  maxTokens = 8192,
+  maxTokens = DEFAULT_MAX_TOKENS,
+  options: CallLlmOptions = {},
 ): Promise<Record<string, unknown>> {
   const stage = ctx.stage;
   // Rough within-stage estimate from output length; the client only moves it forward.
@@ -125,6 +136,8 @@ async function callLlm(
       signal: ctx.signal,
       operation: ctx.operation ?? undefined,
       onStream: live.update,
+      validate: options.validate,
+      images: options.images,
     });
   } catch (error) {
     // A cancelled run is cleared by run_cancelled; only real failures show.
@@ -140,6 +153,41 @@ async function callLlm(
   live.end("done");
   ctx.shared.insertAgentMessage(ctx.runId, agent, "assistant", res.text);
   return extractJson(res.text);
+}
+
+// ---------------------------------------------------------------------------
+// Structured output shapes (checked before a repair is accepted)
+// ---------------------------------------------------------------------------
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export const OUTPUT_SHAPES = {
+  outline: (data: Record<string, unknown>): string | null =>
+    isRecord(data.story_outline) ? null : "expected a story_outline object",
+  planCharacters: (data: Record<string, unknown>): string | null =>
+    Array.isArray(data.characters) || isRecord(data.preserve_ids)
+      ? null
+      : "expected a characters array",
+  planShots: (data: Record<string, unknown>): string | null =>
+    Array.isArray(data.shots) || isRecord(data.preserve_ids) ? null : "expected a shots array",
+  visualNotes: (data: Record<string, unknown>): string | null =>
+    typeof data.visual_notes === "string" ? null : "expected a visual_notes string",
+  /** A critic may decline to score; a score it does give has to be a 0–10 number. */
+  critique: (data: Record<string, unknown>): string | null => {
+    const raw = data.score ?? data.total_score;
+    if (raw === undefined || raw === null) return null;
+    return critiqueScore(data) === null ? "score must be a number between 0 and 10" : null;
+  },
+};
+
+/** The critic's 0–10 verdict, or null when it gave none (never a silent 0). */
+export function critiqueScore(data: Record<string, unknown>): number | null {
+  const raw = data.score ?? data.total_score;
+  if (raw === undefined || raw === null || raw === "") return null;
+  const score = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(score) && score >= 0 && score <= 10 ? score : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +254,9 @@ export async function runOutline(ctx: StageContext): Promise<void> {
   if (ctx.userFeedback) payload.user_feedback = ctx.userFeedback;
 
   const system = PROMPTS["outline.SYSTEM_PROMPT"];
-  const data = await callLlm(ctx, "outline", system, JSON.stringify(payload), 2048);
+  const data = await callLlm(ctx, "outline", system, JSON.stringify(payload), 2048, {
+    validate: OUTPUT_SHAPES.outline,
+  });
 
   const outline = cleanOutline(data);
   const visualBible = typeof data.visual_bible === "string" ? data.visual_bible : "";
@@ -315,7 +365,9 @@ export async function runPlanCharacters(ctx: StageContext): Promise<void> {
   await ctx.emitter.sendThinking("plan", "planning", "正在设计角色设定与人物关系…");
 
   const payload = planBasePayload(ctx, "characters");
-  const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096);
+  const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096, {
+    validate: OUTPUT_SHAPES.planCharacters,
+  });
   await applyCharacterPlan(ctx, data);
 
   await ctx.emitter.sendThinking("plan", "decision", "角色设定完成，等待分镜脚本…");
@@ -332,7 +384,9 @@ export async function runPlanShots(ctx: StageContext): Promise<void> {
   await ctx.emitter.sendThinking("plan", "planning", "正在分镜与节奏设计…");
 
   const payload = planBasePayload(ctx, "shots");
-  const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096);
+  const data = await callLlm(ctx, "plan", PROMPTS["plan.SYSTEM_PROMPT"], JSON.stringify(payload), 4096, {
+    validate: OUTPUT_SHAPES.planShots,
+  });
   await applyShotPlan(ctx, data);
 
   await ctx.emitter.sendThinking("plan", "decision", "分镜脚本完成…");
@@ -483,6 +537,7 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
             "You are a character visual design assistant. Extract only observable visual traits: hair color and style, eye color, skin tone, body type, height, distinguishing features, clothing, colors, and signature items. Reply as JSON with one string field named visual_notes. Use the same language as the description; omit personality and backstory.",
             `Character name: ${character.name}\nDescription: ${character.description}\n\nExtract the key visual traits.`,
             512,
+            { validate: OUTPUT_SHAPES.visualNotes },
           );
           const visualNotes = typeof notes.visual_notes === "string" ? notes.visual_notes.trim() : "";
           if (visualNotes) characterForRender = { ...character, visual_notes: visualNotes };
@@ -717,6 +772,20 @@ export interface CritiqueOutcome {
   regenerateEntityIds: number[];
 }
 
+async function critiqueImage(ctx: StageContext, url: string | null): Promise<LlmImageInput | null> {
+  if (!url) return null;
+  try {
+    const bytes = await ctx.media.readImageBytes(url);
+    const mimeType = sniffImageMime(bytes);
+    if (!mimeType) return null;
+    return { data: bytes.toString("base64"), mimeType };
+  } catch (error) {
+    if (ctx.signal.aborted) throw error;
+    console.warn(`critic: image unavailable (${error instanceof Error ? error.message : String(error)})`);
+    return null;
+  }
+}
+
 export async function runCritique(
   ctx: StageContext,
   entityType: "character" | "shot",
@@ -729,30 +798,61 @@ export async function runCritique(
   await ctx.emitter.sendMessage("critic", `开始审查 ${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}…`);
 
   let minScore = 10;
+  let judged = 0;
   let willRegenerate = false;
   const regenerateEntityIds: number[] = [];
+  // key 现在受字面量类型约束，拼错会编译失败（见 prompts.ts 注释）。
+  // 这里不再写 `?? ""` —— 正是那种兜底让空 prompt 的 bug 静默上线。
+  const systemPrompt =
+    entityType === "character"
+      ? PROMPTS["critic.CHARACTER_REVIEW_SYSTEM_PROMPT"]
+      : PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"];
   for (const entity of entities) {
-    const imageUrl = entity.image_url;
-    const prompt = `You evaluate visual quality. Review image: ${imageUrl ?? "(none)"} for ${entityType} ${entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`}. Return JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.`;
-    // key 现在受字面量类型约束，拼错会编译失败（见 prompts.ts 注释）。
-    // 这里不再写 `?? ""` —— 正是那种兜底让空 prompt 的 bug 静默上线。
-    const systemPrompt =
-      entityType === "character"
-        ? PROMPTS["critic.CHARACTER_REVIEW_SYSTEM_PROMPT"]
-        : PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"];
-    const data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024);
-    const score = Number(data.score ?? data.total_score ?? 0);
-    const rawDimensions =
-      typeof data.dimensions === "object" && data.dimensions !== null
-        ? (data.dimensions as Record<string, unknown>)
-        : {};
-    const dimensions: Record<string, number> = {
-      consistency: Number(rawDimensions.consistency ?? data.consistency ?? 0),
-      quality: Number(rawDimensions.quality ?? data.quality ?? 0),
-      composition: Number(rawDimensions.composition ?? data.composition ?? 0),
+    const label =
+      entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`;
+    // The model has to see the pixels: the render goes in as image content,
+    // never as a URL in the prompt text (a text model cannot open it).
+    const image = await critiqueImage(ctx, entity.image_url);
+    const description = entity.description ?? "";
+    const prompt = image
+      ? `Review the attached ${entityType === "character" ? "character image" : "shot image"} for ${label}.\nDescription: ${description}\nReturn JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.\nIf you cannot actually see an attached image, do not guess: return "score": null with one issue saying the image was not visible.`
+      : `No image is available to review for ${label}. Do not guess a score: return JSON with "score": null and one issue explaining that the image could not be reviewed.`;
+    let data: Record<string, unknown> | null = null;
+    let failure = "";
+    try {
+      data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024, {
+        validate: OUTPUT_SHAPES.critique,
+        images: image ? [image] : undefined,
+      });
+    } catch (error) {
+      if (ctx.signal.aborted) throw error;
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    const score = data && image ? critiqueScore(data) : null;
+    if (score === null) {
+      // No verdict is not a failing grade: regenerating on a missing score
+      // only burns provider time (the old `?? 0` redrew every image twice).
+      const reason = !image ? "没有可审查的图片" : failure ? "审查模型调用失败" : "审查模型没有给出有效评分";
+      console.warn(`critic: no verdict for ${entityType} ${entity.id}: ${failure || reason}`);
+      await ctx.emitter.sendMessage(
+        "critic",
+        `⚠️ ${label} 未能完成审查（${reason}），保留当前画面，不重新生成。`,
+      );
+      continue;
+    }
+    judged += 1;
+    const rawDimensions = isRecord(data!.dimensions) ? data!.dimensions : {};
+    const dimension = (key: string): number => {
+      const value = Number(rawDimensions[key] ?? data![key]);
+      return Number.isFinite(value) ? value : 0;
     };
-    const issues = Array.isArray(data.issues) ? (data.issues as string[]) : [];
-    const suggestions = Array.isArray(data.suggestions) ? (data.suggestions as string[]) : [];
+    const dimensions: Record<string, number> = {
+      consistency: dimension("consistency"),
+      quality: dimension("quality"),
+      composition: dimension("composition"),
+    };
+    const issues = Array.isArray(data!.issues) ? data!.issues.map(String) : [];
+    const suggestions = Array.isArray(data!.suggestions) ? data!.suggestions.map(String) : [];
     const belowThreshold = score < ctx.critiqueScoreThreshold;
     if (score < minScore) minScore = score;
     const willRegen = belowThreshold && rounds < ctx.critiqueMaxRounds;
@@ -771,13 +871,13 @@ export async function runCritique(
     });
     await ctx.emitter.sendMessage(
       "critic",
-      `${entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`} 审查结果：总分 ${score.toFixed(1)}/10${willRegen ? "，将重新生成" : "，质量达标"}`,
+      `${label} 审查结果：总分 ${score.toFixed(1)}/10${willRegen ? "，将重新生成" : "，质量达标"}`,
     );
   }
-  if (entityType === "character" && !willRegenerate && entities.length > 0) {
-    // consistency_eval service parity: overall score over character critiques
+  if (entityType === "character" && !willRegenerate && judged > 0) {
+    // consistency_eval service parity: overall score over the judged critiques
     const overall = Math.min(100, Math.round((minScore / 10) * 100));
-    ctx.emitter.consistencyEvalCompleted(overall, entities.length);
+    ctx.emitter.consistencyEvalCompleted(overall, judged);
   }
   return { willRegenerate, minScore, regenerateEntityIds };
 }
@@ -849,12 +949,16 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
           ? `The input is a 3x3 reference board. Use the top-center panel as the first frame and the other panels only for character identity and continuity. Generate one full-frame video; do not reproduce the grid. Preserve the comic/anime style and do not redesign characters. ${prompt}`
           : `Use the provided image as the first-frame visual anchor. Preserve visible characters, outfits, hair colors, scene layout, framing, camera distance, and the 2D comic/anime style. Do not convert it to live-action, photorealistic, hyperrealistic, or realistic 3D footage; do not redesign characters. ${prompt}`
         : prompt;
-      const duration = shot.duration && shot.duration > 0 ? shot.duration : defaultDuration;
+      // Providers take whole seconds (doubao only 5 or 10); the stored shot
+      // duration is the length of the clip that was actually requested.
+      const duration = normalizeVideoDuration(
+        ctx.mediaSettings.videoProvider,
+        shot.duration && shot.duration > 0 ? shot.duration : defaultDuration,
+      );
       const videoUrl = await ctx.media.generateVideoUrl({
         prompt: videoPrompt,
         imageUrl,
-        duration:
-          ctx.mediaSettings.videoProvider === "doubao" && duration !== 10 ? 5 : duration,
+        duration,
       });
       const before = ctx.shared.getLiveShot(shot.id);
       if (!before) continue;
