@@ -192,6 +192,14 @@ describe("boardViewport", () => {
 		expect(centre).toBeCloseTo(48 + 372 + (1280 - 420 - 380) / 2);
 		expect(v.y + storyboard.y * v.zoom).toBeGreaterThanOrEqual(48);
 	});
+
+	it("shows the whole board when the floor is lowered (manual 适应视图)", () => {
+		const board = { x: 0, y: 0, width: 2000, height: 600 };
+		const v = boardViewport(board, { width: 1280, height: 800 }, { left: 372, right: 332 }, board, 0.2);
+		const availW = 1280 - (48 + 372) - (48 + 332);
+		expect(v.zoom).toBeCloseTo(availW / board.width);
+		expect(v.x + board.x * v.zoom).toBeCloseTo(48 + 372);
+	});
 });
 
 describe("moveShot", () => {

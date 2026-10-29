@@ -37,6 +37,14 @@ describe("StudioControls", () => {
 		expect(screen.getByText(`工作台状态：${label}`)).toBeInTheDocument();
 	});
 
+	it("makes 下载成片 the primary action once the final cut exists", () => {
+		renderControls({ studioStatus: getStudioStatusMeta("ready"), downloadUrl: "http://x/final.mp4" });
+		const download = screen.getByRole("link", { name: "下载成片" });
+		expect(download).toHaveAttribute("target", "_blank");
+		expect(download.className).toContain("bg-primary");
+		expect(screen.getByRole("button", { name: "重新生成" }).className).not.toContain("bg-primary");
+	});
+
 	it("names the stage and progress while generating, with a stop action", async () => {
 		const user = userEvent.setup();
 		const onCancel = vi.fn();

@@ -46,6 +46,7 @@ const READABLE_ZOOM = 12 / 13;
 /**
  * 适配整块画板（角色、分镜、成片三个 frame）：放大不超过 1，在剩余空间里居中。
  * 整块放不下可读字号时，停在可读下限并以分镜区（focus）为中心，两侧 frame 可以被裁掉。
+ * 手动「适应视图」传 floor = MIN_ZOOM：总是显示整块画板（Figma 的 Shift+1），不受可读下限限制。
  * 留白让出两侧打开的浮动面板，以及底部提示栏 + 工具条
  * （--toolbar-offset 6.75rem + 工具条 ~44px + 16px 间隙）。
  */
@@ -54,13 +55,14 @@ export function boardViewport(
 	viewport: { width: number; height: number },
 	insets = { left: 0, right: 0 },
 	focus = bounds,
+	floor = READABLE_ZOOM,
 ) {
 	const pad = { left: 48 + insets.left, right: 48 + insets.right, top: 48, bottom: 168 };
 	const availW = Math.max(1, viewport.width - pad.left - pad.right);
 	const availH = Math.max(1, viewport.height - pad.top - pad.bottom);
 	const fitZoom = Math.min(availW / bounds.width, availH / bounds.height);
-	const zoom = Math.min(1, Math.max(READABLE_ZOOM, fitZoom));
-	const box = fitZoom < READABLE_ZOOM ? focus : bounds;
+	const zoom = Math.min(1, Math.max(floor, fitZoom));
+	const box = fitZoom < floor ? focus : bounds;
 	const axis = (start: number, avail: number, size: number, origin: number) =>
 		size * zoom <= avail
 			? start + (avail - size * zoom) / 2 - origin * zoom
@@ -160,20 +162,22 @@ function FlowInner({
 	}, [framePositions, graph, interactionMode, layout, setNodes]);
 
 	const fit = useCallback(
-		(duration: number) => {
+		(duration: number, whole = false) => {
 			const el = containerRef.current;
 			const target = flow.getNodes();
 			if (!el || target.length === 0) return;
 			const bounds = flow.getNodesBounds(target);
 			if (bounds.width === 0 || bounds.height === 0) return;
 			const shotline = flow.getNode(frameNodeId("shotline"));
-			autoFitRef.current = true;
+			// 手动看全图之后，面板开合不再按可读下限重新适配
+			autoFitRef.current = !whole;
 			void flow.setViewport(
 				boardViewport(
 					bounds,
 					{ width: el.clientWidth, height: el.clientHeight },
 					insetsRef.current,
 					shotline ? flow.getNodesBounds([shotline]) : bounds,
+					whole ? MIN_ZOOM : READABLE_ZOOM,
 				),
 				{ duration },
 			);
@@ -323,7 +327,7 @@ function FlowInner({
 			manual();
 			void flow.zoomTo(1, animation);
 		},
-		fit: () => fit(motionDuration("normal")),
+		fit: () => fit(motionDuration("normal"), true),
 	};
 
 	return (

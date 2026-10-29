@@ -469,6 +469,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						onOpenVersions={handleOpenVersions}
 						onExport={handleExportWebtoon}
 						exportBusy={exporting}
+						downloadUrl={project?.video_url ? getStaticUrl(`/api/v1/projects/${projectId}/final-video`) : null}
 					/>
 				}
 			/>

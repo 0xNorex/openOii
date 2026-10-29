@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { STAGE_PIPELINE, getPipelineStageIndex } from "~/utils/pipeline";
 import { IconButton } from "~/components/ui/IconButton";
-import { Button } from "~/components/ui/Button";
+import { BUTTON_BASE, BUTTON_VARIANTS, Button } from "~/components/ui/Button";
 import {
 	type StudioStatus,
 	studioStatusDotClass,
@@ -30,6 +30,8 @@ interface StudioControlsProps {
 	/** Trigger export (e.g. webtoon). */
 	onExport?: () => void;
 	exportBusy?: boolean;
+	/** 成片下载地址；完成后它是顶栏主按钮（CapCut / Runway 的「导出」位置） */
+	downloadUrl?: string | null;
 }
 
 const chromeBtn =
@@ -59,6 +61,7 @@ export function StudioControls({
 	onOpenVersions,
 	onExport,
 	exportBusy = false,
+	downloadUrl = null,
 }: StudioControlsProps) {
 	const [toolsOpen, setToolsOpen] = useState(false);
 	const toolsRef = useRef<HTMLDivElement>(null);
@@ -78,6 +81,8 @@ export function StudioControls({
 	// “从失败阶段重试”只在收件箱；这里只有开始 / 重新生成
 	const generateLabel = studioStatus.state === "idle" ? "开始生成" : "重新生成";
 	const hasTools = Boolean(onOpenVersions || onExport);
+	// 成片可用时：下载是主操作，重新生成退为次要
+	const finished = studioStatus.state === "ready" && Boolean(downloadUrl) && !isGenerating;
 	const pillText = [studioStatus.label, stageLabel, progressPercent === null ? null : `${progressPercent}%`]
 		.filter(Boolean)
 		.join(" · ");
@@ -174,7 +179,7 @@ export function StudioControls({
 				) : null}
 				{!isGenerating && !hasRecovery && !awaitingConfirm && onGenerate ? (
 					<Button
-						variant="primary"
+						variant={finished ? "secondary" : "primary"}
 						size="sm"
 						className={chromeBtn}
 						onClick={onGenerate}
@@ -183,6 +188,19 @@ export function StudioControls({
 						<SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
 						{generateLabel}
 					</Button>
+				) : null}
+				{finished && downloadUrl ? (
+					<a
+						href={downloadUrl}
+						download
+						// 成片在另一个源上：新标签打开，工作台留在原处
+						target="_blank"
+						rel="noopener"
+						className={`${BUTTON_BASE} ${BUTTON_VARIANTS.primary} h-8 touch-target-dense ${chromeBtn}`}
+					>
+						<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						下载成片
+					</a>
 				) : null}
 			</div>
 		</div>
