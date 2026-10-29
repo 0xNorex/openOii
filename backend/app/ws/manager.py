@@ -21,6 +21,7 @@ from app.schemas.ws import (
     DataClearedEventData,
     ErrorEventData,
     OutlineUpdatedEventData,
+    ProjectRestoredEventData,
     ProjectUpdatedEventData,
     RunAwaitingConfirmEventData,
     RunCancelledEventData,
@@ -69,6 +70,7 @@ _EVENT_DATA_MODELS: dict[str, type[Any]] = {
     "audio_generated": AudioGeneratedEventData,
     "version_created": VersionCreatedEventData,
     "version_rollback": VersionRollbackEventData,
+    "project_restored": ProjectRestoredEventData,
     "export_completed": ExportCompletedEventData,
     "consistency_eval_completed": ConsistencyEvalCompletedEventData,
 }

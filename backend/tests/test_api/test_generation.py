@@ -539,8 +539,11 @@ async def test_stale_cancelling_run_ends_cancelled_not_failed(async_client, test
 
     res = await async_client.get(f"/api/v1/projects/{project.id}/runs/current")
     assert res.status_code == 200
-    assert res.json()["active_run"]["status"] == "cancelled"
-    assert res.json()["active_run"]["error"] is None
+    # The stop is honoured and is final: nothing is offered as resumable.
+    assert res.json() is None
+    await test_session.refresh(run)
+    assert run.status == "cancelled"
+    assert run.error is None
 
 
 @pytest.mark.asyncio

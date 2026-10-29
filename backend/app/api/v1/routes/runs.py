@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import cast
+from typing import Literal, cast
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
@@ -31,21 +31,35 @@ from app.schemas.project import (
     GateFeedbackAcceptedResponse,
     GateFeedbackRequest,
     GenerateRequest,
+    PreviousVersionRead,
     ProviderResolution,
     RecoveryControlRead,
+    RegenerateEstimateRead,
+    RegeneratePlanRead,
+    RestoreVersionResponse,
 )
 from app.services.engine_client import (
     EngineConflictError,
     EngineUnavailableError,
     engine_active_run_ids,
     engine_cancel_run,
+    engine_owner_gone,
     engine_resume_run,
     engine_start_run,
     ensure_engine_running,
 )
 from app.services.generation_entry import decide_generation_entry
 from app.services.image_factory import create_image_service
-from app.services.provider_resolution import resolve_project_provider_settings_async
+from app.services.project_versions import (
+    capture_project_version,
+    count_project_entities,
+    is_valid_snapshot,
+    restore_project_version,
+)
+from app.services.provider_resolution import (
+    resolve_project_provider_settings_async,
+    warm_project_text_probe,
+)
 from app.services.run_context import build_run_context_snapshot
 from app.services.run_recovery import build_recovery_control_surface
 from app.services.run_intent import build_rerun_intent
@@ -57,8 +71,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _ACTIVE_RUN_STATUSES = ("queued", "running", "waiting_for_approval", "cancelling")
-_RECOVERABLE_RUN_STATUSES = ("failed", "cancelled")
+# Only a run that broke on its own can be continued. A run the user stopped or
+# dismissed (cancelled) is over: the project goes back to its last finished state.
+_RECOVERABLE_RUN_STATUSES = ("failed",)
 _TERMINAL_RUN_STATUSES = {"cancelled", "succeeded", "failed"}
+_TERMINAL_RUN_STATUS_TUPLE = ("cancelled", "succeeded", "failed")
+EXECUTOR_GONE_ERROR = "Engine restarted; the executor that owned this run is gone; run is safe to resume"
+LEASE_EXPIRED_ERROR = "Execution lease missing or expired; run is safe to resume"
 
 def _has_live_lease(run: AgentRun) -> bool:
     return bool(
@@ -408,6 +427,91 @@ async def _latest_run_for_project(
     return res.scalars().first()
 
 
+async def _latest_recoverable_run(session: AsyncSession, project_id: int) -> AgentRun | None:
+    """The latest finished run, but only when it broke on its own.
+
+    Looking at the latest terminal run (not the latest failed one) matters: an
+    old failure must not resurface after a later run succeeded or was stopped.
+    """
+    latest = await _latest_run_for_project(session, project_id, _TERMINAL_RUN_STATUS_TUPLE)
+    return _surface_recoverable(latest)
+
+
+def _surface_recoverable(run: AgentRun | None) -> AgentRun | None:
+    if run is None or run.status not in _RECOVERABLE_RUN_STATUSES or _rejected_feedback(run):
+        return None
+    return run
+
+
+PROJECT_RESTORED_AGENT = "version"
+
+
+def project_restored_text(reason: str) -> str:
+    if reason == "restored":
+        return "已恢复到上一版"
+    return "已停止，项目放回了重新生成之前的版本（成片、角色、分镜都还在）"
+
+
+def _previous_version(run: AgentRun | None) -> dict[str, object] | None:
+    snapshot = run.context_snapshot if run is not None and isinstance(run.context_snapshot, dict) else {}
+    previous = snapshot.get("previous_version")
+    return previous if is_valid_snapshot(previous) else None
+
+
+async def _restore_previous_version(
+    *, session: AsyncSession, ws: ConnectionManager | None, run: AgentRun, reason: str
+) -> bool:
+    """Put back what the project looked like before this regenerate.
+
+    Marks the capture as used so it is applied once. Returns whether anything
+    in the project changed.
+    """
+    previous = _previous_version(run)
+    if previous is None or previous.get("restored_at"):
+        return False
+    changed = await restore_project_version(session, run.project_id, previous)
+    snapshot = dict(run.context_snapshot or {})
+    snapshot["previous_version"] = {**previous, "restored_at": utcnow().isoformat(), "restored_by": reason}
+    run.context_snapshot = snapshot
+    session.add(run)
+    if changed:
+        # 活动流里留一条：刷新后也看得出这次停止把上一版放回来了
+        session.add(
+            Message(
+                project_id=run.project_id,
+                run_id=run.id,
+                agent=PROJECT_RESTORED_AGENT,
+                role="assistant",
+                content=project_restored_text(reason),
+            )
+        )
+    await session.commit()
+    await session.refresh(run)
+    if changed and ws is not None:
+        await ws.send_event(
+            run.project_id,
+            {
+                "type": "project_restored",
+                "data": {"project_id": run.project_id, "run_id": run.id, "reason": reason},
+            },
+        )
+    return changed
+
+
+async def _settle_stopped_run(
+    *, session: AsyncSession, ws: ConnectionManager | None, project_id: int
+) -> None:
+    """A stopped regenerate returns the project to its last finished version.
+
+    The engine terminalises a stop on its own schedule, so this runs on the next
+    read after the run is cancelled (and right away when the API cancels it).
+    """
+    latest = await _latest_run_for_project(session, project_id, _TERMINAL_RUN_STATUS_TUPLE)
+    if latest is None or latest.status != "cancelled":
+        return
+    await _restore_previous_version(session=session, ws=ws, run=latest, reason="stopped")
+
+
 async def _reconcile_active_candidate(
     *,
     session: AsyncSession,
@@ -425,13 +529,21 @@ async def _reconcile_active_candidate(
         return None, None
 
     engine_ids = await engine_active_run_ids(settings.engine_url)
-    if run.id in engine_ids or _has_live_lease(run):
+    executor_gone = False
+    if run.id in engine_ids:
         return run, None
+    if _has_live_lease(run):
+        # A live lease normally means a live executor. The exception is an
+        # engine that was restarted: the new process answers with another owner
+        # id and the old one is gone, so do not wait two minutes for expiry.
+        if not await engine_owner_gone(settings.engine_url, run.lease_owner):
+            return run, None
+        executor_gone = True
 
     # A cancel requested before the executor died ends as cancelled, not failed.
     cancelled = run.cancel_requested_at is not None
     run.status = "cancelled" if cancelled else "failed"
-    run.error = None if cancelled else "Execution lease missing or expired; run is safe to resume"
+    run.error = None if cancelled else EXECUTOR_GONE_ERROR if executor_gone else LEASE_EXPIRED_ERROR
     run.lease_owner = None
     run.lease_token = None
     run.lease_expires_at = None
@@ -450,6 +562,7 @@ async def _new_run(
     current_agent: str,
     execution_command: dict[str, object] | None,
     commit: bool = True,
+    extra_context: dict[str, object] | None = None,
 ) -> AgentRun:
     provider_snapshot = provider_resolution.as_project_provider_settings().model_dump(mode="json")
     context_snapshot = await build_run_context_snapshot(
@@ -465,11 +578,11 @@ async def _new_run(
         progress=0.0,
         provider_snapshot=provider_snapshot,
         workflow_version=WORKFLOW_VERSION,
-        context_snapshot=(
-            {**context_snapshot, "execution_command": execution_command}
-            if execution_command is not None
-            else context_snapshot
-        ),
+        context_snapshot={
+            **context_snapshot,
+            **(extra_context or {}),
+            **({"execution_command": execution_command} if execution_command is not None else {}),
+        },
     )
     session.add(run)
     if commit:
@@ -485,6 +598,7 @@ async def get_current_run(
     project_id: int,
     session: AsyncSession = SessionDep,
     settings: Settings = SettingsDep,
+    ws: ConnectionManager = WsManagerDep,
 ) -> RecoveryControlRead | None:
     await get_or_404(session, Project, project_id)
 
@@ -502,11 +616,12 @@ async def get_current_run(
             state="active",
         )
 
-    resumable_run = newly_recoverable or await _latest_run_for_project(
-        session, project_id, _RECOVERABLE_RUN_STATUSES
+    await _settle_stopped_run(session=session, ws=ws, project_id=project_id)
+    resumable_run = (
+        _surface_recoverable(newly_recoverable)
+        if newly_recoverable is not None
+        else await _latest_recoverable_run(session, project_id)
     )
-    if _rejected_feedback(resumable_run):
-        resumable_run = None
     if resumable_run is not None:
         return await build_recovery_control_surface(
             session=session,
@@ -538,11 +653,14 @@ async def start_run(
         settings=settings,
         run=candidate,
     )
-    resumable_run = stale_run or await _latest_run_for_project(
-        session, project_id, _RECOVERABLE_RUN_STATUSES
+    if active_run is None:
+        await _settle_stopped_run(session=session, ws=None, project_id=project_id)
+        await session.refresh(project)
+    resumable_run = (
+        _surface_recoverable(stale_run)
+        if stale_run is not None
+        else await _latest_recoverable_run(session, project_id)
     )
-    if _rejected_feedback(resumable_run):
-        resumable_run = None
 
     provider_resolution: ProviderResolution = await resolve_project_provider_settings_async(
         project, settings
@@ -580,6 +698,9 @@ async def start_run(
             details={"provider_resolution": provider_resolution.as_error_details()},
         )
 
+    # A regenerate is a new version: keep what the project is now so stopping
+    # it, or "恢复上一版" afterwards, can put it back.
+    previous_version = await capture_project_version(session, project_id)
     run = await _new_run(
         session=session,
         settings=settings,
@@ -594,6 +715,7 @@ async def start_run(
             "target_character_ids": [],
             "target_shot_ids": [],
         },
+        extra_context={"previous_version": previous_version} if previous_version else None,
     )
     run_id = require_run_id(run)
 
@@ -671,6 +793,40 @@ async def cancel_run(
 ):
     """Persist cancellation intent; terminal state belongs to the executor."""
     run = await get_or_404(session, AgentRun, run_id)
+    if run.status == "failed":
+        # 取消 on an interrupted run dismisses it: it stops being offered as
+        # resumable and a regenerate that broke puts the previous version back.
+        dismissed = await session.execute(
+            update(AgentRun)
+            .where(AgentRun.id == run_id)
+            .where(AgentRun.status == "failed")
+            .values(
+                status="cancelled",
+                cancel_requested_at=utcnow(),
+                awaiting_payload=None,
+                lease_owner=None,
+                lease_token=None,
+                lease_expires_at=None,
+            )
+        )
+        await session.commit()
+        if dismissed.rowcount != 1:
+            return CancelRunResponse(status="no_active_run")
+        await session.refresh(run)
+        await _restore_previous_version(session=session, ws=ws, run=run, reason="dismissed")
+        await ws.send_event(
+            run.project_id,
+            {
+                "type": "run_cancelled",
+                "data": {
+                    "run_id": run_id,
+                    "project_id": run.project_id,
+                    "cancelled_count": 1,
+                    "run_ids": [run_id],
+                },
+            },
+        )
+        return CancelRunResponse(status="cancelled", cancelled=1, run_ids=[run_id])
     if run.status in _TERMINAL_RUN_STATUSES:
         return CancelRunResponse(status="no_active_run")
 
@@ -712,6 +868,7 @@ async def cancel_run(
         run.awaiting_payload = None
         session.add(run)
         await session.commit()
+        await _restore_previous_version(session=session, ws=ws, run=run, reason="stopped")
         await ws.send_event(
             project_id,
             {
@@ -800,7 +957,6 @@ async def gate_feedback(
 
     await session.refresh(run)
     awaiting = run.awaiting_payload if isinstance(run.awaiting_payload, dict) else {}
-    previous = awaiting.get("feedback") if isinstance(awaiting.get("feedback"), dict) else None
     await ws.send_event(
         run.project_id,
         {
@@ -811,7 +967,7 @@ async def gate_feedback(
                 "gate": awaiting.get("gate") or run.current_agent,
                 "stage": awaiting.get("current_stage"),
                 "feedback_id": feedback["id"],
-                "round": int(previous.get("round", 0)) + 1 if previous else 1,
+                "round": feedback["round"],
                 "state": "received",
                 "content": content,
                 "entity_type": feedback.get("entity_type"),
@@ -819,7 +975,9 @@ async def gate_feedback(
             },
         },
     )
-    return GateFeedbackAcceptedResponse(run_id=run_id, feedback_id=str(feedback["id"]))
+    return GateFeedbackAcceptedResponse(
+        run_id=run_id, feedback_id=str(feedback["id"]), round=feedback.get("round")
+    )
 
 
 @router.post(
@@ -854,6 +1012,7 @@ async def feedback_project(
             state="active",
         )
         return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=control.model_dump(mode="json"))
+    newly_recoverable = _surface_recoverable(newly_recoverable)
     if newly_recoverable is not None:
         control = await build_recovery_control_surface(
             session=session,
@@ -932,3 +1091,149 @@ async def feedback_project(
         force_regenerate=bool(scope["entity_ids"]),
     )
     return FeedbackAcceptedResponse(run_id=run_id)
+
+
+# Rough per-call durations for the 重新生成 estimate when there is no history.
+_EST_TEXT_STAGE_S = 50
+_EST_IMAGE_S = 35
+_EST_VIDEO_S = 110
+_EST_MERGE_S = 20
+_REGENERATE_STAGES = ["故事大纲", "角色设定", "分镜脚本", "角色形象图", "分镜画面", "视频片段", "成片"]
+
+
+def _is_full_run(run: AgentRun) -> bool:
+    snapshot = run.context_snapshot if isinstance(run.context_snapshot, dict) else {}
+    command = snapshot.get("execution_command")
+    return isinstance(command, dict) and command.get("stage") == "full"
+
+
+async def _latest_full_run(session: AsyncSession, project_id: int) -> AgentRun | None:
+    res = await session.execute(
+        select(AgentRun)
+        .where(AgentRun.project_id == project_id)
+        .order_by(cast(InstrumentedAttribute[datetime], cast(object, AgentRun.created_at)).desc())
+        .limit(20)
+    )
+    for run in res.scalars().all():
+        if _is_full_run(run):
+            return run
+    return None
+
+
+def _previous_version_read(run: AgentRun) -> PreviousVersionRead | None:
+    previous = _previous_version(run)
+    if previous is None:
+        return None
+    project = previous.get("project") if isinstance(previous.get("project"), dict) else {}
+    characters = previous.get("characters") if isinstance(previous.get("characters"), list) else []
+    shots = previous.get("shots") if isinstance(previous.get("shots"), list) else []
+    restored_at = previous.get("restored_at")
+    return PreviousVersionRead(
+        run_id=require_run_id(run),
+        run_status=run.status,
+        captured_at=str(previous.get("captured_at")) if previous.get("captured_at") else None,
+        video_url=project.get("video_url") if isinstance(project.get("video_url"), str) else None,
+        character_count=len(characters),
+        shot_count=len(shots),
+        restorable=run.status in _TERMINAL_RUN_STATUSES and not restored_at,
+        restored_at=str(restored_at) if restored_at else None,
+    )
+
+
+@router.get("/projects/{project_id}/runs/regenerate-plan", response_model=RegeneratePlanRead)
+async def regenerate_plan(
+    project_id: int,
+    warm: bool = False,
+    session: AsyncSession = SessionDep,
+    settings: Settings = SettingsDep,
+) -> RegeneratePlanRead:
+    """What 重新生成 would redo, so the confirm dialog can say it before it runs."""
+    project = await get_or_404(session, Project, project_id)
+    if warm:
+        # The open dialog is the moment before a start: warm the provider probe
+        # so the start itself does not wait on it. Plain reads (menus) do not
+        # pay for a probe.
+        warm_project_text_probe(project, settings)
+    character_count, shot_count = await count_project_entities(session, project_id)
+    planned_characters = character_count or max(len(project.character_hints or []), 2)
+    planned_shots = shot_count or (project.target_shot_count or 4)
+    text_calls = 3 + 2  # outline, characters, shots + two critique passes
+    image_calls = planned_characters + planned_shots
+    video_calls = planned_shots
+    seconds = (
+        3 * _EST_TEXT_STAGE_S
+        + image_calls * _EST_IMAGE_S
+        + video_calls * _EST_VIDEO_S
+        + _EST_MERGE_S
+    )
+    basis: Literal["history", "heuristic"] = "heuristic"
+    latest_full = await _latest_full_run(session, project_id)
+    if latest_full is not None and latest_full.status == "succeeded":
+        snapshot = latest_full.context_snapshot if isinstance(latest_full.context_snapshot, dict) else {}
+        command = snapshot.get("execution_command")
+        auto = isinstance(command, dict) and command.get("auto_mode") is True
+        elapsed = (latest_full.updated_at - latest_full.created_at).total_seconds()
+        # Only an auto run measures generation alone; a manual run includes the
+        # time the user spent at each gate.
+        if auto and 60 <= elapsed <= 4 * 3600:
+            seconds = int(elapsed)
+            basis = "history"
+    return RegeneratePlanRead(
+        project_id=project_id,
+        has_content=bool(character_count or shot_count or project.video_url),
+        character_count=character_count,
+        shot_count=shot_count,
+        has_final_video=bool(project.video_url),
+        stages=_REGENERATE_STAGES,
+        estimate=RegenerateEstimateRead(
+            seconds_low=int(seconds * (0.8 if basis == "history" else 0.6)),
+            seconds_high=int(seconds * (1.3 if basis == "history" else 1.6)),
+            text_calls=text_calls,
+            image_calls=image_calls,
+            video_calls=video_calls,
+            basis=basis,
+        ),
+        previous_version=_previous_version_read(latest_full) if latest_full is not None else None,
+    )
+
+
+@router.post("/runs/{run_id}/restore-previous", response_model=RestoreVersionResponse)
+async def restore_previous_version(
+    run_id: int,
+    session: AsyncSession = SessionDep,
+    ws: ConnectionManager = WsManagerDep,
+) -> RestoreVersionResponse:
+    """恢复上一版: put back the version this regenerate replaced.
+
+    Only for a finished run (stopping an active one already restores) and only
+    for the project's latest regenerate, so an older capture never overwrites a
+    newer version.
+    """
+    run = await get_or_404(session, AgentRun, run_id)
+    previous = _previous_version(run)
+    if previous is None:
+        raise AppException(
+            message="这次运行没有保存上一版", code="NO_PREVIOUS_VERSION", status_code=status.HTTP_409_CONFLICT
+        )
+    if previous.get("restored_at"):
+        return RestoreVersionResponse(run_id=run_id, restored=False)
+    if run.status not in _TERMINAL_RUN_STATUSES:
+        raise AppException(
+            message="运行还在进行，先停止它（停止会自动回到上一版）",
+            code="RUN_STILL_ACTIVE",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+    active = await _latest_run_for_project(session, run.project_id, _ACTIVE_RUN_STATUSES)
+    if active is not None:
+        raise AppException(
+            message="项目有正在进行的运行，先停止它", code="RUN_STILL_ACTIVE", status_code=status.HTTP_409_CONFLICT
+        )
+    latest_full = await _latest_full_run(session, run.project_id)
+    if latest_full is None or latest_full.id != run.id:
+        raise AppException(
+            message="之后又重新生成过，这一版已经不是上一版",
+            code="PREVIOUS_VERSION_STALE",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+    changed = await _restore_previous_version(session=session, ws=ws, run=run, reason="restored")
+    return RestoreVersionResponse(run_id=run_id, restored=changed)

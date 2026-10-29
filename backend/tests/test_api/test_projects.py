@@ -425,6 +425,32 @@ async def test_get_project_messages(async_client, test_session):
 
 
 @pytest.mark.asyncio
+async def test_project_messages_keep_write_order_across_timestamp_formats(async_client, test_session):
+    """引擎写 ISO "…T…Z"，后端写 "… …"：按文本排序会把后写的用户意见排到最前。"""
+    from sqlalchemy import text
+
+    project = await create_project(test_session)
+    run = await create_run(test_session, project_id=project.id, status="running")
+    insert = text(
+        "INSERT INTO message (project_id, run_id, agent, role, content, is_loading, created_at) "
+        "VALUES (:p, :r, :agent, :role, :content, 0, :at)"
+    )
+    rows = [
+        ("outline", "assistant", "第一版大纲", "2026-10-29T13:20:05.560Z"),
+        ("user", "user", "结局更温暖一些", "2026-10-29 13:20:21.885700"),
+        ("outline", "assistant", "第二版大纲", "2026-10-29T13:21:37.805Z"),
+    ]
+    for agent, role, content, at in rows:
+        await test_session.execute(
+            insert, {"p": project.id, "r": run.id, "agent": agent, "role": role, "content": content, "at": at}
+        )
+    await test_session.commit()
+
+    data = (await async_client.get(f"/api/v1/projects/{project.id}/messages")).json()
+    assert [m["content"] for m in data] == ["第一版大纲", "结局更温暖一些", "第二版大纲"]
+
+
+@pytest.mark.asyncio
 async def test_delete_project(async_client, test_session):
     project = await create_project(test_session)
     res = await async_client.delete(f"/api/v1/projects/{project.id}")

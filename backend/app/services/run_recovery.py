@@ -99,6 +99,16 @@ def _infer_current_stage(run: AgentRun, completed: Sequence[str]) -> str:
     return "plan_outline"
 
 
+def _gate_stage(run: AgentRun) -> str | None:
+    payload = run.awaiting_payload if isinstance(run.awaiting_payload, dict) else None
+    if payload is None:
+        return None
+    stage = payload.get("current_stage") or payload.get("stage")
+    if isinstance(stage, str) and stage in PHASE2_STAGE_ORDER and stage not in PRODUCTION_STAGE_SEQUENCE:
+        return stage
+    return None
+
+
 async def _stage_artifact_counts(session: AsyncSession, project_id: int) -> dict[str, int]:
     """Per-stage entity counts derived from persisted project entities.
 
@@ -176,6 +186,11 @@ async def build_recovery_summary(
         execution_command = run.context_snapshot.get("execution_command")
         if isinstance(execution_command, dict):
             current_stage = _safe_stage_name(execution_command.get("stage")) or current_stage
+    # A run that stopped at an approval gate stopped *at the gate*, not in the
+    # production stage after it: shots_approval must not read as rendering.
+    gate_stage = _gate_stage(run)
+    if gate_stage is not None:
+        current_stage = gate_stage
     artifact_counts = await _stage_artifact_counts(session, run.project_id)
 
     stage_history = [

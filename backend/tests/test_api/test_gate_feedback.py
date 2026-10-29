@@ -76,7 +76,8 @@ async def test_gate_feedback_requests_changes_without_approving(
     assert stored.gate_feedback["id"] == feedback_id
 
     messages = (await test_session.execute(select(Message).where(Message.run_id == run.id))).scalars().all()
-    assert [m.content for m in messages] == ["结局更温暖"]
+    assert [m.content for m in messages if m.role == "user"] == ["结局更温暖"]
+    assert [m.summary for m in messages if m.role == "feedback_receipt"] == [feedback_id]
 
     receipts = [e for _, e in ws_manager.events if e["type"] == "run_feedback"]
     assert receipts and receipts[-1]["data"]["state"] == "received"
@@ -158,3 +159,45 @@ async def test_rest_confirm_refused_when_not_at_a_gate(async_client, test_sessio
     res = await async_client.post(f"/api/v1/runs/{run.id}/confirm")
     assert res.status_code == 409
     assert res.json()["error"]["code"] == "RUN_NOT_AT_GATE"
+
+
+@pytest.mark.asyncio
+async def test_feedback_receipt_is_persisted_and_rounds_count_from_the_db(
+    async_client, test_session, ws_manager, _shared_maker
+):
+    """A reload must still show every earlier round; the counter is not in memory."""
+    import json
+
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+
+    first = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "更悬疑一点"})
+    assert first.status_code == 202
+    # The engine finished that round and came back to the gate.
+    await test_session.refresh(run)
+    run.gate_feedback = None
+    test_session.add(run)
+    await test_session.commit()
+    second = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "结局反转"})
+    assert second.status_code == 202
+
+    rows = (
+        await test_session.execute(
+            select(Message).where(Message.run_id == run.id).where(Message.role == "feedback_receipt").order_by(Message.id)
+        )
+    ).scalars().all()
+    receipts = [json.loads(row.content) for row in rows]
+    assert [(r["round"], r["content"], r["state"], r["stage"]) for r in receipts] == [
+        (1, "更悬疑一点", "received", "outline_approval"),
+        (2, "结局反转", "received", "outline_approval"),
+    ]
+    assert rows[0].summary == first.json()["feedback_id"]
+    rounds = [e["data"]["round"] for _, e in ws_manager.events if e["type"] == "run_feedback"]
+    assert rounds == [1, 2]
+    await test_session.refresh(run)
+    assert run.gate_feedback["round"] == 2
+
+    # The receipt row is ordered after the user's words and before any redo output.
+    listed = (await async_client.get(f"/api/v1/projects/{project.id}/messages")).json()
+    roles = [m["role"] for m in listed]
+    assert roles == ["user", "feedback_receipt", "user", "feedback_receipt"]

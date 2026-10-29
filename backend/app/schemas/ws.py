@@ -45,6 +45,7 @@ WsEventType = Literal[
     "bible_updated",
     "version_created",
     "version_rollback",
+    "project_restored",
     "audio_generated",
     "export_completed",
     "consistency_eval_completed",
@@ -318,6 +319,15 @@ class VersionRollbackEventData(BaseModel):
     entity_id: int
     from_version: int
     to_version: int
+
+
+class ProjectRestoredEventData(BaseModel):
+    """The project's outline/characters/shots/final cut were put back to the
+    version kept before a regenerate (stopped, dismissed or restored)."""
+
+    project_id: int
+    run_id: int
+    reason: Literal["stopped", "dismissed", "restored"]
 
 
 class ConsistencyEvalCompletedEventData(BaseModel):

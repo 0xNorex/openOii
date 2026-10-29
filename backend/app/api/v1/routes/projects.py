@@ -495,10 +495,10 @@ async def list_messages(project_id: int, session: AsyncSession = SessionDep):
     """获取项目的所有消息记录"""
     await get_or_404(session, Project, project_id)
     message_project_id_col = cast(InstrumentedAttribute[int], cast(object, Message.project_id))
-    message_created_at_col = cast(InstrumentedAttribute[datetime], cast(object, Message.created_at))
+    # 按写入顺序（id）排：后端与引擎写的 created_at 文本格式不同
+    # （"2026-01-01 00:00:00" 与 "2026-01-01T00:00:00Z"），按它排序会把
+    # 后端写的用户意见和回执排到引擎产物前面。
     res = await session.execute(
-        select(Message)
-        .where(message_project_id_col == project_id)
-        .order_by(message_created_at_col.asc(), Message.id.asc())
+        select(Message).where(message_project_id_col == project_id).order_by(Message.id.asc())
     )
     return [MessageRead.model_validate(m) for m in res.scalars().all()]

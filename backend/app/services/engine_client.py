@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -197,6 +198,42 @@ async def engine_active_run_ids(base_url: str) -> set[int]:
     if not isinstance(runs, list):
         return set()
     return {int(r) for r in runs if isinstance(r, (int, float))}
+
+
+_ENGINE_OWNER = re.compile(r"^engine-(\d+)-[0-9a-f-]{36}$")
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+async def engine_owner_gone(base_url: str, lease_owner: str | None) -> bool:
+    """True when the engine that holds this lease has certainly died.
+
+    The heartbeat renews a lease every 30s for 120s, so a run whose engine was
+    killed keeps claiming to be active for up to two minutes. Detect it sooner:
+    the engine at ``base_url`` answers with a different owner id, and the old
+    owner's process no longer exists. Anything less certain (engine unreachable,
+    unknown owner format) waits for the lease to expire as before.
+    """
+    match = _ENGINE_OWNER.match(lease_owner or "")
+    if match is None:
+        return False
+    health = await engine_health(base_url)
+    if health is None:
+        return False
+    current = health.get("owner_id")
+    if not isinstance(current, str) or current == lease_owner:
+        return False
+    return not _pid_alive(int(match.group(1)))
 
 
 async def engine_healthy(base_url: str) -> bool:

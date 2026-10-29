@@ -9,6 +9,7 @@ Stage/agent 映射由 contracts/workflow.json 生成，不能在这里再维护�
 from __future__ import annotations
 
 import asyncio
+import json
 
 from sqlalchemy import select, update
 
@@ -134,6 +135,19 @@ async def submit_gate_feedback(
         "received_at": utcnow().isoformat(),
     }
     async with async_session_maker() as session:
+        current = await session.get(AgentRun, run_id)
+        awaiting = (
+            current.awaiting_payload
+            if current is not None and isinstance(current.awaiting_payload, dict)
+            else {}
+        )
+        stage = awaiting.get("current_stage") or awaiting.get("stage")
+        gate = awaiting.get("gate") or (current.current_agent if current is not None else None)
+        # The round counter lives in the DB, not in engine memory, so it is
+        # right across reloads and engine restarts.
+        feedback["round"] = await count_feedback_receipts(session, run_id, stage) + 1
+        feedback["stage"] = stage
+        feedback["gate"] = gate
         result = await session.execute(
             update(AgentRun)
             .where(AgentRun.id == run_id)
@@ -158,8 +172,58 @@ async def submit_gate_feedback(
         session.add(
             Message(project_id=project_id, run_id=run_id, agent="user", role="user", content=text)
         )
+        # The receipt is written now, so in the timeline it sits before the redo
+        # output; the engine updates this same row as the state moves on.
+        session.add(
+            Message(
+                project_id=project_id,
+                run_id=run_id,
+                agent=str(gate or "system"),
+                role=FEEDBACK_RECEIPT_ROLE,
+                summary=feedback["id"],
+                content=json.dumps(
+                    {
+                        "id": feedback["id"],
+                        "round": feedback["round"],
+                        "state": "received",
+                        "content": text,
+                        "reason": None,
+                        "gate": gate,
+                        "stage": stage,
+                        "entity_type": feedback["entity_type"],
+                        "entity_ids": ids,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+        )
         await session.commit()
     return feedback
+
+
+FEEDBACK_RECEIPT_ROLE = "feedback_receipt"
+
+
+async def count_feedback_receipts(session, run_id: int, stage: str | None) -> int:
+    """How many "request changes" rounds this run already had at ``stage``."""
+    from app.models.message import Message
+
+    rows = (
+        await session.execute(
+            select(Message.content)
+            .where(Message.run_id == run_id)
+            .where(Message.role == FEEDBACK_RECEIPT_ROLE)
+        )
+    ).scalars()
+    count = 0
+    for raw in rows:
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(data, dict) and (stage is None or data.get("stage") == stage):
+            count += 1
+    return count
 
 
 async def approve_gate(run_id: int, *, project_id: int) -> None:

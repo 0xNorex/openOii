@@ -303,6 +303,46 @@ class CancelRunResponse(BaseModel):
     run_ids: list[int] = Field(default_factory=list)
 
 
+class PreviousVersionRead(BaseModel):
+    """The version a full regenerate replaced, kept on that run."""
+
+    run_id: int
+    run_status: str
+    captured_at: str | None = None
+    video_url: str | None = None
+    character_count: int = 0
+    shot_count: int = 0
+    restorable: bool = False
+    restored_at: str | None = None
+
+
+class RegenerateEstimateRead(BaseModel):
+    seconds_low: int
+    seconds_high: int
+    text_calls: int
+    image_calls: int
+    video_calls: int
+    basis: Literal["history", "heuristic"]
+
+
+class RegeneratePlanRead(BaseModel):
+    """What 重新生成 will redo, roughly how long and how many model calls."""
+
+    project_id: int
+    has_content: bool
+    character_count: int
+    shot_count: int
+    has_final_video: bool
+    stages: list[str]
+    estimate: RegenerateEstimateRead
+    previous_version: PreviousVersionRead | None = None
+
+
+class RestoreVersionResponse(BaseModel):
+    run_id: int
+    restored: bool
+
+
 class FeedbackAcceptedResponse(BaseModel):
     """反馈已受理；run_id 是本次反馈触发的 run。"""
 
@@ -386,6 +426,8 @@ class GateConfirmAcceptedResponse(BaseModel):
 class GateFeedbackAcceptedResponse(BaseModel):
     run_id: int
     feedback_id: str
+    # Round number at this gate, counted from the persisted receipts.
+    round: int | None = None
     status: Literal["accepted"] = "accepted"
 
 
