@@ -292,7 +292,7 @@ export function SettingsModal() {
 												border border-line-strong transition-colors duration-fast
                         ${
 													isActive
-														? "bg-info text-info-content"
+														? "bg-primary text-primary-content"
 														: "bg-paper-200 hover:bg-paper-300"
 												}
                       `}
@@ -302,7 +302,7 @@ export function SettingsModal() {
 											<span
 												className={`
                         rounded-sm px-1 py-0.5 text-xs tabular-nums
-                        ${isActive ? "bg-info-content/20" : "bg-paper-300"}
+                        ${isActive ? "bg-primary-content/20" : "bg-paper-300"}
                       `}
 											>
 												{section.items.length}
