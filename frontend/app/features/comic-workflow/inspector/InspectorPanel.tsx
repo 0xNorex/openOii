@@ -10,6 +10,8 @@ interface InspectorPanelProps {
 	selectedNode: ComicWorkflowNode | null;
 	selectedNodeIds?: string[];
 	structureLocked: boolean;
+	/** 运行停在审批门（此时 structureLocked 也为真） */
+	atGate?: boolean;
 	universeId?: number | null;
 	/** 画布不承载 Brief；未选中时显示项目视图（Brief + 宇宙时间线）。 */
 	briefNode?: ComicWorkflowNode | null;
@@ -26,6 +28,7 @@ export function InspectorPanel({
 	selectedNode,
 	selectedNodeIds = [],
 	structureLocked,
+	atGate = false,
 	universeId = null,
 	briefNode = null,
 	open,
@@ -80,6 +83,7 @@ export function InspectorPanel({
 					selectedNode={activeNode}
 					selectedNodeIds={selectedNodeIds}
 					structureLocked={structureLocked}
+					atGate={atGate}
 					universeId={universeId}
 				/>
 			</div>

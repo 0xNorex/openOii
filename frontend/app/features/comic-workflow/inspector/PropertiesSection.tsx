@@ -13,11 +13,15 @@ export function PropertiesSection({
 	projectId,
 	node,
 	structureLocked,
+	atGate = false,
 }: {
 	projectId: number;
 	node: ComicWorkflowNode;
 	structureLocked: boolean;
+	/** 停在审批门：角色和分镜的属性可以改（这正是审的时候），项目简报不动 */
+	atGate?: boolean;
 }) {
+	const entityLocked = structureLocked && !atGate;
 	if (node.kind === "brief") {
 		return (
 			<ProjectDraftForm
@@ -29,11 +33,11 @@ export function PropertiesSection({
 	}
 	if (node.kind === "character") {
 		return (
-			<CharacterDraftForm character={node.character} disabled={structureLocked} />
+			<CharacterDraftForm character={node.character} disabled={entityLocked} />
 		);
 	}
 	if (node.kind === "shot") {
-		return <ShotDraftForm shot={node.shot} disabled={structureLocked} />;
+		return <ShotDraftForm shot={node.shot} disabled={entityLocked} />;
 	}
 	return (
 		<div className="space-y-3 text-sm text-ink-muted">

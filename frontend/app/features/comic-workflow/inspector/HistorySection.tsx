@@ -1,6 +1,7 @@
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import type { ComicWorkflowNode } from "../graph/types";
-import { ActionButton, ActionStack, FieldList, reviewLabel } from "./fields";
+import { ActionButton, ActionStack, FieldList } from "./fields";
+import { nodeStatusLabel } from "../canvas/WorkflowCards";
 
 function formatTime(value: string | null): string {
 	if (!value) return "未批准";
@@ -18,7 +19,7 @@ export function HistorySection({ node }: { node: ComicWorkflowNode }) {
 					items={[
 						// approval_version 只数批准次数；生成出来的 v1…vN 在「对比版本」里，两套编号不混用
 						["批准次数", `${entity.approval_version} 次`],
-						["审阅状态", reviewLabel(entity.approval_state)],
+						["状态", nodeStatusLabel(node.status)],
 						["批准时间", formatTime(entity.approved_at)],
 					]}
 				/>

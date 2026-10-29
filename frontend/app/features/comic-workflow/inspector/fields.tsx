@@ -18,7 +18,7 @@ export function FieldList({ items }: { items: Array<[string, string | number]> }
 					key={label}
 					className="flex items-start justify-between gap-3 border-b border-line pb-1.5 text-sm"
 				>
-					<span className="label text-ink-muted">
+					<span className="label shrink-0 whitespace-nowrap text-ink-muted">
 						{label}
 					</span>
 					<span className="min-w-0 text-right text-ink-muted">{value}</span>
@@ -32,6 +32,24 @@ export function ActionStack({ children }: { children: ReactNode }) {
 	return <div className="space-y-1.5">{children}</div>;
 }
 
+/**
+ * 写操作为什么不能点。运行中整体锁；停在审批门时只锁重做（它会另起一个运行），
+ * 并告诉用户这时该怎么改：提修改意见，或直接改属性。
+ */
+export function LockNotice({ atGate, what = "结构写入操作" }: { atGate: boolean; what?: string }) {
+	return (
+		<div className="rounded-md border border-info/30 bg-info-bg px-2 py-1.5 text-xs leading-relaxed text-info-fg" role="note">
+			{atGate
+				? "正在等你确认这一步：要改结果，选中卡片后在下方输入框提修改意见；属性可以直接改，单格重做在确认后可用。"
+				: `生成运行中，${what}已锁定。`}
+		</div>
+	);
+}
+
+export function lockReason(atGate: boolean): string {
+	return atGate ? "审批门待确认：请用修改意见，确认后可单独重做" : "生成运行中，暂不可用";
+}
+
 export function ActionButton({
 	icon,
 	label,
@@ -40,6 +58,7 @@ export function ActionButton({
 	danger,
 	primary,
 	onClick,
+	disabledReason,
 }: {
 	icon: Parameters<typeof SvgIcon>[0]["name"];
 	label: string;
@@ -48,8 +67,11 @@ export function ActionButton({
 	danger?: boolean;
 	primary?: boolean;
 	onClick: () => void;
+	/** 禁用时悬停看到的原因（禁用按钮收不到 hover，挂在外层） */
+	disabledReason?: string;
 }) {
 	return (
+		<span className="block" title={disabled ? disabledReason : undefined}>
 		<Button
 			// 危险操作用红字的安静按钮（填充红底时红字会看不见）
 			variant={primary && !danger ? "primary" : "ghost"}
@@ -62,6 +84,7 @@ export function ActionButton({
 			<SvgIcon name={icon} size={12} />
 			{label}
 		</Button>
+		</span>
 	);
 }
 

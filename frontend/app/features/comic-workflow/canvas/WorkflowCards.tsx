@@ -44,6 +44,11 @@ const STATUS_COPY: Record<WorkflowNodeStatus, { label: string; cls: string }> = 
 	ready: { label: "可用", cls: "bg-success/15 text-success-fg" },
 };
 
+/** 卡片、Inspector 共用的状态词：同一张卡在两处叫法一致 */
+export function nodeStatusLabel(status: WorkflowNodeStatus): string {
+	return STATUS_COPY[status].label;
+}
+
 function stopCanvasPointer(e: React.PointerEvent<HTMLElement>) {
 	e.stopPropagation();
 }

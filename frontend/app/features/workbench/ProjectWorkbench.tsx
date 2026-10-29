@@ -602,6 +602,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								selectedNode={selectedWorkflowNode}
 								selectedNodeIds={selectedNodeIds}
 								structureLocked={hasActiveRun || runAwaitingConfirm}
+								atGate={runAwaitingConfirm}
 								universeId={project?.universe_id ?? null}
 								briefNode={briefNode}
 								open={inspectorOpen}

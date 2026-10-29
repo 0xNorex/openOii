@@ -6,7 +6,7 @@ import { removeCharacterFromCache, removeShotFromCache, upsertCharacterInCache, 
 import { toast } from "~/utils/toast";
 import type { ArtifactVersion } from "~/types";
 import type { ComicWorkflowNode } from "../graph/types";
-import { ActionButton, ActionStack, errorMessage } from "./fields";
+import { ActionButton, ActionStack, errorMessage, LockNotice, lockReason } from "./fields";
 import { MultiShotActions } from "./MultiShotActions";
 
 /** 生成：批准、重做、资产与宇宙同步、删除。 */
@@ -14,6 +14,7 @@ export function GenerationSection({
 	projectId,
 	node,
 	structureLocked,
+	atGate = false,
 	universeId = null,
 	multiShotIds = [],
 	compact = false,
@@ -21,6 +22,8 @@ export function GenerationSection({
 	projectId: number;
 	node: ComicWorkflowNode;
 	structureLocked: boolean;
+	/** 停在审批门：锁定说明改成"该怎么改" */
+	atGate?: boolean;
 	universeId?: number | null;
 	multiShotIds?: number[];
 	/** 右键菜单里用：省掉说明文字 */
@@ -193,12 +196,8 @@ export function GenerationSection({
 
 	return (
 		<ActionStack>
-			{structureLocked ? (
-				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
-					生成运行中，结构写入操作已锁定。
-				</div>
-			) : null}
-			{shotCellLabel && !compact ? (
+			{structureLocked ? <LockNotice atGate={atGate} /> : null}
+			{shotCellLabel && !compact && !structureLocked ? (
 				<div className="rounded-md border border-info/30 bg-info/10 px-2 py-1.5 text-xs leading-relaxed text-ink-muted">
 					<strong className="text-info-fg">{shotCellLabel}</strong>
 					{" · "}
@@ -209,7 +208,7 @@ export function GenerationSection({
 				icon="check"
 				label={node.status === "approved" ? "已批准" : "批准此节点"}
 				primary
-				disabled={writeDisabled || node.status === "approved"}
+				disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled || node.status === "approved"}
 				loading={busy === "approve"}
 				onClick={approve}
 			/>
@@ -218,14 +217,14 @@ export function GenerationSection({
 					<ActionButton
 						icon="refresh-cw"
 						label={`重做首帧 · ${shotCellLabel}`}
-						disabled={writeDisabled}
+						disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 						loading={busy === "regenerate"}
 						onClick={() => regenerate("image")}
 					/>
 					<ActionButton
 						icon="play"
 						label={`重做视频 · ${shotCellLabel}`}
-						disabled={writeDisabled}
+						disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 						loading={busy === "regenerate-video"}
 						onClick={() => regenerate("video")}
 					/>
@@ -235,7 +234,7 @@ export function GenerationSection({
 					<ActionButton
 						icon="refresh-cw"
 						label="重新生成当前角色"
-						disabled={writeDisabled}
+						disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 						loading={busy === "regenerate"}
 						onClick={() => regenerate("image")}
 					/>
@@ -244,14 +243,14 @@ export function GenerationSection({
 							<ActionButton
 								icon="star"
 								label="提升到宇宙共享角色"
-								disabled={writeDisabled}
+								disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 								loading={busy === "promote"}
 								onClick={promoteToUniverse}
 							/>
 							<ActionButton
 								icon="refresh-cw"
 								label="同步变更回宇宙"
-								disabled={writeDisabled}
+								disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 								loading={busy === "sync"}
 								onClick={syncToUniverse}
 							/>
@@ -262,14 +261,14 @@ export function GenerationSection({
 			<ActionButton
 				icon="clock-3"
 				label="换回上一版"
-				disabled={writeDisabled}
+				disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 				loading={busy === "previous"}
 				onClick={swapToPrevious}
 			/>
 			<ActionButton
 				icon="archive"
 				label="保存到资产库"
-				disabled={writeDisabled}
+				disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 				loading={busy === "asset"}
 				onClick={addToAssets}
 			/>
@@ -278,7 +277,7 @@ export function GenerationSection({
 					icon="trash-2"
 					label="删除"
 					danger
-					disabled={writeDisabled}
+					disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 					loading={busy === "delete"}
 					onClick={deleteNode}
 				/>

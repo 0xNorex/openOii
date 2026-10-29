@@ -86,10 +86,34 @@ describe("WorkflowInspector", () => {
 		for (const name of ["选区", "属性", "生成", "历史"]) {
 			expect(screen.getByRole("button", { name })).toBeInTheDocument();
 		}
-		expect(screen.getByText("一致性特征")).toBeInTheDocument();
+		// 和卡片同一个词：卡片是「待确认」，这里也是
+		expect(screen.getByText("待确认")).toBeInTheDocument();
+		expect(screen.queryByText("审阅状态")).toBeNull();
 
 		await user.click(screen.getByRole("button", { name: "属性" }));
 		expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
+	});
+
+	it("at a gate lets you edit properties, and says how to change results instead of a bare lock", async () => {
+		const user = userEvent.setup();
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked atGate />);
+
+		await user.click(screen.getByRole("button", { name: "生成" }));
+		expect(screen.getByRole("note")).toHaveTextContent("提修改意见");
+		expect(screen.queryByText(/结构写入操作已锁定/)).toBeNull();
+		const redo = screen.getByRole("button", { name: "重新生成当前角色" });
+		expect(redo).toBeDisabled();
+		expect(redo.parentElement).toHaveAttribute("title", expect.stringContaining("确认后可单独重做"));
+
+		await user.click(screen.getByRole("button", { name: "属性" }));
+		expect(screen.getByRole("button", { name: "保存" })).not.toBeDisabled();
+	});
+
+	it("while running, properties stay locked", async () => {
+		const user = userEvent.setup();
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked />);
+		await user.click(screen.getByRole("button", { name: "生成" }));
+		expect(screen.getByRole("note")).toHaveTextContent("生成运行中");
 	});
 
 	it("opens the version compare drawer for the selection from 历史", async () => {

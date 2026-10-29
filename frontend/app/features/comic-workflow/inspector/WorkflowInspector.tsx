@@ -16,6 +16,7 @@ interface WorkflowInspectorProps {
 	selectedNode: ComicWorkflowNode | null;
 	selectedNodeIds?: string[];
 	structureLocked: boolean;
+	atGate?: boolean;
 	universeId?: number | null;
 }
 
@@ -31,6 +32,7 @@ export function WorkflowInspector({
 	selectedNode,
 	selectedNodeIds = [],
 	structureLocked,
+	atGate = false,
 	universeId = null,
 }: WorkflowInspectorProps) {
 	const [activeTab, setActiveTab] = useState<InspectorTab>("selection");
@@ -61,7 +63,7 @@ export function WorkflowInspector({
 			<MultiShotActions
 				projectId={projectId}
 				shotIds={multiShotIds}
-				structureLocked={structureLocked}
+				structureLocked={structureLocked} atGate={atGate}
 			/>
 		);
 	}
@@ -93,7 +95,7 @@ export function WorkflowInspector({
 						}`}
 						onClick={() => setActiveTab(tab)}
 					>
-						{TAB_LABELS[tab]}
+						{tab === "selection" && selectedNode.kind === "brief" ? "项目" : TAB_LABELS[tab]}
 					</PlainButton>
 				))}
 			</div>
@@ -106,14 +108,14 @@ export function WorkflowInspector({
 					<PropertiesSection
 						projectId={projectId}
 						node={selectedNode}
-						structureLocked={structureLocked}
+						structureLocked={structureLocked} atGate={atGate}
 					/>
 				) : null}
 				{activeTab === "generation" ? (
 					<GenerationSection
 						projectId={projectId}
 						node={selectedNode}
-						structureLocked={structureLocked}
+						structureLocked={structureLocked} atGate={atGate}
 						universeId={universeId}
 						multiShotIds={multiShotIds}
 					/>

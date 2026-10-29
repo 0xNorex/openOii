@@ -2,17 +2,20 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { shotsApi } from "~/services/api";
 import { toast } from "~/utils/toast";
-import { ActionButton, errorMessage } from "./fields";
+import { ActionButton, errorMessage, LockNotice, lockReason } from "./fields";
 
 /** 多选分镜：批量重做。 */
 export function MultiShotActions({
 	projectId,
 	shotIds,
 	structureLocked,
+	atGate = false,
 }: {
 	projectId: number;
 	shotIds: number[];
 	structureLocked: boolean;
+	/** 停在审批门：锁定说明改成"该怎么改" */
+	atGate?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const [busy, setBusy] = useState<string | null>(null);
@@ -50,23 +53,19 @@ export function MultiShotActions({
 				批量只动选中格 · 不改其他分镜
 			</p>
 			<div className="mt-2 space-y-1.5">
-				{structureLocked ? (
-					<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
-						生成运行中，批量操作已锁定。
-					</div>
-				) : null}
+				{structureLocked ? <LockNotice atGate={atGate} what="批量操作" /> : null}
 				<ActionButton
 					icon="refresh-cw"
 					label={`重做首帧 · ${shotIds.length} 格`}
 					primary
-					disabled={writeDisabled}
+					disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 					loading={busy === "image"}
 					onClick={() => batchRegen("image")}
 				/>
 				<ActionButton
 					icon="play"
 					label={`重做视频 · ${shotIds.length} 格`}
-					disabled={writeDisabled}
+					disabledReason={structureLocked ? lockReason(atGate) : undefined} disabled={writeDisabled}
 					loading={busy === "video"}
 					onClick={() => batchRegen("video")}
 				/>
