@@ -297,3 +297,30 @@ test("the stream folds into its running step, moves progress, and hides bare sep
 	await expect(row).toHaveCount(0);
 	await expect(timeline).toContainText("大纲 · 进行中");
 });
+
+test("the timeline keeps only what happened: no stale 正在…, no repeated thinking, warnings with an icon and no ids", async ({ page }) => {
+	const state = await setup(page);
+	await open(page);
+	await startRun(page, state);
+	const message = (agent: string, role: string, content: string, extra: Record<string, unknown> = {}) => ({
+		type: "run_message",
+		data: { agent, role, content, isLoading: false, project_id: 7, run_id: 901, ...extra },
+	});
+	await dispatch(page, message("outline", "step", "生成故事大纲"));
+	await dispatch(page, message("outline", "assistant", "正在生成故事大纲…"));
+	await dispatch(page, message("outline", "thinking", "大纲已完成，等待角色设定…", { phase: "decision" }));
+	await dispatch(page, message("outline", "thinking", "大纲已完成，等待角色设定…"));
+	await dispatch(page, message("outline", "assistant", "大纲概要：雨天的纸船"));
+	await dispatch(page, message("critic", "assistant", "⚠️ 分镜 #76 未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。"));
+
+	const timeline = page.getByRole("list", { name: "活动时间线" });
+	await expect(timeline).toContainText("大纲概要：雨天的纸船");
+	await expect(timeline).not.toContainText("正在生成故事大纲…");
+	await expect(timeline).toContainText("1 项细节");
+	const warning = timeline.locator("[data-activity='warning']");
+	await expect(warning).toHaveCount(1);
+	await expect(warning).toContainText("提醒");
+	await expect(warning.locator("svg")).toHaveCount(1);
+	await expect(timeline).not.toContainText("⚠");
+	await expect(timeline).not.toContainText("#76");
+});
