@@ -95,6 +95,15 @@ export function setFeedbackReceipt(projectId: number, next: FeedbackReceipt | nu
 			});
 		}
 	}
+	if (next) {
+		// 同一张回执已经归档过（例如恢复运行时先清空、再回到同一闸门）：归档处也跟着更新
+		const id = `receipt_${next.id}`;
+		updateMessageFeed(projectId, (messages) =>
+			messages.some((msg) => msg.id === id)
+				? messages.map((msg) => (msg.id === id ? { ...msg, receipt: next } : msg))
+				: messages,
+		);
+	}
 	patchRunState(projectId, { feedbackReceipt: next });
 }
 

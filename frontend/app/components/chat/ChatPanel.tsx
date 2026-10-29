@@ -58,11 +58,14 @@ export function ChatPanel({
   }).data ?? EMPTY_MESSAGES;
 
   const entries = useMemo(() => {
-    // 当前闸门的回执排在最后；已经归档进消息流的同一张不重复
+    // 当前闸门的回执排在最后；已经归档进消息流的同一张就地换成最新状态，不重复
     const receiptId = feedbackReceipt ? `receipt_${feedbackReceipt.id}` : null;
-    const feed: AgentMessage[] =
-      feedbackReceipt && !messages.some((msg) => msg.id === receiptId)
-        ? [
+    let feed: AgentMessage[] = messages;
+    if (feedbackReceipt) {
+      const archived = messages.some((msg) => msg.id === receiptId);
+      feed = archived
+        ? messages.map((msg) => (msg.id === receiptId ? { ...msg, receipt: feedbackReceipt } : msg))
+        : [
             ...messages,
             {
               id: receiptId ?? undefined,
@@ -71,8 +74,8 @@ export function ChatPanel({
               content: feedbackReceipt.content,
               receipt: feedbackReceipt,
             },
-          ]
-        : messages;
+          ];
+    }
     const all = deriveActivityTimeline(feed, { running: isGenerating && !awaitingConfirm });
     return limit ? all.slice(-limit) : all;
   }, [messages, feedbackReceipt, isGenerating, awaitingConfirm, limit]);

@@ -56,6 +56,21 @@ describe("gate feedback projection", () => {
 		expect(readRunState(1).awaitingConfirm).toBe(true);
 	});
 
+	it("a resumed run that comes back with the same receipt updates the archived card", () => {
+		send("run_feedback", { run_id: 9, feedback_id: "fb3", round: 1, state: "regenerating", content: "远景", stage: "shots_approval" });
+		// resuming starts the run again, which archives the in-flight receipt
+		send("run_started", { run_id: 9, current_stage: "plan" });
+		send("run_awaiting_confirm", gate({
+			current_stage: "shots_approval",
+			stage: "shots_approval",
+			feedback: { id: "fb3", round: 1, state: "revised", content: "远景" },
+		}));
+		const archived = readMessageFeed(1).filter((msg) => msg.id === "receipt_fb3");
+		expect(archived).toHaveLength(1);
+		expect(archived[0]?.receipt?.state).toBe("revised");
+		expect(readRunState(1).feedbackReceipt?.state).toBe("revised");
+	});
+
 	it("approving archives the receipt into the activity feed", () => {
 		send("run_awaiting_confirm", gate({ feedback: { id: "fb1", round: 1, state: "revised", content: "更温暖" } }));
 		send("run_confirmed", { run_id: 9 });
