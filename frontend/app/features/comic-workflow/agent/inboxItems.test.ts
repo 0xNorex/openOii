@@ -55,6 +55,12 @@ describe("deriveInboxItems", () => {
 		expect(item).toMatchObject({ kind: "recoverable", resumable: false, detail: "这次运行无法接着跑，取消后可以重新生成" });
 	});
 
+	it("treats a control without available_actions as resumable", () => {
+		const { available_actions: _omit, ...legacy } = recoverable;
+		const [item] = deriveInboxItems({ ...base, recoveryControl: legacy as RecoveryControlRead });
+		expect(item).toMatchObject({ kind: "recoverable", resumable: true });
+	});
+
 	it("ignores an active (not recoverable) control", () => {
 		expect(deriveInboxItems({ ...base, recoveryControl: { ...recoverable, state: "active" } })).toEqual([]);
 	});

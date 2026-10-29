@@ -314,6 +314,7 @@ test("recovery card keeps plan_approval checkpoint as resume target", async ({ p
 			body: {
 				state: "recoverable",
 				detail: "运行停在审批节点，可继续恢复。",
+				available_actions: ["resume", "cancel"],
 				thread_id: "thread-plan-approval-7",
 				active_run: {
 					id: 2002,

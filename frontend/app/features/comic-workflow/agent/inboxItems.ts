@@ -50,7 +50,8 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		const summary = input.recoveryControl.recovery_summary;
 		const stage = stageTitle(summary?.current_stage) ?? "上次运行";
 		const kept = summary?.preserved_stages?.length ?? 0;
-		const resumable = input.recoveryControl.available_actions.includes("resume");
+		// 旧后端可能不带 available_actions：缺省时按可继续处理，不能让收件箱崩掉
+		const resumable = input.recoveryControl.available_actions?.includes("resume") !== false;
 		items.push({
 			kind: "recoverable",
 			id: "recoverable",
