@@ -70,7 +70,8 @@ function ProjectDraftForm({
 		setStory(project.story ?? "");
 	}, [project.id, project.title, project.story]);
 
-	const handleSave = async () => {
+	const handleSave = async (auto = false) => {
+		if (saving) return;
 		setSaving(true);
 		try {
 			const updated = await projectsApi.update(projectId, {
@@ -85,7 +86,7 @@ function ProjectDraftForm({
 			);
 			queryClient.invalidateQueries({ queryKey: ["project", projectId] });
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
-			toast.success({ title: "Brief", message: "已保存" });
+			toast.success({ title: "Brief", message: auto ? "已自动保存" : "已保存" });
 		} catch (error) {
 			toast.error({ title: "保存失败", message: errorMessage(error, "保存失败") });
 		} finally {
@@ -94,10 +95,14 @@ function ProjectDraftForm({
 	};
 
 	return (
-		<FormShell disabled={disabled}>
+		<FormShell
+			disabled={disabled}
+			dirty={title !== (project.title ?? "") || story !== (project.story ?? "")}
+			onAutoSave={() => handleSave(true)}
+		>
 			<TextInput label="标题" value={title} onChange={setTitle} />
 			<TextArea label="故事" value={story} onChange={setStory} rows={8} />
-			<SaveButton disabled={disabled} loading={saving} onClick={handleSave} />
+			<SaveButton disabled={disabled} loading={saving} onClick={() => handleSave()} />
 		</FormShell>
 	);
 }
@@ -110,11 +115,12 @@ function CharacterDraftForm({
 	disabled: boolean;
 }) {
 	const queryClient = useQueryClient();
-	const [draft, setDraft] = useState<CharacterUpdatePayload>({
+	const original: CharacterUpdatePayload = {
 		name: character.name,
 		description: character.description ?? "",
 		visual_notes: character.visual_notes ?? "",
-	});
+	};
+	const [draft, setDraft] = useState<CharacterUpdatePayload>(original);
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
@@ -125,7 +131,8 @@ function CharacterDraftForm({
 		});
 	}, [character.id, character.name, character.description, character.visual_notes]);
 
-	const handleSave = async () => {
+	const handleSave = async (auto = false) => {
+		if (saving) return;
 		setSaving(true);
 		try {
 			const updated = await charactersApi.update(character.id, {
@@ -136,7 +143,7 @@ function CharacterDraftForm({
 			});
 			upsertCharacterInCache(queryClient, character.project_id, updated);
 			queryClient.invalidateQueries({ queryKey: ["characters", character.project_id] });
-			toast.success({ title: "角色", message: "已保存" });
+			toast.success({ title: "角色", message: auto ? "已自动保存" : "已保存" });
 		} catch (error) {
 			toast.error({ title: "保存失败", message: errorMessage(error, "保存失败") });
 		} finally {
@@ -145,7 +152,11 @@ function CharacterDraftForm({
 	};
 
 	return (
-		<FormShell disabled={disabled}>
+		<FormShell
+			disabled={disabled}
+			dirty={isDirty(draft, original)}
+			onAutoSave={() => handleSave(true)}
+		>
 			<TextInput
 				label="名称"
 				value={draft.name ?? ""}
@@ -167,14 +178,14 @@ function CharacterDraftForm({
 				}
 				rows={4}
 			/>
-			<SaveButton disabled={disabled} loading={saving} onClick={handleSave} />
+			<SaveButton disabled={disabled} loading={saving} onClick={() => handleSave()} />
 		</FormShell>
 	);
 }
 
 function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 	const queryClient = useQueryClient();
-	const [draft, setDraft] = useState<ShotUpdatePayload>({
+	const original: ShotUpdatePayload = {
 		description: shot.description,
 		scene: shot.scene ?? "",
 		action: shot.action ?? "",
@@ -183,7 +194,8 @@ function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 		duration: shot.duration,
 		image_prompt: shot.image_prompt ?? "",
 		prompt: shot.prompt ?? "",
-	});
+	};
+	const [draft, setDraft] = useState<ShotUpdatePayload>(original);
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
@@ -209,7 +221,8 @@ function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 		shot.prompt,
 	]);
 
-	const handleSave = async () => {
+	const handleSave = async (auto = false) => {
+		if (saving) return;
 		setSaving(true);
 		try {
 			const updated = await shotsApi.update(shot.id, {
@@ -225,7 +238,7 @@ function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 			});
 			upsertShotInCache(queryClient, shot.project_id, updated);
 			queryClient.invalidateQueries({ queryKey: ["shots", shot.project_id] });
-			toast.success({ title: "镜头", message: "已保存" });
+			toast.success({ title: "镜头", message: auto ? "已自动保存" : "已保存" });
 		} catch (error) {
 			toast.error({ title: "保存失败", message: errorMessage(error, "保存失败") });
 		} finally {
@@ -234,7 +247,11 @@ function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 	};
 
 	return (
-		<FormShell disabled={disabled}>
+		<FormShell
+			disabled={disabled}
+			dirty={isDirty(draft, original)}
+			onAutoSave={() => handleSave(true)}
+		>
 			<TextArea
 				label="描述"
 				value={draft.description ?? ""}
@@ -291,7 +308,11 @@ function ShotDraftForm({ shot, disabled }: { shot: Shot; disabled: boolean }) {
 				onChange={(value) => setDraft((state) => ({ ...state, prompt: value }))}
 				rows={4}
 			/>
-			<SaveButton disabled={disabled} loading={saving} onClick={handleSave} />
+			<SaveButton disabled={disabled} loading={saving} onClick={() => handleSave()} />
 		</FormShell>
 	);
+}
+
+function isDirty<T extends object>(draft: T, original: T): boolean {
+	return (Object.keys(original) as (keyof T)[]).some((key) => draft[key] !== original[key]);
 }

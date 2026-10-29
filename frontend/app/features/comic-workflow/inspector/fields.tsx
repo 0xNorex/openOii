@@ -1,5 +1,5 @@
 /** 检查器各分区共用的小部件。 */
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Button } from "~/components/ui/Button";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { ApiError } from "~/types/errors";
@@ -65,21 +65,49 @@ export function ActionButton({
 	);
 }
 
+/**
+ * 表单外壳。dirty 时：焦点离开表单（点别的卡片、切页签）就自动保存；
+ * 关页面前浏览器会提示。像 Figma / Linear 一样，改了不会静默丢失。
+ */
 export function FormShell({
 	disabled,
 	children,
+	dirty = false,
+	onAutoSave,
 }: {
 	disabled: boolean;
 	children: ReactNode;
+	dirty?: boolean;
+	onAutoSave?: () => void;
 }) {
+	useEffect(() => {
+		if (!dirty || disabled) return;
+		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+		window.addEventListener("beforeunload", warn);
+		return () => window.removeEventListener("beforeunload", warn);
+	}, [dirty, disabled]);
+
 	return (
-		<fieldset className="space-y-3" disabled={disabled}>
+		<fieldset
+			className="space-y-3"
+			disabled={disabled}
+			onBlur={(event) => {
+				if (!dirty || disabled || !onAutoSave) return;
+				if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+				onAutoSave();
+			}}
+		>
 			{disabled ? (
 				<div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1.5 text-xs text-warning-fg">
 					生成运行中，保存操作已锁定。
 				</div>
 			) : null}
 			{children}
+			{dirty && !disabled ? (
+				<p className="m-0 text-xs text-ink-muted" role="status">
+					有未保存的修改，离开这张表单时会自动保存。
+				</p>
+			) : null}
 		</fieldset>
 	);
 }
