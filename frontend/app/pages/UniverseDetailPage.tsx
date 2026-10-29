@@ -10,15 +10,6 @@ import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Modal } from "~/components/ui/Modal";
 import { Select } from "~/components/ui/Select";
-import {
-	PlusIcon,
-	BookOpenIcon,
-	TrashIcon,
-	GlobeAltIcon,
-	PaintBrushIcon,
-	UserGroupIcon,
-	PencilSquareIcon,
-} from "@heroicons/react/24/outline";
 import { toast } from "~/utils/toast";
 import { ApiError } from "~/types/errors";
 import type { SharedCharacterRead, UniverseDetail } from "~/types";
@@ -26,6 +17,7 @@ import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
 import { TopBar } from "~/components/layout/TopBar";
 import { IconButton } from "../components/ui/IconButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export function UniverseDetailPage() {
 	const { universeId } = useParams<{ universeId: string }>();
@@ -249,12 +241,12 @@ export function UniverseDetailPage() {
 								← 列表
 							</Link>
 							<Button size="sm" variant="ghost" onClick={openEdit}>
-								<PencilSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
+								<SvgIcon name="pencil" size={14} />
 								编辑
 							</Button>
 							<Link to={createChapterHref}>
 								<Button size="sm">
-									<PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="plus" size={14} />
 									新建章节
 								</Button>
 							</Link>
@@ -274,7 +266,7 @@ export function UniverseDetailPage() {
 						{u.world_setting ? (
 							<DeskSection
 								title="世界观设定"
-								icon={<GlobeAltIcon className="h-4 w-4" aria-hidden="true" />}
+								icon={<SvgIcon name="globe" size={16} />}
 							>
 								<p className="m-0 whitespace-pre-wrap text-sm text-ink-muted">
 									{u.world_setting}
@@ -285,7 +277,7 @@ export function UniverseDetailPage() {
 						{u.style_rules ? (
 							<DeskSection
 								title="统一风格规则"
-								icon={<PaintBrushIcon className="h-4 w-4" aria-hidden="true" />}
+								icon={<SvgIcon name="brush" size={16} />}
 							>
 								<p className="m-0 whitespace-pre-wrap text-sm text-ink-muted">
 									{u.style_rules}
@@ -299,7 +291,7 @@ export function UniverseDetailPage() {
 				<div className="grid items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
 					<DeskSection
 						title="章节列表"
-						icon={<BookOpenIcon className="h-4 w-4" aria-hidden="true" />}
+						icon={<SvgIcon name="book-open" size={16} />}
 						meta={`${u.chapters.length} 章节`}
 					>
 						{u.chapters.length === 0 ? (
@@ -358,7 +350,7 @@ export function UniverseDetailPage() {
 													removeProjectMutation.mutate(ch.project_id)
 												}
 											>
-												<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
+												<SvgIcon name="trash-2" size={14} />
 											</IconButton>
 										</div>
 									))}
@@ -368,7 +360,7 @@ export function UniverseDetailPage() {
 
 					<DeskSection
 						title="共享角色库"
-						icon={<UserGroupIcon className="h-4 w-4" aria-hidden="true" />}
+						icon={<SvgIcon name="group" size={16} />}
 						meta={`${u.shared_characters.length} 个`}
 						actions={
 							<>

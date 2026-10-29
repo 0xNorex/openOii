@@ -1,7 +1,7 @@
-import { InformationCircleIcon, WrenchScrewdriverIcon } from "@heroicons/react/24/outline";
 import type { ConfigItem, ConfigValue } from "~/types";
 import { ConfigField, type ConfigChangeHandler } from "./ConfigField";
 import { PROVIDER_TABS, TAB_CONFIG, itemsFor, type ProviderTab } from "./settingsTabs";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface SectionProps {
 	tab: string;
@@ -19,7 +19,7 @@ export function SettingsSection({ tab, items, formState, onChange }: SectionProp
 	return (
 		<div className="space-y-3">
 			<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
-				<InformationCircleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+				<SvgIcon name="info" size={14} className="mt-0.5 shrink-0" />
 				<span>{TAB_CONFIG[tab]?.desc}</span>
 			</div>
 			{provider ? (
@@ -29,7 +29,7 @@ export function SettingsSection({ tab, items, formState, onChange }: SectionProp
 					<div className="space-y-2">{items.map(field)}</div>
 					{items.length === 0 && (
 						<div className="py-8 text-center text-xs text-ink-muted">
-							<InformationCircleIcon className="mx-auto mb-1.5 h-8 w-8 opacity-50" />
+							<SvgIcon name="info" size={32} className="mx-auto mb-1.5 opacity-50" />
 							<p className="m-0">此分类暂无配置项</p>
 						</div>
 					)}
@@ -59,7 +59,6 @@ function ProviderBody({
 }) {
 	const provider = currentProvider(tab, formState);
 	const name = tab.providerKey.toUpperCase();
-	const Icon = tab.icon;
 	const hasProviderItem = items.some((i) => i.key.toLowerCase() === tab.providerKey);
 	return (
 		<>
@@ -99,11 +98,11 @@ function ProviderBody({
 				const groupItems = itemsFor(items, group.match);
 				if (groupItems.length === 0 && !group.note) return null;
 				const common = !group.providers;
-				const GroupIcon = common ? WrenchScrewdriverIcon : Icon;
+				const groupIcon = common ? "tools" : tab.icon;
 				return (
 					<div key={index} className="space-y-2">
 						<h4 className={`m-0 flex items-center gap-1.5 text-xs font-bold ${common ? "text-ink-muted" : "text-info-fg"}`}>
-							<GroupIcon className="h-3.5 w-3.5" />
+							<SvgIcon name={groupIcon} size={14} />
 							{typeof group.title === "function" ? group.title(provider) : group.title}
 						</h4>
 						<div className={`space-y-2 rounded-r-md py-1.5 pl-2.5 ${common ? "bg-paper-300/30" : "bg-info/5"}`}>

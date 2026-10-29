@@ -1,6 +1,6 @@
 import { useId, useRef } from "react";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Dialog } from "./Dialog";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -61,7 +61,7 @@ export function ConfirmModal({
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${styles.iconBg}`}
         >
-          <ExclamationTriangleIcon className={`h-5 w-5 ${styles.icon}`} />
+          <SvgIcon name="triangle-alert" size={20} className={`${styles.icon}`} />
         </div>
 
         <div className="min-w-0 flex-1">

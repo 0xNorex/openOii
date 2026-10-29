@@ -1,9 +1,9 @@
 import { MEDIA, imageReady, videoReady } from "~/components/ui/media";
-import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import { useMemo, type ReactNode } from "react";
 import { getStaticUrl } from "~/services/api";
 import type { Character, Shot } from "~/types";
 import { type StudioStatus, studioStatusDotClass } from "../state/deriveStudioStatus";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface MobileWorkbenchPreviewProps {
 	projectId: number;
@@ -83,7 +83,7 @@ export function MobileWorkbenchPreview({
 							rel="noopener"
 							className="btn-doodle inline-flex items-center justify-center gap-1 bg-primary px-2.5 py-1 text-sm text-primary-content hover:bg-primary-hover active:bg-primary-pressed"
 						>
-							<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							<SvgIcon name="download" size={14} />
 							下载成片
 						</a>
 					</div>

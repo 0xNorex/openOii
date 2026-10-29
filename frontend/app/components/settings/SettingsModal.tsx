@@ -5,12 +5,6 @@ import { configApi } from "~/services/api";
 import type { ConfigValue } from "~/types";
 import { Dialog } from "~/components/ui/Dialog";
 import { groupConfigs } from "~/utils/configGroups";
-import {
-	XMarkIcon,
-	Cog6ToothIcon,
-	InformationCircleIcon,
-	ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
 import { Button } from "../../components/ui/Button";
 import { IconButton } from "../../components/ui/IconButton";
 import { PlainButton } from "../../components/ui/PlainButton";
@@ -18,6 +12,7 @@ import { SettingsAlert, type AlertState } from "./SettingsAlert";
 import { SettingsSection } from "./SettingsSection";
 import { TAB_CONFIG } from "./settingsTabs";
 import { testOverrides, testServiceFor } from "./testConnection";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export function SettingsModal() {
 	const { isModalOpen, closeModal } = useSettingsStore();
@@ -232,7 +227,7 @@ export function SettingsModal() {
 						id="settings-modal-title"
 						className="flex items-center gap-1.5 text-md font-bold"
 					>
-						<Cog6ToothIcon className="h-5 w-5 text-info-fg" />
+						<SvgIcon name="settings" size={20} className="text-info-fg" />
 						<span>系统设置</span>
 						<span className="hidden font-mono text-xs font-normal uppercase text-ink-muted sm:inline">providers / storage / runtime</span>
 					</h3>
@@ -241,7 +236,7 @@ export function SettingsModal() {
 						aria-label="关闭设置"
 						title="关闭设置"
 					>
-						<XMarkIcon className="h-4 w-4" />
+						<SvgIcon name="x" size={16} />
 					</IconButton>
 				</div>
 
@@ -257,7 +252,7 @@ export function SettingsModal() {
 							role="alert"
 							className="alert-doodle bg-error/10 text-error-fg border border-error py-2 text-sm"
 						>
-							<ExclamationCircleIcon className="h-5 w-5" />
+							<SvgIcon name="warning-circle" size={20} />
 							<span>加载配置失败，请检查后端服务是否正常运行。</span>
 						</div>
 					</div>
@@ -297,7 +292,7 @@ export function SettingsModal() {
 												}
                       `}
 										>
-											{cfg ? <cfg.icon className="h-4 w-4" /> : null}
+											{cfg ? <SvgIcon name={cfg.icon} size={16} /> : null}
 											<span>{cfg?.title || section.title}</span>
 											<span
 												className={`
@@ -333,7 +328,7 @@ export function SettingsModal() {
 
 						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-paper-200 px-3 py-2 sm:px-4">
 							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-info-fg">
-								<InformationCircleIcon className="h-4 w-4 shrink-0" />
+								<SvgIcon name="info" size={16} className="shrink-0" />
 								<span className="truncate" id="settings-footer-hint">
 									{testServiceFor(activeTab)
 										? "大部分配置保存后立即生效，数据库/Redis 配置需重启"

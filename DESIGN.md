@@ -225,6 +225,20 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - Chinese text has no letter-spacing and no italics. `text-autospace` adds the CJK/Latin gap where the browser supports it.
 - **Browser surfaces:** a selection tinted with `primary`, a `primary` caret, thin ink scrollbars, `color-scheme` and a `theme-color` meta that follow the theme. See `docs/research/craft-direction.md`.
 
+### Icons
+
+- **One component:** `ui/SvgIcon` (`name`, `size`, `className`). It renders on a 24 grid with a 1.5 stroke, round caps and joins, and `currentColor`. Sizes stay on ICON_SCALE {8, 12, 14, 16, 20, 24, 32}; the contract test enforces both the scale and the ban on `@heroicons/*`.
+- **Generic glyphs:** Iconoir v7 (MIT, © Luca Burgio). The path data is copied into the registry, so there is no runtime dependency.
+- **Domain glyphs**, drawn for openOii:
+  - `shot`: a viewfinder with crop corners;
+  - `storyboard`: 2×2 panels with caption lines;
+  - `render`: a film frame with sprocket holes and play;
+  - `approve-gate`: posts, a beam and a check;
+  - `registration`, `crop` (also used for fit view) and `screentone`;
+  - `stop`, `layers` and `arrow-down-to-line`.
+- **Canvas card headers:** brief `lightbulb`, character `user`, shot `shot`, output `render`. The project switcher uses `storyboard`.
+- Icon sheet: `.devdata/screens/craft2-icon-sheet.png`.
+
 ## 4. Elevation
 
 - **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-line`, or `border-border-strong` for controls). 2px is reserved for selection, active-tab underlines and left accent bars. No shadow.

@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	DocumentTextIcon,
-	FaceFrownIcon,
-	FolderOpenIcon,
-	PlusIcon,
-	TrashIcon,
-} from "@heroicons/react/24/outline";
 import { TopBar } from "~/components/layout/TopBar";
 import { Button } from "~/components/ui/Button";
 import { EmptyState as SharedEmptyState } from "~/components/ui/EmptyState";
@@ -21,6 +14,7 @@ import { ApiError } from "~/types/errors";
 import type { Project } from "~/types";
 import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 import { IconButton } from "../components/ui/IconButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 
 function formatDate(value: string | null | undefined) {
@@ -165,7 +159,7 @@ export function ProjectsPage() {
 							</Button>
 							<Link to="/">
 								<Button size="sm">
-									<PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="plus" size={14} />
 									新建
 								</Button>
 							</Link>
@@ -199,7 +193,7 @@ export function ProjectsPage() {
 								onClick={handleBatchDeleteClick}
 								disabled={selectedCount === 0 || deleteMutation.isPending}
 							>
-								<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
+								<SvgIcon name="trash-2" size={14} />
 								批量删除（{selectedCount}）
 							</Button>
 						</div>
@@ -311,10 +305,7 @@ function ProjectRow({
 				className="min-w-0 py-0.5 pr-2"
 			>
 				<div className="flex min-w-0 items-center gap-1.5">
-					<FolderOpenIcon
-						className="h-3.5 w-3.5 shrink-0 text-primary"
-						aria-hidden="true"
-					/>
+					<SvgIcon name="folder" size={14} className="shrink-0 text-primary" />
 					{/* <sm 标题完整换行展示，sm+ 才单行截断 */}
 					<h2 className="m-0 break-words text-sm font-bold sm:truncate">
 						{project.title}
@@ -353,7 +344,7 @@ function ProjectRow({
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"
 			>
-				<TrashIcon className="h-4 w-4" aria-hidden="true" />
+				<SvgIcon name="trash-2" size={16} />
 			</IconButton>
 		</article>
 	);
@@ -373,7 +364,7 @@ function LoadingState() {
 function ErrorState() {
 	return (
 		<div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
-			<FaceFrownIcon className="h-6 w-6 text-error-fg" aria-hidden="true" />
+			<SvgIcon name="emoji-sad" size={24} className="text-error-fg" />
 			<div>
 				<p className="m-0 text-md font-bold text-error-fg">
 					加载失败，请重试
@@ -390,13 +381,13 @@ function EmptyState() {
 	return (
 		<div className="min-h-40 rounded-lg border border-dashed border-line bg-paper-200/35">
 			<SharedEmptyState
-				icon={<DocumentTextIcon className="h-5 w-5" aria-hidden="true" />}
+				icon={<SvgIcon name="page" size={20} />}
 				title="暂无项目"
 				description="开始创作你的第一个故事"
 				action={
 					<Link to="/">
 						<Button size="sm">
-							<PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							<SvgIcon name="plus" size={14} />
 							新建项目
 						</Button>
 					</Link>

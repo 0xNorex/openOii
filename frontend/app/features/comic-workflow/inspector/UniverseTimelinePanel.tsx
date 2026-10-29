@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GlobeAltIcon } from "@heroicons/react/24/outline";
 import { universesApi } from "~/services/api";
 import { EmptyState } from "~/components/ui/EmptyState";
 import { Button } from "~/components/ui/Button";
 import { toast } from "~/utils/toast";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface UniverseTimelinePanelProps {
 	universeId: number;
@@ -84,7 +84,7 @@ export function UniverseTimelinePanel({
 					universe
 				</p>
 				<div className="mt-0.5 flex items-center gap-1.5">
-					<GlobeAltIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+					<SvgIcon name="globe" size={14} className="text-primary" />
 					<h3 className="m-0 truncate text-sm font-bold">
 						{data.universe_name}
 					</h3>

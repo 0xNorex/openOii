@@ -8,15 +8,9 @@ import { ActivityTimeline } from "~/features/comic-workflow/agent/ActivityTimeli
 import { deriveActivityTimeline } from "~/features/comic-workflow/agent/activityTimeline";
 import { Button } from "~/components/ui/Button";
 import { AGENT_NAME_MAP, type WorkflowStage } from "~/types";
-import {
-  LightBulbIcon,
-  PaintBrushIcon,
-  RocketLaunchIcon,
-  StopIcon,
-  BoltIcon,
-} from "@heroicons/react/24/outline";
 import { getWorkflowStageInfo } from "~/utils/workflowStage";
 import type { AgentMessage } from "~/types";
+import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 
 /** Stable empty array so the query's fallback does not churn identity. */
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -29,11 +23,11 @@ interface ChatPanelProps {
 	limit?: number;
 }
 
-function getStageIcon(stage: WorkflowStage) {
-  if (stage === "compose") return RocketLaunchIcon;
-  if (stage === "render" || stage === "render_approval") return PaintBrushIcon;
-  if (stage === "plan" || stage === "plan_approval") return LightBulbIcon;
-  return LightBulbIcon;
+function getStageIcon(stage: WorkflowStage): IconName {
+  if (stage === "compose") return "render";
+  if (stage === "render" || stage === "render_approval") return "brush";
+  if (stage === "plan" || stage === "plan_approval") return "lightbulb";
+  return "lightbulb";
 }
 
 const agentNameMap = AGENT_NAME_MAP;
@@ -68,7 +62,7 @@ export function ChatPanel({
     title: "规划阶段",
     description: "正在生成剧本、角色与镜头规划",
   };
-  const StageIcon = getStageIcon(fallbackStage);
+  const stageIcon = getStageIcon(fallbackStage);
   const runMode = useEditorStore((s) => s.runMode);
   const isYolo = runMode === "yolo";
 
@@ -77,7 +71,7 @@ export function ChatPanel({
 		<div className="flex h-full flex-col bg-paper-100" data-shell="activity-feed">
       <div className="flex items-center justify-between border-b border-line px-2 py-1">
         <div className="flex min-w-0 items-center gap-1.5">
-          <StageIcon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <SvgIcon name={stageIcon} size={14} className="shrink-0 text-primary" />
           <span className="truncate text-xs font-bold">
             {info.title}
           </span>
@@ -92,7 +86,7 @@ export function ChatPanel({
             {agentNameMap[currentAgent || ""] || currentAgent || "处理中"}…
             {isYolo && (
 				<span className="inline-flex items-center gap-0.5 rounded-full border border-primary/30 px-1.5 text-xs text-primary">
-                <BoltIcon className="h-2 w-2" aria-hidden="true" /> 快速
+                <SvgIcon name="zap" size={8} /> 快速
               </span>
             )}
           </div>
@@ -103,7 +97,7 @@ export function ChatPanel({
             className="h-8 min-h-8 gap-1 px-2 text-error-fg hover:bg-error/10"
             aria-label="停止生成"
           >
-            <StopIcon className="h-3.5 w-3.5" aria-hidden="true" /> 停止
+            <SvgIcon name="stop" size={14} /> 停止
           </Button>
         </div>
       )}
@@ -111,7 +105,7 @@ export function ChatPanel({
       {entries.length === 0 && !isGenerating ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 text-center">
           <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
-            <StageIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+            <SvgIcon name={stageIcon} size={14} className="text-primary" />
           </div>
           <p className="m-0 text-xs text-ink-muted">
             暂无活动记录

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { configApi } from "~/services/api";
 import type { ConfigItem } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
@@ -103,9 +102,9 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 						{isRevealing ? (
 							<span className=" spinner-doodle h-3 w-3" />
 						) : isRevealed ? (
-							<EyeSlashIcon className="h-4 w-4" />
+							<SvgIcon name="eye-closed" size={16} />
 						) : (
-							<EyeIcon className="h-4 w-4" />
+							<SvgIcon name="eye" size={16} />
 						)}
 					</IconButton>
 				</div>

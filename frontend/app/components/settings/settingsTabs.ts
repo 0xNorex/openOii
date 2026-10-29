@@ -1,29 +1,22 @@
-import {
-	CircleStackIcon,
-	PhotoIcon,
-	SparklesIcon,
-	VideoCameraIcon,
-	WrenchScrewdriverIcon,
-} from "@heroicons/react/24/outline";
+import type { IconName } from "~/components/ui/SvgIcon";
 import type { ConfigItem } from "~/types";
 
-type Icon = typeof SparklesIcon;
 
-export const TAB_CONFIG: Record<string, { icon: Icon; title: string; desc: string }> = {
-	basic: { icon: WrenchScrewdriverIcon, title: "基础", desc: "应用名称、环境、日志级别等基础配置" },
-	database: { icon: CircleStackIcon, title: "数据库", desc: "数据库和 Redis 连接配置" },
+export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: string }> = {
+	basic: { icon: "tools", title: "基础", desc: "应用名称、环境、日志级别等基础配置" },
+	database: { icon: "database", title: "数据库", desc: "数据库和 Redis 连接配置" },
 	text: {
-		icon: SparklesIcon,
+		icon: "sparks",
 		title: "文本生成",
 		desc: "文本生成服务配置，支持 Anthropic、OpenAI 兼容接口和 Fake 本地测试",
 	},
 	image: {
-		icon: PhotoIcon,
+		icon: "image",
 		title: "图像服务",
 		desc: "图像生成服务配置，默认使用 ModelScope Z-Image-Turbo，也支持 OpenAI 兼容接口和 Fake 本地测试",
 	},
 	video: {
-		icon: VideoCameraIcon,
+		icon: "video-camera",
 		title: "视频服务",
 		desc: "视频生成服务配置，支持 OpenAI 兼容接口、豆包和 Fake 本地测试",
 	},
@@ -40,7 +33,7 @@ export interface ProviderGroup {
 export interface ProviderTab {
 	providerKey: string;
 	defaultProvider: string;
-	icon: Icon;
+	icon: IconName;
 	layout: "row" | "grid";
 	options: { value: string; title: string; desc: string }[];
 	groups: ProviderGroup[];
@@ -53,7 +46,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 	text: {
 		providerKey: "text_provider",
 		defaultProvider: "anthropic",
-		icon: SparklesIcon,
+		icon: "sparks",
 		layout: "row",
 		options: [
 			{ value: "anthropic", title: "Anthropic Claude", desc: "Anthropic 兼容接口，推荐使用" },
@@ -78,7 +71,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 	image: {
 		providerKey: "image_provider",
 		defaultProvider: "modelscope",
-		icon: PhotoIcon,
+		icon: "image",
 		layout: "grid",
 		options: [
 			{ value: "openai", title: "OpenAI 兼容", desc: "可用于 gpt-image-2 等兼容接口" },
@@ -103,7 +96,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 	video: {
 		providerKey: "video_provider",
 		defaultProvider: "openai",
-		icon: VideoCameraIcon,
+		icon: "video-camera",
 		layout: "row",
 		options: [
 			{ value: "doubao", title: "豆包视频", desc: "火山引擎 Ark API，国内推荐" },

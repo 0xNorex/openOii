@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { AdjustmentsHorizontalIcon, BoltIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { MessageInput } from "~/components/chat/MessageInput";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { useEditorStore } from "~/stores/editorStore";
 import { toast } from "~/utils/toast";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export interface PromptChip {
 	id: string;
@@ -102,9 +102,9 @@ export function PromptBar({
 					title={isAuto ? "自动确认：阶段自动通过" : "逐步确认：每个阶段由你确认"}
 				>
 					{isAuto ? (
-						<BoltIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+						<SvgIcon name="zap" size={14} className="text-primary" />
 					) : (
-						<AdjustmentsHorizontalIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						<SvgIcon name="sliders" size={14} />
 					)}
 					{isAuto ? "自动确认" : "逐步确认"}
 				</PlainButton>
@@ -124,7 +124,7 @@ export function PromptBar({
 									onClick={() => onRemoveSelection(chip.id)}
 									aria-label={`移除 ${chip.label}`}
 								>
-									<XMarkIcon className="h-3 w-3" aria-hidden="true" />
+									<SvgIcon name="x" size={12} />
 								</PlainButton>
 							) : null}
 						</span>

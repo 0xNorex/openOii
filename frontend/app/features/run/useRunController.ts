@@ -1,4 +1,3 @@
-import { StopIcon } from "@heroicons/react/24/outline";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -246,7 +245,7 @@ export function useRunController(args: {
 						agent: "system",
 						role: "system",
 						content: "生成已停止",
-						icon: StopIcon,
+						icon: "stop",
 						timestamp: new Date().toISOString(),
 					});
 				}

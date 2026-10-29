@@ -1,9 +1,9 @@
-import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
 import { useToastStore } from "~/stores/toast.store";
 import type { Toast as ToastType } from "~/types/errors";
 import { Button } from "../../components/ui/Button";
 import { IconButton } from "../../components/ui/IconButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface ToastProps {
   toast: ToastType;
@@ -46,7 +46,7 @@ export function Toast({ toast }: ToastProps) {
           className="rounded-full"
           aria-label="关闭"
         >
-          <XMarkIcon className="h-3.5 w-3.5" />
+          <SvgIcon name="x" size={14} />
         </IconButton>
       </div>
 

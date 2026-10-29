@@ -1,10 +1,3 @@
-import {
-	StopIcon,
-	SparklesIcon,
-	ClockIcon,
-	ArrowDownTrayIcon,
-	EllipsisHorizontalIcon,
-} from "@heroicons/react/24/outline";
 import { STAGE_PIPELINE, getPipelineStageIndex } from "~/utils/pipeline";
 import { IconButton } from "~/components/ui/IconButton";
 import { BUTTON_BASE, BUTTON_VARIANTS, Button } from "~/components/ui/Button";
@@ -14,6 +7,7 @@ import {
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { useEffect, useRef, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface StudioControlsProps {
 	isGenerating: boolean;
@@ -126,7 +120,7 @@ export function StudioControls({
 							title="版本 / 一致性 / 导出"
 							onClick={() => setToolsOpen((open) => !open)}
 						>
-							<EllipsisHorizontalIcon className="h-4 w-4" aria-hidden="true" />
+							<SvgIcon name="more-horiz" size={16} />
 						</IconButton>
 						{toolsOpen ? <ul
 							tabIndex={0}
@@ -142,7 +136,7 @@ export function StudioControls({
 										onClick={() => { setToolsOpen(false); runMenuAction(onOpenVersions); }}
 										aria-label="打开版本对比"
 									>
-										<ClockIcon className="h-3.5 w-3.5" aria-hidden="true" />
+										<SvgIcon name="clock-3" size={14} />
 										版本对比
 									</PlainButton>
 								</li>
@@ -156,7 +150,7 @@ export function StudioControls({
 										disabled={exportBusy || isGenerating}
 										aria-label="导出 Webtoon 长图"
 									>
-										<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+										<SvgIcon name="download" size={14} />
 										{exportBusy ? "导出中…" : "导出 Webtoon"}
 									</PlainButton>
 								</li>
@@ -173,7 +167,7 @@ export function StudioControls({
 						className={`${chromeBtn} text-error-fg`}
 						onClick={onCancel}
 					>
-						<StopIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						<SvgIcon name="stop" size={14} />
 						停止
 					</Button>
 				) : null}
@@ -185,7 +179,7 @@ export function StudioControls({
 						onClick={onGenerate}
 						disabled={generateDisabled}
 					>
-						<SparklesIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						<SvgIcon name="sparks" size={14} />
 						{generateLabel}
 					</Button>
 				) : null}
@@ -198,7 +192,7 @@ export function StudioControls({
 						rel="noopener"
 						className={`${BUTTON_BASE} ${BUTTON_VARIANTS.primary} h-8 touch-target-dense ${chromeBtn}`}
 					>
-						<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						<SvgIcon name="download" size={14} />
 						下载成片
 					</a>
 				) : null}

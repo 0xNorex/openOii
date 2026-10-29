@@ -1,10 +1,10 @@
 import { clsx } from "clsx";
-import { ChevronDoubleLeftIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { ChatPanel } from "~/components/chat/ChatPanel";
 import { IconButton } from "~/components/ui/IconButton";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { InboxPanel, type InboxActions } from "./InboxPanel";
 import type { InboxItem } from "./inboxItems";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export type AgentPanelTab = "activity" | "inbox";
 
@@ -45,7 +45,7 @@ export function AgentPanel({
 				aria-expanded={false}
 				data-shell="agent-panel"
 			>
-				<SparklesIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+				<SvgIcon name="sparks" size={14} className="text-primary" />
 				活动
 				{pendingCount > 0 ? (
 					<span className="rounded-full bg-primary px-1.5 text-primary-content">{pendingCount}</span>
@@ -94,7 +94,7 @@ export function AgentPanel({
 						aria-expanded
 						title="收起活动面板"
 					>
-						<ChevronDoubleLeftIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						<SvgIcon name="chevrons-left" size={14} />
 					</IconButton>
 			</div>
 			<div

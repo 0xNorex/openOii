@@ -1,4 +1,3 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useQueryClient } from "@tanstack/react-query";
 import {
 	lazy,
@@ -37,6 +36,7 @@ import { readRunState as readRunStateSnapshot } from "~/query/runState";
 import { AGENT_NAME_MAP, type VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 const WorkflowCanvas = lazy(() =>
 	import("~/features/comic-workflow/canvas/ComicWorkflowCanvas").then((m) => ({
@@ -385,10 +385,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	if (workspaceLoading) {
 		return (
 			<div className="page-shell items-center justify-center gap-3 bg-paper-100">
-				<ArrowPathIcon
-					className="h-5 w-5 animate-pulse text-ink-muted"
-					aria-hidden="true"
-				/>
+				<SvgIcon name="refresh-cw" size={20} className="animate-pulse text-ink-muted" />
 				<p className="font-mono text-sm text-ink-muted">正在加载项目…</p>
 			</div>
 		);
@@ -417,7 +414,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 								})
 							}
 						>
-							<ArrowPathIcon className="h-4 w-4" aria-hidden="true" />
+							<SvgIcon name="refresh-cw" size={16} />
 							重试
 						</Button>
 						<Link to="/">

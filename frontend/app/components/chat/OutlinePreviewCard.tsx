@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { Button } from "~/components/ui/Button";
 import type { StoryOutline } from "~/types";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface OutlinePreviewCardProps {
 	outline: StoryOutline;
@@ -80,7 +80,7 @@ export function OutlinePreviewCard({
 				className="gap-1 px-0"
 				onClick={() => setExpanded((v) => !v)}
 			>
-				{expanded ? <ChevronUpIcon className="w-3 h-3" /> : <ChevronDownIcon className="w-3 h-3" />}
+				{expanded ? <SvgIcon name="chevron-up" size={12} /> : <SvgIcon name="chevron-down" size={12} />}
 				{expanded ? "收起编辑" : "展开详细大纲"}
 			</Button>
 

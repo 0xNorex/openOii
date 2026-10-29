@@ -1,6 +1,6 @@
-import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { Button } from "~/components/ui/Button";
 import { Dialog } from "~/components/ui/Dialog";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export type AlertType = "success" | "error" | "warning";
 
@@ -28,12 +28,12 @@ export function SettingsAlert({
 	onDismiss: () => void;
 	onConfirm: () => void;
 }) {
-	const Icon = alert.type === "success" ? CheckCircleIcon : ExclamationCircleIcon;
+	const icon = alert.type === "success" ? "circle-check" : "warning-circle";
 	return (
 		<Dialog open={alert.show} onClose={onDismiss} labelledBy="settings-alert-title" className="max-w-md p-4">
 			<div className="flex items-start gap-2.5">
 				<div className={`shrink-0 ${TONE[alert.type]}`}>
-					<Icon className="h-6 w-6" />
+					<SvgIcon name={icon} size={24} />
 				</div>
 				<div className="min-w-0 flex-1">
 					<h3 id="settings-alert-title" className="mb-1 text-md font-bold">

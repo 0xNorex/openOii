@@ -1,16 +1,9 @@
 import type { ReactNode } from "react";
-import {
-	ArrowPathIcon,
-	CheckIcon,
-	ExclamationTriangleIcon,
-	PencilSquareIcon,
-	PlayIcon,
-	XMarkIcon,
-} from "@heroicons/react/24/outline";
 import { OutlinePreviewCard } from "~/components/chat/OutlinePreviewCard";
 import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
 import type { InboxItem } from "./inboxItems";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export interface InboxActions {
 	onConfirm: (feedback?: string) => void;
@@ -72,11 +65,11 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 							) : null}
 							<div className="flex gap-2">
 								<Button variant="primary" size="sm" className="flex-1" onClick={() => actions.onConfirm()}>
-									<CheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="check" size={14} />
 									确认继续
 								</Button>
 								<Button variant="secondary" size="sm" className="flex-1" onClick={actions.onRequestChanges}>
-									<PencilSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="pencil" size={14} />
 									提修改意见
 								</Button>
 							</div>
@@ -89,12 +82,12 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 							<div className="flex gap-2">
 								{item.resumable ? (
 									<Button variant="primary" size="sm" className="flex-1" onClick={actions.onResume}>
-										<PlayIcon className="h-3.5 w-3.5" aria-hidden="true" />
+										<SvgIcon name="play" size={14} />
 										继续
 									</Button>
 								) : null}
 								<Button variant="ghost" size="sm" className="flex-1" onClick={actions.onCancel}>
-									<XMarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="x" size={14} />
 									取消
 								</Button>
 							</div>
@@ -112,7 +105,7 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 											onClick={() => actions.onSelectShot(clip.shot_id)}
 											aria-label={`在画布上选中分镜 S${String(clip.order).padStart(2, "0")}`}
 										>
-											<ExclamationTriangleIcon className="h-3.5 w-3.5 shrink-0 text-error-fg" aria-hidden="true" />
+											<SvgIcon name="triangle-alert" size={14} className="shrink-0 text-error-fg" />
 											<span className="font-mono">S{String(clip.order).padStart(2, "0")}</span>
 											<span className="min-w-0 truncate text-ink-muted">{clip.reason}</span>
 										</PlainButton>
@@ -131,7 +124,7 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 							onClick={actions.onRetry}
 							disabled={actions.retryDisabled}
 						>
-							<ArrowPathIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							<SvgIcon name="refresh-cw" size={14} />
 							从失败阶段重试
 						</Button>
 					</Card>

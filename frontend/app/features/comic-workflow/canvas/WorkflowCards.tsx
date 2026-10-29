@@ -384,7 +384,7 @@ function CharacterCard({
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="star" compact />
+				<CardHeader node={node} icon="user" compact />
 				{node.character.description ? (
 					<p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
 						{node.character.description}
@@ -456,7 +456,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="clapperboard" compact />
+				<CardHeader node={node} icon="shot" compact />
 				<p className="m-0 mt-1 label-caps text-ink-muted">
 					格 {cell}
 				</p>
@@ -527,7 +527,7 @@ function OutputCard({
 
 	return (
 		<div className="flex h-full flex-col p-4">
-			<CardHeader node={node} icon="play-circle" />
+			<CardHeader node={node} icon="render" />
 
 			{/* 内联播放器：交付台上直接看，不用先开弹窗 */}
 			<div
@@ -639,7 +639,7 @@ function CardHeader({
 	compact = false,
 }: {
 	node: ComicWorkflowNode;
-	icon: "lightbulb" | "star" | "clapperboard" | "play-circle";
+	icon: "lightbulb" | "user" | "shot" | "render";
 	compact?: boolean;
 }) {
 	return (

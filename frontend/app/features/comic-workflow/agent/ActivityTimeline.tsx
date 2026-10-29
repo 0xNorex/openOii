@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { ArrowDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
 import type { ActivityEntry } from "./activityTimeline";
 import { formatDuration } from "./activityTimeline";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;
@@ -68,10 +68,7 @@ function EntryRow({ entry }: { entry: ActivityEntry }) {
 							onClick={() => setOpen((v) => !v)}
 							aria-expanded={expanded}
 						>
-							<ChevronRightIcon
-								className={clsx("h-3 w-3 transition-transform duration-fast", expanded && "rotate-90")}
-								aria-hidden="true"
-							/>
+							<SvgIcon name="chevron-right" size={12} className={clsx("transition-transform duration-fast", expanded && "rotate-90")} />
 							{entry.children.length} 项细节
 						</PlainButton>
 						{/* 常驻 DOM，用 grid-rows 展开；收起时 inert，读屏与 Tab 都跳过 */}
@@ -142,7 +139,7 @@ export function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
 						scrollToBottom();
 					}}
 				>
-					<ArrowDownIcon className="h-3.5 w-3.5" aria-hidden="true" />
+					<SvgIcon name="arrow-down" size={14} />
 					跳到最新
 				</Button>
 			)}

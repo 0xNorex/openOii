@@ -1,16 +1,8 @@
 import { useCallback, useState, type ReactNode } from "react";
-import {
-	ArchiveBoxIcon,
-	ArrowsPointingOutIcon,
-	CursorArrowRaysIcon,
-	HandRaisedIcon,
-	MagnifyingGlassMinusIcon,
-	MagnifyingGlassPlusIcon,
-	Squares2X2Icon,
-} from "@heroicons/react/24/outline";
 import { projectsApi } from "~/services/api";
 import { toast } from "~/utils/toast";
 import { Button } from "~/components/ui/Button";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface ComicCanvasToolbarProps {
 	projectId: number;
@@ -80,20 +72,20 @@ export function ComicCanvasToolbar({
 				label="选择工具"
 				onClick={() => controls.setTool("select")}
 			>
-				<CursorArrowRaysIcon className="h-4 w-4" />
+				<SvgIcon name="cursor" size={16} />
 			</ToolButton>
 			<ToolButton
 				active={controls.tool === "hand"}
 				label="抓手工具"
 				onClick={() => controls.setTool("hand")}
 			>
-				<HandRaisedIcon className="h-4 w-4" />
+				<SvgIcon name="hand" size={16} />
 			</ToolButton>
 
 			<Divider />
 
 			<ToolButton label="缩小" onClick={controls.zoomOut}>
-				<MagnifyingGlassMinusIcon className="h-4 w-4" />
+				<SvgIcon name="zoom-out" size={16} />
 			</ToolButton>
 			<Button
 				variant="ghost"
@@ -106,16 +98,16 @@ export function ComicCanvasToolbar({
 				{controls.zoomPercent}%
 			</Button>
 			<ToolButton label="放大" onClick={controls.zoomIn}>
-				<MagnifyingGlassPlusIcon className="h-4 w-4" />
+				<SvgIcon name="zoom-in" size={16} />
 			</ToolButton>
 			<ToolButton label="适应视图" onClick={controls.fit}>
-				<ArrowsPointingOutIcon className="h-4 w-4" />
+				<SvgIcon name="crop" size={16} />
 			</ToolButton>
 
 			<Divider />
 
 			<ToolButton label="整理画布" showLabel labelText="整理" onClick={onResetLayout}>
-				<Squares2X2Icon className="h-4 w-4" />
+				<SvgIcon name="view-grid" size={16} />
 			</ToolButton>
 			{onToggleSortMode ? (
 				<ToolButton
@@ -151,7 +143,7 @@ export function ComicCanvasToolbar({
 				<>
 					<Divider />
 					<ToolButton label="打开资产库" showLabel labelText="资产" onClick={onOpenAssets}>
-						<ArchiveBoxIcon className="h-4 w-4" />
+						<SvgIcon name="archive" size={16} />
 					</ToolButton>
 				</>
 			) : null}

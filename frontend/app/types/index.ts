@@ -1,5 +1,3 @@
-import type React from "react";
-
 export interface ProjectProviderEntry {
 	selected_key: string;
 	source: "project" | "default";
@@ -517,7 +515,7 @@ export interface AgentMessage {
 	role: string;
 	content: string;
 	summary?: string; // 摘要（用于确认环节显示）
-	icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+	icon?: import("~/components/ui/SvgIcon").IconName;
 	timestamp?: string;
 	progress?: number; // 0-1 之间的进度值
 	isLoading?: boolean; // 是否正在加载

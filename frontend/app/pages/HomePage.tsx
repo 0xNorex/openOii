@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi, universesApi } from "~/services/api";
 import { Button } from "~/components/ui/Button";
-import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { TopBar } from "~/components/layout/TopBar";
 import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
@@ -217,7 +216,7 @@ export function HomePage() {
 										disabled={!story.trim() || createMutation.isPending}
 										loading={createMutation.isPending}
 									>
-										{!createMutation.isPending ? <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" /> : null}
+										{!createMutation.isPending ? <SvgIcon name="send" size={16} /> : null}
 										开始创作
 									</Button>
 								</div>

@@ -1,6 +1,6 @@
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { clsx } from "clsx";
 import type { SelectHTMLAttributes } from "react";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 	density?: "compact" | "normal";
@@ -25,13 +25,7 @@ export function Select({
 					className,
 				)}
 			/>
-			<ChevronDownIcon
-				className={clsx(
-					"pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-ink-muted",
-					compact ? "h-3.5 w-3.5" : "h-4 w-4",
-				)}
-				aria-hidden="true"
-			/>
+			<SvgIcon name="chevron-down" size={compact ? 14 : 16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-ink-muted" />
 		</div>
 	);
 }

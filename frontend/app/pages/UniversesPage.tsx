@@ -8,12 +8,12 @@ import { DeskSection } from "~/components/layout/DeskSection";
 import { Input } from "~/components/ui/Input";
 import { Modal } from "~/components/ui/Modal";
 import { ConfirmModal } from "~/components/ui/ConfirmModal";
-import { GlobeAltIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { toast } from "~/utils/toast";
 import type { Universe } from "~/types";
 import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
 import { TopBar } from "~/components/layout/TopBar";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export function UniversesPage() {
 	const queryClient = useQueryClient();
@@ -91,7 +91,7 @@ export function UniversesPage() {
 					meta={isLoading ? "…" : `${universes.length} 个`}
 					actions={
 						<Button size="sm" onClick={() => setShowCreate(true)}>
-							<PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							<SvgIcon name="plus" size={14} />
 							创建
 						</Button>
 					}
@@ -100,7 +100,7 @@ export function UniversesPage() {
 
 				<DeskSection
 					title="全部宇宙"
-					icon={<GlobeAltIcon className="h-4 w-4" aria-hidden="true" />}
+					icon={<SvgIcon name="globe" size={16} />}
 					meta={isLoading || isError ? undefined : `${universes.length} 个`}
 				>
 					{isLoading && (
@@ -137,12 +137,12 @@ export function UniversesPage() {
 					{!isLoading && !isError && universes.length === 0 && (
 						<EmptyState
 							compact
-							icon={<GlobeAltIcon className="h-8 w-8" aria-hidden="true" />}
+							icon={<SvgIcon name="globe" size={32} />}
 							title="还没有 IP 宇宙"
 							description="创建第一个宇宙，开始跨项目故事"
 							action={
 								<Button size="sm" onClick={() => setShowCreate(true)}>
-									<PlusIcon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+									<SvgIcon name="plus" size={14} className="mr-1" />
 									创建第一个宇宙
 								</Button>
 							}

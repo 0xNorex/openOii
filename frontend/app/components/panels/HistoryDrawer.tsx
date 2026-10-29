@@ -290,7 +290,7 @@ export function HistoryDrawer({ open, onClose, onNavigate }: HistoryDrawerProps)
 					{!projects || projects.length === 0 ? (
 						<div className="py-8 text-center text-xs text-ink-muted">
 							<SvgIcon
-								name="clapperboard"
+								name="storyboard"
 								size={24}
 								className="mx-auto mb-2 text-ink-faint"
 							/>

@@ -3,7 +3,7 @@ import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import type { SharedCharacterRead } from "~/types";
 import { getStaticUrl } from "~/services/api";
-import { UserIcon } from "@heroicons/react/24/outline";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface SharedCharacterCardProps {
 	character: SharedCharacterRead;
@@ -41,7 +41,7 @@ export function SharedCharacterCard({
 					</div>
 				) : (
 					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-paper-200">
-						<UserIcon className="h-4 w-4 text-ink-faint" aria-hidden="true" />
+						<SvgIcon name="user" size={16} className="text-ink-faint" />
 					</div>
 				)}
 				<div className="min-w-0 flex-1">

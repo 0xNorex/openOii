@@ -1,15 +1,3 @@
-import {
-	Cog6ToothIcon,
-	FilmIcon,
-	PlusIcon,
-	ChevronDownIcon,
-	MoonIcon,
-	SunIcon,
-	SparklesIcon,
-	GlobeAltIcon,
-	HomeIcon,
-	RectangleStackIcon,
-} from "@heroicons/react/24/outline";
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +10,7 @@ import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 import { Button } from "~/components/ui/Button";
 import { clsx } from "clsx";
 import { PlainButton } from "../../components/ui/PlainButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface TopBarProps {
 	projectId?: number;
@@ -61,17 +50,11 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 					aria-expanded={open}
 					aria-haspopup="listbox"
 				>
-					<FilmIcon
-						className="h-3.5 w-3.5 flex-shrink-0 text-primary"
-						aria-hidden="true"
-					/>
+					<SvgIcon name="storyboard" size={14} className="flex-shrink-0 text-primary" />
 					<span className="min-w-0 truncate" title={currentTitle}>
 						{currentTitle}
 					</span>
-					<ChevronDownIcon
-						className={`h-3 w-3 flex-shrink-0 transition-transform duration-fast ${open ? "rotate-180" : ""}`}
-						aria-hidden="true"
-					/>
+					<SvgIcon name="chevron-down" size={12} className={`flex-shrink-0 transition-transform duration-fast ${open ? "rotate-180" : ""}`} />
 				</PlainButton>
 			</div>
 
@@ -86,7 +69,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 						onClick={() => setOpen(false)}
 						className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-muted transition-colors duration-fast hover:bg-paper-300"
 					>
-						<RectangleStackIcon className="h-3 w-3" aria-hidden="true" />
+						<SvgIcon name="projects" size={12} />
 						全部项目
 					</Link>
 					<div className="my-1 border-t border-line" />
@@ -120,7 +103,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 						onClick={() => setOpen(false)}
 						className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-primary transition-colors duration-fast hover:bg-paper-300"
 					>
-						<PlusIcon className="h-3 w-3" aria-hidden="true" />
+						<SvgIcon name="plus" size={12} />
 						新建项目
 					</Link>
 				</div>
@@ -159,7 +142,7 @@ function UniverseChip({ projectId }: { projectId: number }) {
 			className="touch-target-dense hidden max-w-44 items-center gap-1 truncate rounded-full border border-primary/25 bg-primary/10 px-2 text-xs font-bold text-primary transition-colors duration-fast hover:bg-primary/15 sm:inline-flex"
 			title={chapterTitle || universe?.name || "IP 宇宙"}
 		>
-			<SparklesIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+			<SvgIcon name="sparks" size={12} className="shrink-0" />
 			<span className="truncate">{label}</span>
 		</Link>
 	);
@@ -247,21 +230,21 @@ export function TopBar({ projectId, center }: TopBarProps) {
 						to="/"
 						label="创作"
 						active={homeActive}
-						icon={<HomeIcon className="h-3.5 w-3.5" aria-hidden="true" />}
+						icon={<SvgIcon name="home" size={14} />}
 					/>
 					<NavLink
 						to="/projects"
 						label="项目"
 						active={projectsActive && !homeActive}
 						icon={
-							<RectangleStackIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							<SvgIcon name="projects" size={14} />
 						}
 					/>
 					<NavLink
 						to="/universes"
 						label="宇宙"
 						active={universesActive}
-						icon={<GlobeAltIcon className="h-3.5 w-3.5" aria-hidden="true" />}
+						icon={<SvgIcon name="globe" size={14} />}
 					/>
 				</nav>
 			</div>
@@ -278,9 +261,9 @@ export function TopBar({ projectId, center }: TopBarProps) {
 					title={isDark ? "切换亮色" : "切换暗色"}
 				>
 					{isDark ? (
-						<SunIcon className="h-4 w-4" aria-hidden="true" />
+						<SvgIcon name="sun" size={16} />
 					) : (
-						<MoonIcon className="h-4 w-4" aria-hidden="true" />
+						<SvgIcon name="moon" size={16} />
 					)}
 				</Button>
 				<Button
@@ -291,7 +274,7 @@ export function TopBar({ projectId, center }: TopBarProps) {
 					title="设置"
 					aria-label="设置"
 				>
-					<Cog6ToothIcon className="h-4 w-4" aria-hidden="true" />
+					<SvgIcon name="settings" size={16} />
 				</Button>
 			</div>
 		</header>

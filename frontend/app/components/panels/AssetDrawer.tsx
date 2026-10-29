@@ -3,12 +3,11 @@ import { useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetsApi, getStaticUrl } from "~/services/api";
 import { Button } from "~/components/ui/Button";
-import { SvgIcon } from "~/components/ui/SvgIcon";
+import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import { ConfirmModal } from "~/components/ui/ConfirmModal";
 import { Dialog } from "~/components/ui/Dialog";
 import { toast } from "~/utils/toast";
 import type { Asset, AssetCreatePayload } from "~/types";
-import type { IconName } from "~/components/ui/SvgIcon";
 import { IconButton } from "../../components/ui/IconButton";
 import { PlainButton } from "../../components/ui/PlainButton";
 
@@ -17,7 +16,7 @@ type AssetType = "character" | "scene";
 const ASSET_TABS: { key: AssetType | "all"; label: string; icon: IconName }[] =
 	[
 		{ key: "all", label: "全部", icon: "layers" },
-		{ key: "character", label: "角色", icon: "star" },
+		{ key: "character", label: "角色", icon: "user" },
 		{ key: "scene", label: "场景", icon: "image" },
 	];
 

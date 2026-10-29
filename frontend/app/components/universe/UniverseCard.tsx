@@ -2,8 +2,8 @@ import { MEDIA, imageReady } from "~/components/ui/media";
 import { Link } from "react-router-dom";
 import { Card } from "~/components/ui/Card";
 import type { Universe } from "~/types";
-import { SparklesIcon, UsersIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { IconButton } from "../../components/ui/IconButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface UniverseCardProps {
 	universe: Universe;
@@ -41,7 +41,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 						</div>
 					) : (
 						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-line bg-paper-200 p-2">
-							<SparklesIcon className="h-6 w-6 text-primary" aria-hidden="true" />
+							<SvgIcon name="sparks" size={24} className="text-primary" />
 							<span className="label-caps text-ink-muted">universe / {universe.id}</span>
 						</div>
 					)}
@@ -66,11 +66,11 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 
 					<div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-ink-muted">
 						<span className="inline-flex items-center gap-1 rounded-full border border-line bg-paper-200 px-1.5 py-0.5 tabular-nums">
-							<SparklesIcon className="h-3 w-3" aria-hidden="true" />
+							<SvgIcon name="sparks" size={12} />
 							{universe.projects_count} 章节
 						</span>
 						<span className="inline-flex items-center gap-1 rounded-full border border-line bg-paper-200 px-1.5 py-0.5 tabular-nums">
-							<UsersIcon className="h-3 w-3" aria-hidden="true" />
+							<SvgIcon name="group" size={12} />
 							{universe.shared_characters_count} 角色
 						</span>
 					</div>
@@ -87,7 +87,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 				title="删除宇宙"
 				aria-label={`删除宇宙 ${universe.name}`}
 			>
-				<TrashIcon className="h-3.5 w-3.5" aria-hidden="true" />
+				<SvgIcon name="trash-2" size={14} />
 			</IconButton>
 		</div>
 	);

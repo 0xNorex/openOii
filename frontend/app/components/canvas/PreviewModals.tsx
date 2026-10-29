@@ -1,8 +1,8 @@
 import { Dialog } from "~/components/ui/Dialog";
-import { XMarkIcon } from "@heroicons/react/24/outline";
 import { Button } from "../../components/ui/Button";
 import { IconButton } from "../../components/ui/IconButton";
 import { PlainButton } from "../../components/ui/PlainButton";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface ImagePreviewModalProps {
   src: string;
@@ -23,7 +23,7 @@ export function ImagePreviewModal({ src, alt, onClose }: ImagePreviewModalProps)
         onClick={onClose}
         aria-label="关闭"
       >
-        <XMarkIcon className="w-5 h-5" aria-hidden="true" />
+        <SvgIcon name="x" size={20} />
       </IconButton>
     </Dialog>
   );
@@ -59,7 +59,7 @@ export function VideoPreviewModal({
         onClick={onClose}
         aria-label="关闭"
       >
-        <XMarkIcon className="w-5 h-5" aria-hidden="true" />
+        <SvgIcon name="x" size={20} />
       </IconButton>
       {showDownload && (
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between bg-neutral/80 rounded-lg px-4 py-3 border border-line">

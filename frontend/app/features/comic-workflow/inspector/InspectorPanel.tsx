@@ -1,9 +1,9 @@
-import { ChevronDoubleRightIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import { IconButton } from "~/components/ui/IconButton";
 import { PlainButton } from "~/components/ui/PlainButton";
 import type { ComicWorkflowNode } from "../graph/types";
 import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
 import { WorkflowInspector } from "./WorkflowInspector";
+import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface InspectorPanelProps {
 	projectId: number;
@@ -44,7 +44,7 @@ export function InspectorPanel({
 				aria-expanded={false}
 				data-shell="inspector-panel"
 			>
-				<Squares2X2Icon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+				<SvgIcon name="view-grid" size={14} className="text-primary" />
 				{hasSelection ? "检查器" : "项目"}
 			</PlainButton>
 		);
@@ -71,7 +71,7 @@ export function InspectorPanel({
 					aria-expanded
 					title="收起检查器"
 				>
-					<ChevronDoubleRightIcon className="h-3.5 w-3.5" aria-hidden="true" />
+					<SvgIcon name="chevrons-right" size={14} />
 				</IconButton>
 			</div>
 			<div className="min-h-0 flex-1 overflow-hidden">
