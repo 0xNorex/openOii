@@ -422,10 +422,6 @@ function FlowInner({
 				onSelectionChange={handleSelectionChange}
 				onNodeDragStop={handleDragStop}
 				onNodeContextMenu={handleNodeContextMenu}
-				onPaneContextMenu={(event) => {
-					event.preventDefault();
-					closeMenu();
-				}}
 				onMoveStart={(event) => {
 					// event 为 null 表示程序触发（适配、动画），只有用户手势才算手动
 					if (event) manual();

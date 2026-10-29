@@ -407,3 +407,14 @@ test("shots reorder from the keyboard with a live announcement", async ({ page }
 	// 键盘排序后留在排序模式，可以继续移动
 	await expect(page.getByRole("button", { name: "完成分镜排序" })).toBeVisible();
 });
+
+test("right-clicking a card opens its actions until Escape", async ({ page }) => {
+	await page.goto("/project/7");
+	const card = page.locator('.react-flow__node[data-id="shot:1"]');
+	await card.click({ button: "right" });
+	const menu = page.getByRole("region", { name: /的操作$/ });
+	await expect(menu).toBeVisible();
+	await expect(menu.getByRole("button", { name: /重做首帧/ })).toBeFocused();
+	await page.keyboard.press("Escape");
+	await expect(menu).toHaveCount(0);
+});
