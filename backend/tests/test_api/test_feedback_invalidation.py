@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from sqlalchemy import select
 
 from app.api.v1.routes import runs as generation_routes
 from app.models.agent_run import AgentRun
