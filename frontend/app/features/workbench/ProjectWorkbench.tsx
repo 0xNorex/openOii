@@ -185,9 +185,10 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			blockingClips: project.blocking_clips,
 			isGenerating: runIsGenerating,
 			awaitingConfirm: runAwaitingConfirm,
+			currentStep: runState.currentStep,
 		});
 		return graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
-	}, [project, characters, shots, selectedNodeId, runIsGenerating, runAwaitingConfirm]);
+	}, [project, characters, shots, selectedNodeId, runIsGenerating, runAwaitingConfirm, runState.currentStep]);
 
 	// Brief 不在画布上（见 layoutComicWorkflow）：未选中任何卡片时，
 	// 右栏 Inspector 回落到它，项目级上下文保持可达。

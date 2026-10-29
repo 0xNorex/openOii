@@ -247,3 +247,27 @@ describe("buildComicWorkflow", () => {
 		).toEqual([10, 11, 12]);
 	});
 });
+
+describe("node status follows the step the run is on", () => {
+	const statusOf = (currentStep: Parameters<typeof buildComicWorkflow>[0]["currentStep"]) => {
+		const graph = buildComicWorkflow({
+			project: project(),
+			characters: [character({ approval_state: "draft" })],
+			shots: [shot({ approval_state: "draft" })],
+			isGenerating: true,
+			currentStep,
+		});
+		const byKind = (kind: string) => graph.nodes.find((node) => node.kind === kind)?.status;
+		return { character: byKind("character"), shot: byKind("shot") };
+	};
+
+	it("marks only the cards the current step produces as generating", () => {
+		expect(statusOf("render_shots")).toEqual({ character: "unconfirmed", shot: "generating" });
+		expect(statusOf("render_characters")).toEqual({ character: "generating", shot: "unconfirmed" });
+		expect(statusOf("compose_merge")).toEqual({ character: "unconfirmed", shot: "unconfirmed" });
+	});
+
+	it("keeps the old behaviour when the step is unknown", () => {
+		expect(statusOf(null)).toEqual({ character: "generating", shot: "generating" });
+	});
+});

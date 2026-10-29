@@ -39,7 +39,7 @@ export function ComicWorkflowCanvas({
 		title: string;
 	} | null>(null);
 
-	const { isGenerating, awaitingConfirm, currentRunId, recoveryGate } = useRunState(projectId);
+	const { isGenerating, awaitingConfirm, currentRunId, recoveryGate, currentStep } = useRunState(projectId);
 	const focusSection = awaitingConfirm ? gateSection(recoveryGate) : null;
 
 	const { data: project, isLoading: projectLoading } = useQuery({
@@ -67,8 +67,9 @@ export function ComicWorkflowCanvas({
 			blockingClips: project.blocking_clips,
 			isGenerating,
 			awaitingConfirm,
+			currentStep,
 		});
-	}, [project, characters, shots, isGenerating, awaitingConfirm]);
+	}, [project, characters, shots, isGenerating, awaitingConfirm, currentStep]);
 
 	const layout = useMemo(
 		() => (graph ? layoutComicWorkflow(graph) : null),

@@ -1,4 +1,5 @@
 import type { BlockingClip, Character, Project, Shot } from "~/types";
+import type { StageId } from "~/generated/workflowContract";
 import type {
 	ComicWorkflowEdge,
 	ComicWorkflowGraph,
@@ -29,17 +30,29 @@ export interface BuildComicWorkflowInput {
 	isGenerating: boolean;
 	/** 当前运行停在审批门上：只有这时草稿卡片才算"待确认"。 */
 	awaitingConfirm?: boolean;
+	/** 运行正在做的契约阶段：只有这一步产出的卡片才显示"生成中"；未知时退回旧行为。 */
+	currentStep?: StageId | null;
+}
+
+const CHARACTER_STAGES: ReadonlySet<StageId> = new Set<StageId>(["plan_characters", "render_characters", "critique_character_images"]);
+const SHOT_STAGES: ReadonlySet<StageId> = new Set<StageId>(["plan_shots", "render_shots", "critique_shot_images", "compose_videos"]);
+
+function stepTouches(kind: "character" | "shot", currentStep: StageId | null | undefined): boolean {
+	if (currentStep == null) return true;
+	return (kind === "character" ? CHARACTER_STAGES : SHOT_STAGES).has(currentStep);
 }
 
 function nodeStatusFromApproval(
 	approvalState: "draft" | "approved" | "superseded",
 	isGenerating: boolean,
 	awaitingConfirm: boolean,
+	touched = true,
 ): WorkflowNodeStatus {
 	if (approvalState === "approved") return "approved";
 	if (approvalState === "superseded") return "superseded";
 	if (awaitingConfirm) return "review";
-	return isGenerating ? "generating" : "unconfirmed";
+	// 运行在做别的步骤时，已经产出的草稿只是"未确认"，不是"生成中"
+	return isGenerating && touched ? "generating" : "unconfirmed";
 }
 
 export function sortShots(shots: Shot[]): Shot[] {
@@ -195,6 +208,7 @@ export function buildComicWorkflow({
 	blockingClips,
 	isGenerating,
 	awaitingConfirm = false,
+	currentStep,
 }: BuildComicWorkflowInput): ComicWorkflowGraph {
 	const orderedShots = sortShots(shots);
 	const visibleCharacters = characters.filter(hasCharacterContent);
@@ -231,7 +245,7 @@ export function buildComicWorkflow({
 			section: "elements",
 			title: character.name || `角色 ${character.id}`,
 			subtitle: character.has_embedding ? "可复用角色资产" : "角色设定",
-			status: nodeStatusFromApproval(character.approval_state, isGenerating, awaitingConfirm),
+			status: nodeStatusFromApproval(character.approval_state, isGenerating, awaitingConfirm, stepTouches("character", currentStep)),
 			entityId: character.id,
 			character,
 			imageUrl:
@@ -245,7 +259,7 @@ export function buildComicWorkflow({
 			section: "shotline",
 			title: `S${String(shot.order).padStart(2, "0")}`,
 			subtitle: shot.scene || shot.camera || "镜头节点",
-			status: nodeStatusFromApproval(shot.approval_state, isGenerating, awaitingConfirm),
+			status: nodeStatusFromApproval(shot.approval_state, isGenerating, awaitingConfirm, stepTouches("shot", currentStep)),
 			entityId: shot.id,
 			shot,
 			imageUrl: shot.image_url,

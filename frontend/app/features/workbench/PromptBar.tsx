@@ -114,7 +114,7 @@ export function PromptBar({
 				</PlainButton>
 				<span className="h-4 w-px shrink-0 bg-ink/15" aria-hidden="true" />
 				{awaitingConfirm && gateLabel ? (
-					<span className={`${chipClass} border-warning/40 bg-warning/10 text-warning-fg`}>
+					<span className={`${chipClass} border-primary/40 bg-primary/10 text-primary`}>
 						{gateLabel} · 待确认
 					</span>
 				) : null}
