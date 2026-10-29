@@ -214,9 +214,11 @@ export function deriveActivityTimeline(
 		}
 	});
 
-	// 「正在…」只描述当下：后面已经有新记录，就说明它做完了，不再挂着
+	// 「正在…」「正在绘制分镜 (2/2)」只描述当下：后面已经有新记录，就说明它做完了，不再挂着
+	// （步骤行本身带着耗时和细节，结果由它说）
 	for (let i = entries.length - 2; i >= 0; i--) {
-		if (entries[i].kind === "message" && TRANSIENT.test(tidyEllipsis(entries[i].title.trim()))) {
+		const title = tidyEllipsis(entries[i].title.trim());
+		if (entries[i].kind === "message" && (TRANSIENT.test(title) || (title.startsWith("正在") && PROGRESS.test(title)))) {
 			entries.splice(i, 1);
 			starts.splice(i, 1);
 			ends.splice(i, 1);

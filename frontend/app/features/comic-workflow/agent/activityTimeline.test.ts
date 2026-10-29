@@ -31,6 +31,16 @@ describe("deriveActivityTimeline", () => {
 		expect(deriveActivityTimeline(feed.slice(0, 2), { running: true }).map((e) => e.title)).toContain("正在生成故事大纲…");
 	});
 
+	it("drops finished 正在… (n/N) progress once the run moved on", () => {
+		const titles = deriveActivityTimeline([
+			msg("step", "生成角色形象", 0, { agent: "render" }),
+			msg("assistant", "正在绘制：陈望海 (1/2)", 1, { agent: "render" }),
+			msg("assistant", "正在绘制：小鸥 (2/2)", 2, { agent: "render" }),
+			msg("assistant", "已为 2 个角色生成形象图。", 3, { agent: "render" }),
+		]).map((e) => e.title);
+		expect(titles).toEqual(["生成角色形象", "已为 2 个角色生成形象图。"]);
+	});
+
 	it("folds a thinking line that only repeats the one before it", () => {
 		const [step] = deriveActivityTimeline([
 			msg("step", "规划角色", 0),
@@ -70,13 +80,13 @@ describe("deriveActivityTimeline", () => {
 		expect(done[0].detail).toBeUndefined();
 	});
 
-	it("keeps progress of different stages as separate rows", () => {
+	it("does not merge progress of different stages; the finished one gives way", () => {
 		const entries = deriveActivityTimeline([
 			msg("assistant", "正在绘制分镜 (1/2)", 0, { agent: "render" }),
 			msg("assistant", "正在绘制分镜 (2/2)", 5, { agent: "render" }),
 			msg("assistant", "正在生成视频 (1/2)", 9, { agent: "compose" }),
 		]);
-		expect(entries.map((e) => e.title)).toEqual(["正在绘制分镜 (2/2)", "正在生成视频 (1/2)"]);
+		expect(entries.map((e) => e.title)).toEqual(["正在生成视频 (1/2)"]);
 	});
 
 	it("groups tool rows under the current step and measures its duration", () => {
