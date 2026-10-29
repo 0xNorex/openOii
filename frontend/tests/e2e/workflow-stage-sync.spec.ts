@@ -189,6 +189,19 @@ async function mockProjectPageApis(
 			return fulfillJson(state.current);
 		}
 
+		if (path === "/api/v1/projects/7/runs/regenerate-plan" && method === "GET") {
+			return fulfillJson({
+				project_id: 7,
+				has_content: characters.length > 0 || shots.length > 0,
+				character_count: Array.isArray(characters) ? characters.length : 0,
+				shot_count: Array.isArray(shots) ? shots.length : 0,
+				has_final_video: Boolean(project.video_url),
+				stages: ["剧本", "角色", "分镜", "渲染", "合成"],
+				estimate: { seconds_low: 180, seconds_high: 480, text_calls: 4, image_calls: 2, video_calls: 1, basis: "heuristic" },
+				previous_version: null,
+			});
+		}
+
 		if (path === "/api/v1/projects/7/runs" && method === "POST") {
 			state.generateCalls += 1;
 			if (options?.generateResponse) {
@@ -469,7 +482,9 @@ test("full business flow: generate → plan → confirm → render → confirm �
 	const runStarted = page.waitForResponse(
 		(response) => response.url().endsWith("/api/v1/projects/7/runs") && response.request().method() === "POST",
 	);
+	// 已有角色和分镜：重新生成要先确认
 	await page.getByRole("button", { name: /开始生成|重新生成/ }).click();
+	await page.getByTestId("regenerate-dialog").getByRole("button", { name: "重新生成" }).click();
 	await runStarted;
 
 	await push(page, routes, {

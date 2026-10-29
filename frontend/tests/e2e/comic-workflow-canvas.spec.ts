@@ -218,6 +218,18 @@ test.beforeEach(async ({ page }) => {
 		if (path === "/api/v1/projects/7/runs/current" && method === "GET") {
 			return json(null);
 		}
+		if (path === "/api/v1/projects/7/runs/regenerate-plan" && method === "GET") {
+			return json({
+				project_id: 7,
+				has_content: true,
+				character_count: 1,
+				shot_count: 1,
+				has_final_video: false,
+				stages: ["剧本", "角色", "分镜", "渲染", "合成"],
+				estimate: { seconds_low: 180, seconds_high: 480, text_calls: 4, image_calls: 2, video_calls: 1, basis: "heuristic" },
+				previous_version: null,
+			});
+		}
 		if (path === "/api/v1/projects/7/export/webtoon" && method === "POST") {
 			return json({ export_id: "test-export", status: "completed", download_url: "/static/test.png" });
 		}
