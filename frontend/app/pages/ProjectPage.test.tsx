@@ -147,7 +147,9 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
-    Link: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Link: ({ children, to, className }: { children: React.ReactNode; to: string; className?: string }) => (
+      <a href={to} className={className}>{children}</a>
+    ),
     useParams: () => ({ id: currentRouteProjectId }),
     useSearchParams: () => [currentSearchParams, setSearchParams],
     useNavigate: () => vi.fn(),
@@ -752,7 +754,9 @@ describe('ProjectPage live hydration', () => {
     renderWithProviders(<ProjectPage />);
 
     expect(screen.getByText('项目未找到')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '返回首页' })).toBeInTheDocument();
+    const home = screen.getByRole('link', { name: '返回首页' });
+    expect(home).toHaveAttribute('href', '/');
+    expect(home.querySelector('button')).toBeNull();
   });
 
   it('renders the not found page only for a real 404 project error', () => {
