@@ -135,7 +135,7 @@ export function ActivityTimeline({ entries }: { entries: ActivityEntry[] }) {
 				<Button
 					size="sm"
 					variant="secondary"
-					className="absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 shadow-panel"
+					className="animate-fade-in absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 shadow-panel"
 					onClick={() => {
 						setFollowing(true);
 						scrollToBottom();

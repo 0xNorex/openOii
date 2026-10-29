@@ -371,7 +371,7 @@ function AssetCard({
 							<Button
 								variant="ghost"
 								size="sm"
-								className="!px-1.5 !py-0 !min-h-0 !h-5 text-xs text-primary hover:opacity-80"
+								className="!px-1.5 !py-0 !min-h-0 !h-5 text-xs text-primary"
 								onClick={() => onUse(asset)}
 								disabled={isUsing}
 								title="添加到当前项目"
@@ -467,7 +467,7 @@ export function AssetDrawer({ open, onClose, projectId }: AssetDrawerProps) {
 						<Button
 							variant="ghost"
 							size="sm"
-							className="!h-7 !min-h-7 !px-1 text-primary hover:opacity-80"
+							className="!h-7 !min-h-7 !px-1 text-primary"
 							onClick={() => setShowCreateForm(true)}
 							title="新建资产"
 							aria-label="新建资产"

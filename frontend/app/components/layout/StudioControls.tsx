@@ -127,7 +127,7 @@ export function StudioControls({
 							tabIndex={0}
 							role="menu"
 							aria-label="工作台工具菜单"
-							className="absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-line bg-surface p-1 shadow-panel"
+							className="animate-enter absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-line bg-surface p-1 shadow-panel"
 						>
 							{onOpenVersions ? (
 								<li role="none">

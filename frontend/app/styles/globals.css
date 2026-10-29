@@ -62,7 +62,7 @@
   summary {
     transition-property: background-color, border-color, color, fill, stroke;
     transition-duration: var(--duration-normal);
-    transition-timing-function: ease-in-out;
+    transition-timing-function: var(--ease-standard);
   }
 
   *[class*="animate-"],
@@ -115,8 +115,12 @@
 
   .btn-doodle {
     @apply border border-border-strong rounded-md font-semibold duration-fast flex items-center whitespace-nowrap gap-1;
-    transition-property: background-color, border-color, color;
-    transition-timing-function: ease-out;
+    transition-property: background-color, border-color, color, transform;
+    transition-timing-function: var(--ease-standard);
+  }
+  /* 按下：1px 下沉，所有按钮同一手感 */
+  .btn-doodle:active:not(:disabled) {
+    transform: translateY(1px);
   }
   .btn-doodle:disabled {
     @apply cursor-not-allowed;
@@ -159,6 +163,20 @@
 
   .dialog::backdrop {
     @apply bg-neutral/45;
+  }
+
+  /* 进场：遮罩淡入，面板上浮 / 侧滑 / 底滑（reduced-motion 时全局压到 0.01ms） */
+  .dialog[open]::backdrop {
+    animation: fade-in var(--duration-normal) var(--ease-standard);
+  }
+  .dialog[open] .dialog-panel {
+    animation: enter-up var(--duration-normal) var(--ease-standard);
+  }
+  .dialog-sheet-right[open] .dialog-panel {
+    animation-name: enter-from-right;
+  }
+  .dialog-sheet-bottom[open] .dialog-panel {
+    animation-name: enter-from-bottom;
   }
 
   .dialog-sheet-right[open] {
@@ -230,8 +248,38 @@
 @layer utilities {
 
  .animate-slide-in-right {
-    animation: slide-in-right var(--duration-slow) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: slide-in-right var(--duration-slow) var(--ease-standard);
     will-change: opacity, transform;
+  }
+
+ /* 浮层进场：菜单/提示上浮，左右面板从各自一侧滑入 */
+ .animate-fade-in {
+    animation: fade-in var(--duration-normal) var(--ease-standard);
+  }
+ .animate-enter {
+    animation: enter-up var(--duration-normal) var(--ease-standard);
+  }
+ .animate-enter-left {
+    animation: enter-from-left var(--duration-normal) var(--ease-standard);
+  }
+ .animate-enter-right {
+    animation: enter-from-right var(--duration-normal) var(--ease-standard);
+  }
+
+ @keyframes fade-in {
+    from { opacity: 0; }
+  }
+ @keyframes enter-up {
+    from { opacity: 0; transform: translateY(4px) scale(0.99); }
+  }
+ @keyframes enter-from-left {
+    from { opacity: 0; transform: translateX(-8px); }
+  }
+ @keyframes enter-from-right {
+    from { opacity: 0; transform: translateX(8px); }
+  }
+ @keyframes enter-from-bottom {
+    from { opacity: 0; transform: translateY(12px); }
   }
 
  @keyframes slide-in-right {
@@ -241,7 +289,7 @@
 
 }
 
- /* 减少动画偏好（仅剩 animate-slide-in-right 在用）*/
+ /* 减少动画偏好：过渡也压到 0.01ms（base 层已压 animation） */
 @media (prefers-reduced-motion: reduce) {
 
  [data-theme],

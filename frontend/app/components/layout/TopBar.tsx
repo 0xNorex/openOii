@@ -77,7 +77,7 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 
 			{open && (
 				<div
-					className="absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border border-line bg-paper-200 py-1 shadow-panel"
+					className="animate-enter absolute left-0 top-full z-popover mt-1 max-h-80 w-64 overflow-y-auto overscroll-contain rounded-lg border border-line bg-paper-200 py-1 shadow-panel"
 					role="listbox"
 					aria-label="项目列表"
 				>

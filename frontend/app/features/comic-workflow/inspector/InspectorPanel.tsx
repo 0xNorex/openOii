@@ -38,7 +38,7 @@ export function InspectorPanel({
 	if (!open) {
 		return (
 			<PlainButton
-				className="absolute right-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
+				className="animate-enter absolute right-3 top-3 z-panel inline-flex touch-target-dense items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-semibold shadow-panel transition-colors duration-fast hover:border-primary"
 				onClick={() => onOpenChange(true)}
 				aria-label="展开检查器"
 				aria-expanded={false}
@@ -52,7 +52,7 @@ export function InspectorPanel({
 
 	return (
 		<aside
-			className="absolute bottom-24 right-3 top-3 z-panel flex w-panel-inspector max-w-panel flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-panel"
+			className="animate-enter-right absolute bottom-24 right-3 top-3 z-panel flex w-panel-inspector max-w-panel flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-panel"
 			aria-label="检查器"
 			data-shell="inspector-panel"
 			onKeyDown={(event) => {
