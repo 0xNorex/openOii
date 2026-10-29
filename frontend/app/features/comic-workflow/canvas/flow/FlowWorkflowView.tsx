@@ -428,10 +428,11 @@ function FlowInner({
 				}}
 				onMoveStart={(event) => {
 					// event 为 null 表示程序触发（适配、动画），只有用户手势才算手动
-					if (event) {
-						manual();
-						closeMenu();
-					}
+					if (event) manual();
+				}}
+				// 右键按下也会触发 moveStart（右键可拖动平移），所以只在视口真的动了才收起菜单
+				onMove={(event) => {
+					if (event) closeMenu();
 				}}
 				colorMode={theme === "dark" ? "dark" : "light"}
 				minZoom={MIN_ZOOM}
