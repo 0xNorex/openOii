@@ -556,6 +556,9 @@ function OutputCard({
 						<a
 							href={videoUrl}
 							download
+							// 成片在另一个源上，download 属性会被忽略；新标签打开，工作台留在原处
+							target="_blank"
+							rel="noopener"
 							onClick={stopAll}
 							className="btn-doodle touch-target-dense h-7 min-h-7 flex-1 px-2 text-xs bg-primary text-primary-content"
 						>

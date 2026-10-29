@@ -75,6 +75,8 @@ describe("MobileWorkbenchPreview", () => {
 		expect(screen.getByTestId("mobile-final-video")).toBeInTheDocument();
 		const download = screen.getByRole("link", { name: /下载成片/ });
 		expect(download).toHaveAttribute("download");
+		// 跨源的成片会忽略 download：必须新标签打开，不能把工作台导航走
+		expect(download).toHaveAttribute("target", "_blank");
 		expect(download.getAttribute("href")).toContain(
 			"/api/v1/projects/7/final-video",
 		);

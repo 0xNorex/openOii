@@ -81,6 +81,8 @@ export function MobileWorkbenchPreview({
 						<a
 							href={downloadUrl ?? undefined}
 							download
+							target="_blank"
+							rel="noopener"
 							className="btn-doodle inline-flex items-center justify-center gap-1 bg-primary px-2.5 py-1 text-sm text-primary-content"
 						>
 							<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
