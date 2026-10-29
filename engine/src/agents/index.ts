@@ -455,11 +455,36 @@ function nextVersion(ctx: StageContext, entityType: "character" | "shot", entity
   return (row?.v ?? 0) + 1;
 }
 
+/**
+ * 把一格分镜绑定到角色。模型给的 character_names 常和角色名差一点（多了空格、
+ * 「老渔夫陈望海」这种带称呼的写法），或者干脆漏填；精确匹配不到时退回到
+ * 包含匹配，再退回到在画面描述 / 动作 / 台词里找角色名。
+ */
+export function bindShotCharacters(
+  shot: Pick<PlanShot, "character_names" | "description" | "action" | "dialogue">,
+  characters: ReadonlyArray<{ id: number; name: string }>,
+): number[] {
+  const named = characters.filter((c) => c.name.trim().length > 0);
+  const ids = new Set<number>();
+  for (const raw of shot.character_names ?? []) {
+    const n = typeof raw === "string" ? raw.trim() : "";
+    if (!n) continue;
+    const exact = named.find((c) => c.name.trim() === n);
+    const loose = exact ?? named.find((c) => n.includes(c.name.trim()) || c.name.trim().includes(n));
+    if (loose) ids.add(loose.id);
+  }
+  if (ids.size === 0) {
+    const text = [shot.description, shot.action, shot.dialogue].filter(Boolean).join("\n");
+    for (const c of named) if (text.includes(c.name.trim())) ids.add(c.id);
+  }
+  // 保持角色表顺序，渲染时主角在前
+  return named.filter((c) => ids.has(c.id)).map((c) => c.id);
+}
+
 async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): Promise<void> {
   ctx.emitter.commit("shot_updated", () => {
   const rawShots = Array.isArray(data.shots) ? data.shots : [];
   const characters = ctx.shared.charactersForProject(ctx.projectId);
-  const nameToId = new Map(characters.map((c) => [c.name, c.id]));
 
   // wipe-and-recreate shots (full mode parity with plan.py full re-plan)
   for (const existing of ctx.shared.shotsForProject(ctx.projectId)) {
@@ -470,9 +495,7 @@ async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): 
   rawShots.forEach((item, index) => {
     if (typeof item !== "object" || item === null) return;
     const s = item as PlanShot;
-    const characterIds = (s.character_names ?? [])
-      .map((n) => nameToId.get(n))
-      .filter((x): x is number => typeof x === "number");
+    const characterIds = bindShotCharacters(s, characters);
     const description = s.description ?? s.action ?? `分镜 ${index + 1}`;
     const id = ctx.shared.insertShot(ctx.projectId, index + 1, {
       description,
