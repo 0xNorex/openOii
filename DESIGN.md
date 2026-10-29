@@ -223,7 +223,8 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Flat elements** (cards, list rows, inline buttons): 1px border only (`border-line`, or `border-border-strong` for controls). 2px is reserved for selection, active-tab underlines and left accent bars. No shadow.
 - **Floating panels, popovers, toasts, the canvas toolbar:** `shadow-panel`, a layered ink-tinted shadow (a short contact layer plus a soft ambient one). In dark mode it opens with a 1px white 6% hairline.
 - **Dialogs:** `shadow-dialog` on `.dialog-panel`.
-- **Comic accent** (spec §7.6): `.comic-frame` — 2px ink border plus a 3px CMYK cyan/magenta offset. Only on the final-video card. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.
+- **Comic accent** (spec §7.6): `.comic-frame` — a 2px ink border plus two registration marks (⊕) centred above and below the card. Only on the final-video card. There are no hard offset shadows. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.
+- **Selected canvas card:** the 2px primary ring plus `.crop-marks`, which puts printer's crop marks at the four corners. Canvas cards use `rounded-sm` (4px), like cut paper.
 - No hover lift. Pressing a button scales it to 0.97 for 120ms, with no bounce.
 - **Motion:** one easing, `--ease-standard` = `cubic-bezier(0.22, 1, 0.36, 1)`. Only transform, opacity, filter and colours animate. Reduced motion makes every change instant.
 

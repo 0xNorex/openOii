@@ -21,19 +21,15 @@ import type {
 
 const SECTION_STYLE = {
 	brief: {
-		accent: "bg-primary",
 		surface: "bg-primary/5",
 	},
 	elements: {
-		accent: "bg-primary",
 		surface: "bg-primary/5",
 	},
 	shotline: {
-		accent: "bg-info",
 		surface: "bg-info/5",
 	},
 	output: {
-		accent: "bg-ink",
 		surface: "bg-paper-200/45",
 	},
 } as const;
@@ -388,7 +384,7 @@ function CharacterCard({
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="star" accentClass="bg-primary" compact />
+				<CardHeader node={node} icon="star" compact />
 				{node.character.description ? (
 					<p className="m-0 mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">
 						{node.character.description}
@@ -445,10 +441,10 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 					<EmptyMedia label="等待分镜图" busy={node.status === "generating"} />
 				)}
 				{/* 九宫格 cell index */}
-				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm border border-line-strong bg-info px-1 font-mono text-xs font-bold text-info-content">
+				<span className="absolute left-1.5 top-1.5 flex h-6 min-w-6 items-center justify-center rounded-sm bg-ink px-1 font-mono text-xs font-bold text-paper-100">
 					{cell}
 				</span>
-				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-full border border-line bg-paper-100/90 px-1.5 py-0.5 text-xs tabular-nums">
+				<span className="absolute bottom-1.5 left-1.5 inline-flex rounded-sm border border-line bg-paper-100/90 px-1.5 py-0.5 font-mono text-xs">
 					{node.shot.duration ? `${node.shot.duration}s` : "未定时长"}
 				</span>
 				<div className="absolute right-2 top-2">
@@ -460,7 +456,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 				</div>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
-				<CardHeader node={node} icon="clapperboard" accentClass="bg-info" compact />
+				<CardHeader node={node} icon="clapperboard" compact />
 				<p className="m-0 mt-1 font-mono text-xs uppercase tracking-wide text-ink-muted">
 					格 {cell}
 				</p>
@@ -531,7 +527,7 @@ function OutputCard({
 
 	return (
 		<div className="flex h-full flex-col p-4">
-			<CardHeader node={node} icon="play-circle" accentClass="bg-primary" />
+			<CardHeader node={node} icon="play-circle" />
 
 			{/* 内联播放器：交付台上直接看，不用先开弹窗 */}
 			<div
@@ -640,23 +636,18 @@ function outputStateLabel(state: Extract<ComicWorkflowNode, { kind: "output" }>[
 function CardHeader({
 	node,
 	icon,
-	accentClass,
 	compact = false,
 }: {
 	node: ComicWorkflowNode;
 	icon: "lightbulb" | "star" | "clapperboard" | "play-circle";
-	accentClass: string;
 	compact?: boolean;
 }) {
 	return (
 		<div className="flex items-start gap-2">
-			<div
-				className={`flex shrink-0 items-center justify-center rounded-md text-primary-content ${accentClass} ${
-					compact ? "h-7 w-7" : "h-8 w-8"
-				}`}
-			>
-				<SvgIcon name={icon} size={compact ? 13 : 15} />
-			</div>
+			{/* 图标只是线描标记，不再垫彩色方块 */}
+			<span className="mt-0.5 shrink-0 text-ink-muted">
+				<SvgIcon name={icon} size={compact ? 14 : 16} />
+			</span>
 			<div className="min-w-0 flex-1">
 				<div className="flex min-w-0 items-center gap-1.5">
 					<p className="m-0 truncate text-sm font-bold">
@@ -688,6 +679,20 @@ const EMPTY_HINT: Partial<Record<ComicWorkflowSection, string>> = {
 	output: "分镜都有了视频后，成片会出现在这里。",
 };
 
+/** 对位标（⊕）：成片卡上下居中各一个，代替原来的硬投影。 */
+function RegistrationMark({ className }: { className: string }) {
+	return (
+		<svg
+			aria-hidden="true"
+			viewBox="0 0 14 14"
+			className={`pointer-events-none absolute left-1/2 h-3.5 w-3.5 -translate-x-1/2 text-ink ${className}`}
+		>
+			<circle cx="7" cy="7" r="3.5" fill="none" stroke="currentColor" strokeWidth="1" />
+			<path d="M7 0v14M0 7h14" stroke="currentColor" strokeWidth="1" />
+		</svg>
+	);
+}
+
 /** 分区框（React Flow 父节点）。 */
 export function WorkflowFrameView({
 	section,
@@ -706,24 +711,15 @@ export function WorkflowFrameView({
 				draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default"
 			} ${style.surface}`}
 		>
-			<div className="flex items-center gap-2">
-				<span className={`h-7 w-1 rounded-full ${style.accent}`} />
-				<div className="min-w-0">
-					<p className="m-0 font-mono text-xs uppercase text-ink-muted">
-						{eyebrow}
-					</p>
-					{/* countLabel 并入标题行尾：头部固定两行，layout 侧 frameHeader=56 才装得下 */}
-					<div className="flex min-w-0 items-baseline gap-2">
-						<p className="m-0 truncate text-md font-bold leading-tight">
-							{title}
-						</p>
-						{countLabel ? (
-							<p className="m-0 shrink-0 font-mono text-xs uppercase text-ink-muted">
-								{countLabel}
-							</p>
-						) : null}
-					</div>
-				</div>
+			{/* 标号 + 标题一行：01–04 是管线顺序，作为印刷标号放在标题前，而不是标题上方的 eyebrow */}
+			<div className="flex min-w-0 items-baseline gap-2 border-b border-line pb-2">
+				<span className="shrink-0 rounded-sm border border-line-strong px-1 font-mono text-xs text-ink-muted">
+					{eyebrow}
+				</span>
+				<p className="m-0 truncate text-md font-bold leading-tight">{title}</p>
+				{countLabel ? (
+					<p className="m-0 ml-auto shrink-0 font-mono text-xs uppercase text-ink-muted">{countLabel}</p>
+				) : null}
 			</div>
 			{hint ? (
 				<p className="m-0 flex flex-1 items-center justify-center px-6 text-center text-sm text-ink-muted">
@@ -751,17 +747,28 @@ export function WorkflowCardView({
 	draggable?: boolean;
 	selected?: boolean;
 }) {
+	const output = node.kind === "output";
 	return (
-		<article
-			aria-label={node.title}
-			data-status={node.status}
-			className={`h-full select-none overflow-hidden rounded-lg bg-paper-100 text-ink transition duration-fast ease-standard ${
-				node.kind === "output" ? "comic-frame" : `border ${CARD_TONE[node.status] ?? CARD_TONE.draft}`
-			} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-paper-100" : ""}`}
-		>
-			{node.kind === "character" ? <CharacterCard node={node} /> : null}
-			{node.kind === "shot" ? <ShotCard node={node} /> : null}
-			{node.kind === "output" ? <OutputCard node={node} /> : null}
-		</article>
+		<div className="panel-marks relative h-full" data-selected={selected || undefined}>
+			<article
+				aria-label={node.title}
+				data-status={node.status}
+				className={`h-full select-none overflow-hidden rounded-sm bg-paper-100 text-ink transition duration-fast ease-standard ${
+					output ? "comic-frame" : `border ${CARD_TONE[node.status] ?? CARD_TONE.draft}`
+				} ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${selected ? "ring-2 ring-primary ring-offset-2 ring-offset-paper-100" : ""}`}
+			>
+				{node.kind === "character" ? <CharacterCard node={node} /> : null}
+				{node.kind === "shot" ? <ShotCard node={node} /> : null}
+				{output ? <OutputCard node={node} /> : null}
+			</article>
+			{/* 选中：四角裁切线（印刷裁切标记），纯装饰 */}
+			<span className="crop-marks" aria-hidden="true" />
+			{output ? (
+				<>
+					<RegistrationMark className="-top-3.5" />
+					<RegistrationMark className="-bottom-3.5" />
+				</>
+			) : null}
+		</div>
 	);
 }

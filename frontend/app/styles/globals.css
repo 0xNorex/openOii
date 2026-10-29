@@ -147,10 +147,40 @@
     @apply border-border-strong;
   }
 
-  /* 漫画点缀，只用于成片卡（spec §7.6）：2px ink 描边 + CMYK 双色 3px 偏移。 */
+  /* 成片卡（spec §7.6）：2px 墨线框；印刷点缀由卡片外的对位标承担，不再用硬偏移阴影。 */
   .comic-frame {
     @apply border-2 border-ink;
-    box-shadow: 3px 3px 0 0 oklch(var(--cmyk-cyan) / 0.8), 6px 6px 0 0 oklch(var(--cmyk-magenta) / 0.6);
+  }
+
+  /* 选中的分镜格：四角裁切线。每角两条短线沿裁切边向外延伸，与卡片角留出选择环的距离。
+   * 出现时从 1.04 收到 1（transitions.dev 的 scale-in），reduced-motion 下瞬时。 */
+  .crop-marks {
+    --crop: rgb(var(--color-primary));
+    --arm: 6px;
+    --bleed: 10px;
+    position: absolute;
+    inset: calc(var(--bleed) * -1);
+    pointer-events: none;
+    background:
+      linear-gradient(var(--crop), var(--crop)) left 0 top var(--bleed) / var(--arm) 1.5px,
+      linear-gradient(var(--crop), var(--crop)) left var(--bleed) top 0 / 1.5px var(--arm),
+      linear-gradient(var(--crop), var(--crop)) right 0 top var(--bleed) / var(--arm) 1.5px,
+      linear-gradient(var(--crop), var(--crop)) right var(--bleed) top 0 / 1.5px var(--arm),
+      linear-gradient(var(--crop), var(--crop)) left 0 bottom var(--bleed) / var(--arm) 1.5px,
+      linear-gradient(var(--crop), var(--crop)) left var(--bleed) bottom 0 / 1.5px var(--arm),
+      linear-gradient(var(--crop), var(--crop)) right 0 bottom var(--bleed) / var(--arm) 1.5px,
+      linear-gradient(var(--crop), var(--crop)) right var(--bleed) bottom 0 / 1.5px var(--arm);
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: scale(1.04);
+    transition-property: opacity, transform;
+    transition-duration: var(--duration-normal);
+    transition-timing-function: var(--ease-standard);
+  }
+
+  .panel-marks[data-selected] .crop-marks {
+    opacity: 1;
+    transform: none;
   }
 
   .btn-doodle {
