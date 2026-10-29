@@ -457,7 +457,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
 				<CardHeader node={node} icon="clapperboard" compact />
-				<p className="m-0 mt-1 font-mono text-xs uppercase tracking-wide text-ink-muted">
+				<p className="m-0 mt-1 label-caps text-ink-muted">
 					格 {cell}
 				</p>
 				<div className="mt-1.5">

@@ -209,12 +209,20 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ## 3. Typography
 
-- **Sans** (`font-sans`, the default): the system CJK stack in `--font-sans`. No Chinese webfont is bundled; self-hosted installs need no font CDN.
-- **Mono** (`font-mono`): ids such as S01, durations and technical fields. Never for Chinese labels.
-- **Wordmark:** a ⊕ registration mark in `primary` plus `open` + `Oii` (primary) in `font-sans` bold, tight tracking. No webfont is bundled at all.
-- Headings are `font-sans` with `font-semibold` or `font-bold`; there is no separate heading face.
-- Chinese text has no letter-spacing and no italics.
-- Numbers in `font-mono`, `kbd` and `code` are tabular by default. Uppercase mono labels get 0.06em tracking. `text-autospace` adds the CJK/Latin gap where the browser supports it.
+- **Sans** (`font-sans`, the default): **Schibsted Grotesk** (variable 400–900, SIL OFL 1.1) for Latin and numerals, falling back to the system CJK stack (PingFang SC → Hiragino → YaHei → Source Han / Noto Sans CJK). It is a grotesque designed for a newspaper house, so it has more bite than Inter or Geist and holds its weight next to CJK.
+- **Mono** (`font-mono`): **IBM Plex Mono** (400 / 500, SIL OFL 1.1) for frame numbers, timecodes, durations and ids. Never for Chinese labels.
+- **Files:** self-hosted in `public/fonts`, subset to Basic Latin, Latin-1 and common punctuation, with `font-display: swap` and `unicode-range`. Sans and mono 400 are preloaded in `index.html`. Licences: `public/fonts/OFL-*.txt`.
+- **Budget:** at most 120 KB of woff2 in total (59.5 KB today: 36.4 + 11.4 + 11.7). `scripts/check-bundle-budget.mjs` enforces it on `pnpm build`.
+- **No CJK webfont:** a subset of even ~300 glyphs would cost ~75 KB, and user text would then mix two CJK faces. The system stack is used instead.
+- **Scale and tracking:**
+  - `text-xl` and `text-2xl` use `--tracking-display` (−0.022em);
+  - h1–h6 use `--tracking-heading` (−0.012em) at weight 600;
+  - body has no tracking;
+  - `.label-caps` is 12px mono 500, uppercase, `--tracking-label` 0.14em, for section labels such as BRIEF or `universe / 3`.
+- **Line-height:** `--leading-normal` 1.6 for CJK body text; `--leading-snug` 1.35 and `--leading-tight` 1.15 for headings and chrome.
+- **Numerals:** the whole app uses `tabular-nums` so progress, durations and counts don't jitter.
+- **Wordmark:** a ⊕ registration mark in `primary` plus `open` + `Oii` (primary) in `font-sans` bold, tight tracking.
+- Chinese text has no letter-spacing and no italics. `text-autospace` adds the CJK/Latin gap where the browser supports it.
 - **Browser surfaces:** a selection tinted with `primary`, a `primary` caret, thin ink scrollbars, `color-scheme` and a `theme-color` meta that follow the theme. See `docs/research/craft-direction.md`.
 
 ## 4. Elevation

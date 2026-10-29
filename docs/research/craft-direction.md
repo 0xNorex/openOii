@@ -56,3 +56,27 @@
 3. 分镜卡：格号、选中时的裁切角，成片卡用对位标代替硬投影，圆角收到 4px
 4. 等待与空状态：网点骨架、网点加载器配秒数、空格里的裁切角说明
 5. 字标与 favicon：对位标 + 字标，去掉 Bangers
+6. 字体：Schibsted Grotesk + IBM Plex Mono（见下）
+7. 图标：Iconoir 加自绘领域图标，替换 Heroicons（见下）
+
+## 字体决定（第二轮）
+
+看过的参考站：
+
+| 站点 | 字体 |
+| --- | --- |
+| beautifului.dev | Inter + JetBrains Mono，标题 −0.02em |
+| beui.dev | Geist + Geist Mono，小号大写标签 +0.22em |
+| rareui.com | 正文 Inter，展示用 openRunde，等宽 Geist Mono |
+| transitions.dev | Inter，展示用 Saans 500，等宽 Roboto Mono |
+| ui.shadcn.com | Geist |
+
+取用的是做法，不是字体：标题收紧字距、等宽小号大写标签放开字距、展示字和正文拉开字重。Inter 和 Geist 到处都是，用了反而没有辨识度。
+
+- **无衬线：Schibsted Grotesk**（SIL OFL 1.1）。它是为报业集团设计的怪诞体，有印刷和报刊的来历，和「印版与分镜稿」的方向一致；字重够厚，和中文黑体放在一起不发虚。
+  - 落选的有：Bricolage Grotesque（41 KB，太花哨）、Instrument Sans（30 KB，太接近 Inter）。
+- **等宽：IBM Plex Mono**（SIL OFL 1.1）。它有打字机和工程图纸的气质，用在帧号、时间码和 ID 上像分镜表上的打字标注。
+  - 落选的有：Geist Mono，太像 Vercel 系。
+- **中文：不加载网络字体。** 子集化约 300 字也要约 75 KB，超出预算；用户输入的文字还会落回系统字体，同一段里会混出两种中文字形。所以只整理系统中文字体的顺序，并把正文行距调到 1.6。
+- **预算：** 首次加载的字体不超过 120 KB，现在是 59.5 KB。`check-bundle-budget.mjs` 会检查。
+

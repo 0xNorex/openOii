@@ -42,7 +42,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 					) : (
 						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-line bg-paper-200 p-2">
 							<SparklesIcon className="h-6 w-6 text-primary" aria-hidden="true" />
-							<span className="font-mono text-xs uppercase tracking-widest text-ink-muted">universe / {universe.id}</span>
+							<span className="label-caps text-ink-muted">universe / {universe.id}</span>
 						</div>
 					)}
 

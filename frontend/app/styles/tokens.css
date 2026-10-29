@@ -1,3 +1,29 @@
+/* Self-hosted, subset (Basic Latin + Latin-1 + 常用标点), SIL OFL 1.1 — see /fonts/OFL-*.txt */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("/fonts/schibsted-grotesk-var.woff2") format("woff2");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2018-201D, U+2022, U+2026, U+2190-2193, U+2212;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/ibm-plex-mono-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2018-201D, U+2022, U+2026, U+2190-2193, U+2212;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/ibm-plex-mono-500.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2018-201D, U+2022, U+2026, U+2190-2193, U+2212;
+}
+
 /**
  * Design Contract — executable source of truth (ADR 0002).
  * Density: Dense Comic Workbench (D2). Docs: DESIGN.md updated same PR.
@@ -33,10 +59,13 @@
     --status-bg-alpha: 0.1;
 
     /* —— Brand plates (CMYK registration, theme-aware) —— */
-    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-      "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC",
-      "Noto Sans SC", system-ui, sans-serif;
-    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
+    /* Latin/数字走自托管的 Schibsted Grotesk（报刊出身的怪诞体），中文回落到系统黑体；
+     * 等宽用 IBM Plex Mono（打字机/印刷感），专给帧号、时间码、ID。 */
+    --font-sans: "Schibsted Grotesk", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+      "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans SC", -apple-system,
+      BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, "PingFang SC",
+      "Noto Sans Mono CJK SC", monospace;
     --cmyk-cyan: 0.55 0.14 180;
     --cmyk-magenta: 0.55 0.26 330;
 
@@ -62,6 +91,10 @@
     --space-12: 3rem; /* 48 */
 
     /* —— Type scale (dense desk; display stays splash-only) —— */
+    /* 字距随字号走：大字收紧、小号大写标签放开（beui.dev 的标签做法） */
+    --tracking-display: -0.022em;
+    --tracking-heading: -0.012em;
+    --tracking-label: 0.14em;
     --text-xs: 0.75rem; /* 12 — 下限 */
     --text-sm: 0.8125rem; /* 13 */
     --text-base: 0.875rem; /* 14 body on desk */
@@ -72,7 +105,7 @@
 
     --leading-tight: 1.15;
     --leading-snug: 1.35;
-    --leading-normal: 1.5;
+    --leading-normal: 1.6; /* 中文正文需要比拉丁文更松的行距 */
 
     /* —— Radius（spec §7.5）：控件 6px，卡片与面板 10px，胶囊用 rounded-full —— */
     --radius-sm: 4px;

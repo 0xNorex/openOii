@@ -21,6 +21,11 @@
     -webkit-tap-highlight-color: transparent;
     /* 中西文之间自动留 1/4 em（CSS Text 4；不支持的浏览器保持原样） */
     text-autospace: normal;
+    line-height: var(--leading-normal);
+    font-kerning: normal;
+    /* 进度、时长、计数在刷新时不跳动 */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
     /* 浏览器表面：滚动条是细墨线，不是系统灰轨 */
     scrollbar-color: rgb(var(--color-ink) / 0.22) transparent;
   }
@@ -112,6 +117,21 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  /* 大字号收紧字距、提高字重对比（beautifului.dev 的 -0.02em 标题） */
+  .text-xl, .text-2xl {
+    letter-spacing: var(--tracking-display);
+  }
+
+  /* 小号大写标签：等宽 + 放开字距，像分镜表上的栏目名 */
+  .label-caps {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
   }
 
   .sr-only {

@@ -80,7 +80,7 @@ export function UniverseTimelinePanel({
 	return (
 		<div className="flex h-full min-h-0 flex-col" data-shell="universe-timeline">
 			<div className="shrink-0 border-b border-line px-2 py-1.5">
-				<p className="m-0 font-mono text-xs uppercase tracking-wide text-ink-muted">
+				<p className="m-0 label-caps text-ink-muted">
 					universe
 				</p>
 				<div className="mt-0.5 flex items-center gap-1.5">
