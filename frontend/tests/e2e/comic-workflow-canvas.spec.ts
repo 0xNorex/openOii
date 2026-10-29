@@ -256,9 +256,8 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	const agentPanel = page.locator("aside[aria-label='工作流活动']");
 	await expect(page.getByRole("button", { name: "展开活动面板" })).toBeVisible();
 
-	await page.getByRole("button", { name: "适应视图" }).click();
 	const card = page.locator('.react-flow__node[data-id="shot:1"]');
-	// 适配后卡片标题的屏幕字号 ≥ 12px（自动适配的缩放下限；整块放不下时以分镜区为中心）
+	// 自动适配：卡片标题的屏幕字号 ≥ 12px（可读下限；整块放不下时以分镜区为中心）
 	await expect
 		.poll(() =>
 			card.evaluate((el) => {
@@ -269,6 +268,24 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 			}),
 		)
 		.toBeGreaterThanOrEqual(11.95);
+
+	// 手动「适应视图」看全图（#54）：所有分区都在画布可见范围内。
+	// 先等首次自动适配跑完，免得它在点击之后又把视口拉回可读下限
+	await page.waitForTimeout(300);
+	await page.getByRole("button", { name: "适应视图" }).click();
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const pane = document.querySelector(".react-flow")?.getBoundingClientRect();
+				if (!pane) return false;
+				const frames = [...document.querySelectorAll(".react-flow__node-frame")];
+				return frames.length > 0 && frames.every((node) => {
+					const r = node.getBoundingClientRect();
+					return r.left >= pane.left - 1 && r.right <= pane.right + 1 && r.top >= pane.top - 1 && r.bottom <= pane.bottom + 1;
+				});
+			}),
+		)
+		.toBe(true);
 	const before = await card.boundingBox();
 	expect(before).not.toBeNull();
 	if (!before) return;
