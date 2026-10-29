@@ -3,7 +3,9 @@ name: openOii
 description: "AI 漫剧生成平台：故事创意 → 3 Agent 协作 → 可视化漫剧成片"
 colors:
   # light（:root）
-  primary: "#B0215F"
+  primary: "#2F4BC3"
+  primary-hover: "#243BB2"
+  primary-pressed: "#1B2C9D"
   primary-content: "#FFFFFF"
   neutral: "#1C1C22"
   neutral-content: "#ECECF1"
@@ -19,7 +21,9 @@ colors:
   warning: "#9A5B00"
   error: "#B42318"
   # dark（[data-theme="dark"]）
-  dark-primary: "#F27AAE"
+  dark-primary: "#96ACFE"
+  dark-primary-hover: "#A6BCFF"
+  dark-primary-pressed: "#8499E9"
   dark-primary-content: "#121216"
   dark-surface: "#1B1B21"
   dark-paper-100: "#121216"
@@ -64,6 +68,8 @@ components:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.primary-content}"
     rounded: "{rounded.md}"
+    hoverBackgroundColor: "{colors.primary-hover}"
+    activeBackgroundColor: "{colors.primary-pressed}"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -167,7 +173,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 
 openOii is a tool for making comic videos, so the work (the storyboard) gets the screen and the chrome stays quiet.
 The workbench is a full-bleed React Flow canvas; the agent panel, the inspector and the PromptBar float over it.
-Warm grey paper and ink neutrals, one magenta-rose brand hue, the system CJK font stack.
+Warm grey paper and ink neutrals, one ultramarine (群青) brand hue, the system CJK font stack.
 The comic identity survives only where spec §7.6 allows it: the Bangers wordmark, the final-video card and its
 completion moment, and empty states.
 
@@ -183,9 +189,11 @@ and heavy comic everywhere (offset shadows, halftone and display type on every s
 
 ## 2. Colors
 
-One brand hue (magenta-rose) on calm warm-grey neutrals. Light and dark themes; the first visit follows `prefers-color-scheme`, the toggle persists (`data-theme="light" | "dark"`).
+One brand hue (ultramarine, 群青) on calm warm-grey neutrals. Light and dark themes; the first visit follows `prefers-color-scheme`, the toggle persists (`data-theme="light" | "dark"`).
 
-- **Primary** `#B0215F` (dark `#F27AAE`): primary actions, selection, focus ring, links. Also legal as text on every surface (≥ 4.5:1).
+- **Primary** `#2F4BC3` (dark `#96ACFE`): primary actions, selection, focus ring, links, the wordmark and the favicon dot. Also legal as text on every surface (≥ 6:1 light, ≥ 7:1 dark).
+- **Primary ramp**: `primary-hover` `#243BB2` / `primary-pressed` `#1B2C9D` (dark `#A6BCFF` / `#8499E9`, lighter on dark). Filled primary controls use `hover:bg-primary-hover active:bg-primary-pressed`, not alpha. `primary-content` stays ≥ 4.5:1 on all three; `themeContrast.test.ts` checks it.
+- Ultramarine was chosen to stay clear of the teal `info` and storyboard accents and of the `error` red. The CMYK `--cmyk-magenta` plate on the final-video card is a print-registration accent, not the brand.
 - **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` sunken-on-sunken fills, `line` (ink 12%) hairline borders and dividers, `line-strong` (ink 22%) dashed drop zones, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
 - **Text**: `ink` (≥ 7:1), `ink-muted` (hex, ≥ 4.5:1 on every surface), `ink-subtle` (alpha, ≥ 3:1, placeholders/meta only).
 - **Status**: `info` / `success` / `warning` / `error`. Text uses `text-{k}-fg`; tinted backgrounds use `bg-{k}-bg` (alpha from `--status-bg-alpha`); filled badges use `bg-{k} text-{k}-content`.

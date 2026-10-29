@@ -75,6 +75,10 @@ describe.each(THEMES)("主题 %s", (_name, theme) => {
     expect(on("--ink-subtle", surface)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(["--color-primary-hover", "--color-primary-pressed"])("primary-content 在 %s 上 ≥ 4.5:1", (fill) => {
+    expect(contrast(tokenColor(theme, "--color-primary-content"), tokenColor(theme, fill))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(["--color-paper-100", "--color-paper-200", "--color-surface"])("primary 作文字在 %s 上 ≥ 4.5:1", (surface) => {
     expect(on("--color-primary", surface)).toBeGreaterThanOrEqual(4.5);
   });

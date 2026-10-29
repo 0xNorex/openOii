@@ -54,6 +54,8 @@ export default {
       colors: {
         // Owned semantic palette; values live in styles/tokens.css.
         primary: "rgb(var(--color-primary) / <alpha-value>)",
+        "primary-hover": "rgb(var(--color-primary-hover) / <alpha-value>)",
+        "primary-pressed": "rgb(var(--color-primary-pressed) / <alpha-value>)",
         "primary-content": "rgb(var(--color-primary-content) / <alpha-value>)",
         neutral: "rgb(var(--color-neutral) / <alpha-value>)",
         "neutral-content": "rgb(var(--color-neutral-content) / <alpha-value>)",

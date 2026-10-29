@@ -5,11 +5,13 @@
 
 @layer base {
   :root {
-    /* —— Studio palette（spec §7.2）：印版品红主色 + 暖中性 ——
+    /* —— Studio palette（spec §7.2）：群青主色 + 暖中性 ——
      * 通道值写成 "r g b"，供 Tailwind 的 /alpha 修饰使用。
      * paper-100 = bg（页面/画布底），paper-200 = sunken（输入框、分区底），
      * paper-300 = border（分隔线），surface = 浮层面板与卡片。 */
-    --color-primary: 176 33 95; /* #B0215F */
+    --color-primary: 47 75 195; /* #2F4BC3 群青 */
+    --color-primary-hover: 36 59 178; /* #243BB2 */
+    --color-primary-pressed: 27 44 157; /* #1B2C9D */
     --color-primary-content: 255 255 255;
     --color-neutral: 28 28 34;
     --color-neutral-content: 236 236 241;
@@ -112,7 +114,9 @@
   }
 
   [data-theme="dark"] {
-    --color-primary: 242 122 174; /* #F27AAE */
+    --color-primary: 150 172 254; /* #96ACFE 群青（深色） */
+    --color-primary-hover: 166 188 255; /* #A6BCFF */
+    --color-primary-pressed: 132 153 233; /* #8499E9 */
     --color-primary-content: 18 18 22;
     --color-neutral: 8 8 10;
     --color-neutral-content: 236 236 241;

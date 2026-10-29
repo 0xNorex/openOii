@@ -560,7 +560,7 @@ function OutputCard({
 							target="_blank"
 							rel="noopener"
 							onClick={stopAll}
-							className="btn-doodle touch-target-dense h-7 min-h-7 flex-1 px-2 text-xs bg-primary text-primary-content"
+							className="btn-doodle touch-target-dense h-7 min-h-7 flex-1 px-2 text-xs bg-primary text-primary-content hover:bg-primary-hover active:bg-primary-pressed"
 						>
 							<SvgIcon name="download" size={12} />
 							下载成片

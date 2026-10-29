@@ -83,7 +83,7 @@ export function MobileWorkbenchPreview({
 							download
 							target="_blank"
 							rel="noopener"
-							className="btn-doodle inline-flex items-center justify-center gap-1 bg-primary px-2.5 py-1 text-sm text-primary-content"
+							className="btn-doodle inline-flex items-center justify-center gap-1 bg-primary px-2.5 py-1 text-sm text-primary-content hover:bg-primary-hover active:bg-primary-pressed"
 						>
 							<ArrowDownTrayIcon className="h-3.5 w-3.5" aria-hidden="true" />
 							下载成片
