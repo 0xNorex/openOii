@@ -38,6 +38,7 @@ import {
 	type WorkflowFlowNode,
 	type WorkflowInteractionMode,
 } from "./toFlowNodes";
+import { CardContextMenu, type CardMenuState, menuPosition } from "./CardContextMenu";
 
 /** 与 <ReactFlow minZoom> 一致：手动缩放的下限。 */
 const MIN_ZOOM = 0.2;
@@ -265,6 +266,25 @@ function FlowInner({
 		[onSelectedNodeIdChange, onSelectedNodeIdsChange],
 	);
 
+	const [menu, setMenu] = useState<CardMenuState | null>(null);
+	const closeMenu = useCallback(() => setMenu(null), []);
+	const handleNodeContextMenu = useCallback(
+		(event: React.MouseEvent, node: WorkflowFlowNode) => {
+			if (node.type !== "card" || sortMode) return;
+			event.preventDefault();
+			const box = containerRef.current?.getBoundingClientRect();
+			if (!box) return;
+			applySelection([node.id]);
+			onSelectedNodeIdsChange?.([node.id]);
+			onSelectedNodeIdChange?.(node.id);
+			setMenu({
+				node: node.data.node,
+				...menuPosition({ x: event.clientX, y: event.clientY }, box),
+			});
+		},
+		[applySelection, onSelectedNodeIdChange, onSelectedNodeIdsChange, sortMode],
+	);
+
 	const SORT_HINT = "排序模式：拖动分镜，或选中一格后按 Alt + 方向键移动。";
 	const [announcement, setAnnouncement] = useState("");
 	useEffect(() => {
@@ -401,9 +421,17 @@ function FlowInner({
 				onNodesChange={onNodesChange}
 				onSelectionChange={handleSelectionChange}
 				onNodeDragStop={handleDragStop}
+				onNodeContextMenu={handleNodeContextMenu}
+				onPaneContextMenu={(event) => {
+					event.preventDefault();
+					closeMenu();
+				}}
 				onMoveStart={(event) => {
 					// event 为 null 表示程序触发（适配、动画），只有用户手势才算手动
-					if (event) manual();
+					if (event) {
+						manual();
+						closeMenu();
+					}
 				}}
 				colorMode={theme === "dark" ? "dark" : "light"}
 				minZoom={MIN_ZOOM}
@@ -427,6 +455,14 @@ function FlowInner({
 			>
 				{announcement}
 			</p>
+			{menu ? (
+				<CardContextMenu
+					menu={menu}
+					projectId={projectId}
+					structureLocked={structureLocked}
+					onClose={closeMenu}
+				/>
+			) : null}
 			<ComicCanvasToolbar
 				projectId={projectId}
 				onResetLayout={handleResetLayout}

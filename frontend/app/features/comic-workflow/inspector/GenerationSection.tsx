@@ -15,12 +15,15 @@ export function GenerationSection({
 	structureLocked,
 	universeId = null,
 	multiShotIds = [],
+	compact = false,
 }: {
 	projectId: number;
 	node: ComicWorkflowNode;
 	structureLocked: boolean;
 	universeId?: number | null;
 	multiShotIds?: number[];
+	/** 右键菜单里用：省掉说明文字 */
+	compact?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const [busy, setBusy] = useState<string | null>(null);
@@ -180,7 +183,7 @@ export function GenerationSection({
 					生成运行中，结构写入操作已锁定。
 				</div>
 			) : null}
-			{shotCellLabel ? (
+			{shotCellLabel && !compact ? (
 				<div className="rounded-md border border-info/30 bg-info/10 px-2 py-1.5 text-xs leading-relaxed text-ink-muted">
 					<strong className="text-info-fg">{shotCellLabel}</strong>
 					{" · "}
