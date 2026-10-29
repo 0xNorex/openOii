@@ -336,8 +336,10 @@ describe("OpenAI-compatible media provider", () => {
   let base: string;
   let seen: Array<{ method: string; path: string; body: Record<string, unknown> }>;
   let polls: number;
+  let imageFailures: number;
 
   beforeEach(async () => {
+    imageFailures = 0;
     dir = mkdtempSync(join(tmpdir(), "openoii-media-"));
     seen = [];
     polls = 0;
@@ -346,7 +348,10 @@ describe("OpenAI-compatible media provider", () => {
       const body = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
       const path = req.url ?? "";
       seen.push({ method: req.method ?? "", path, body });
-      if (path === "/v1/images/generations") {
+      if (path === "/v1/images/generations" && imageFailures > 0) {
+        imageFailures -= 1;
+        res.writeHead(524).end("origin timeout");
+      } else if (path === "/v1/images/generations") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ data: [{ url: "/v1/media/img.webp" }] }));
       } else if (path === "/v1/media/img.webp") {
@@ -430,5 +435,24 @@ describe("OpenAI-compatible media provider", () => {
     expect(polls).toBe(2);
     expect(url).toMatch(/^\/static\/managed-v1\/[\w-]+\.mp4$/);
     expect(existsSync(join(dir, url.slice("/static/".length)))).toBe(true);
+  });
+
+  it("retries transient provider failures (gateway 524) with the same idempotency key", async () => {
+    vi.stubEnv("OPENOII_PROVIDER_RETRY_MS", "1");
+    imageFailures = 2;
+    const { media } = service();
+    const url = await media.generateImageUrl({ prompt: "lantern" });
+    expect(seen.filter((s) => s.path === "/v1/images/generations")).toHaveLength(3);
+    expect(url).toMatch(/^\/static\/managed-v1\/[\w-]+\.webp$/);
+  });
+
+  it("gives up after the retry budget and reports the status", async () => {
+    vi.stubEnv("OPENOII_PROVIDER_RETRY_MS", "1");
+    imageFailures = 10;
+    const { media } = service();
+    await expect(media.generateImageUrl({ prompt: "lantern" })).rejects.toThrow(
+      "image provider failed: 524",
+    );
+    expect(seen.filter((s) => s.path === "/v1/images/generations")).toHaveLength(4);
   });
 });

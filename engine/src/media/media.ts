@@ -531,6 +531,36 @@ export class MediaService {
     return this.abortSignal ? { ...init, signal: this.abortSignal } : init;
   }
 
+  /**
+   * POST to a media provider, retrying transient failures the way the Python
+   * services do (408/429/5xx, plus Cloudflare's 520–524 origin timeouts and
+   * network errors). The idempotency key is reused across attempts.
+   */
+  private async postProvider(endpoint: string, init: RequestInit): Promise<Response> {
+    const base = providerRetryBaseMs();
+    for (let attempt = 0; ; attempt += 1) {
+      this.throwIfAborted();
+      let response: Response | null = null;
+      let error: unknown = null;
+      try {
+        response = await fetch(endpoint, this.requestInit(init));
+      } catch (caught) {
+        if (this.abortSignal?.aborted) throw caught;
+        error = caught;
+      }
+      const retryable = response ? RETRYABLE_PROVIDER_STATUS.has(response.status) : true;
+      if (!retryable || attempt >= PROVIDER_MAX_RETRIES) {
+        if (response) return response;
+        throw error;
+      }
+      console.warn(
+        `media provider ${response ? `returned ${response.status}` : "request failed"}; retry ${attempt + 1}/${PROVIDER_MAX_RETRIES}`,
+      );
+      await response?.body?.cancel().catch(() => undefined);
+      await this.wait(base * 2 ** attempt);
+    }
+  }
+
   /** Cancellable wait: a pending backoff or poll must not outlive the run. */
   private async wait(ms: number): Promise<void> {
     const signal = this.abortSignal;
@@ -653,18 +683,15 @@ export class MediaService {
       const mime = sniffImageMime(args.imageBytes) ?? "image/png";
       payload.image = `data:${mime};base64,${args.imageBytes.toString("base64")}`;
     }
-    const response = await fetch(
-      endpoint,
-      this.requestInit({
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.settings.imageApiKey}`,
-          ...this.idempotencyHeaders(),
-        },
-        body: JSON.stringify(payload),
-      }),
-    );
+    const response = await this.postProvider(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.settings.imageApiKey}`,
+        ...this.idempotencyHeaders(),
+      },
+      body: JSON.stringify(payload),
+    });
     if (!response.ok) throw new Error(`image provider failed: ${response.status}`);
     const body = (await response.json()) as Record<string, unknown>;
     const data = Array.isArray(body.data) ? body.data[0] : null;
@@ -871,18 +898,15 @@ export class MediaService {
     if (args.imageUrl && this.settings.enableImageToVideo) {
       payload.image_url = await this.videoImageUrl(args.imageUrl);
     }
-    const response = await fetch(
-      endpoint,
-      this.requestInit({
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.settings.videoApiKey}`,
-          ...this.idempotencyHeaders(),
-        },
-        body: JSON.stringify(payload),
-      }),
-    );
+    const response = await this.postProvider(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.settings.videoApiKey}`,
+        ...this.idempotencyHeaders(),
+      },
+      body: JSON.stringify(payload),
+    });
     if (!response.ok) throw new Error(`video provider failed: ${response.status}`);
     let body = (await response.json()) as Record<string, unknown>;
     let url = extractMediaUrl(body);
@@ -1073,6 +1097,14 @@ export class MediaService {
 
 const MAX_VIDEO_BYTES = 1024 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+const RETRYABLE_PROVIDER_STATUS = new Set([408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
+const PROVIDER_MAX_RETRIES = 3;
+/** Backoff base for provider retries; OPENOII_PROVIDER_RETRY_MS overrides it (tests). */
+function providerRetryBaseMs(): number {
+  const raw = Number(process.env.OPENOII_PROVIDER_RETRY_MS ?? 2_000);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 2_000;
+}
+
 /** Async video task poll interval; OPENOII_VIDEO_POLL_MS overrides it (tests, slow providers). */
 function videoTaskPollMs(): number {
   const raw = Number(process.env.OPENOII_VIDEO_POLL_MS ?? 5_000);
