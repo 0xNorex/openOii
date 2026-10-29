@@ -317,6 +317,23 @@ test("the character-image gate shows what it reviews, and canvas cards carry no 
 	await expect(page.getByText("规划阶段")).toHaveCount(0);
 });
 
+test("at a gate the inspector lets you edit properties and says how to change results", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	const stageSummary = { ...summary, current_stage: "character_images_approval", next_stage: "shots" };
+	const gate = { ...gatePayload(), agent: "character_artist", current_stage: "character_images_approval", stage: "character_images_approval", recovery_summary: stageSummary };
+	const characters = [{ id: 1, project_id: 7, name: "小曦", description: "便利店常客", image_url: null, approval_state: "draft", revision: 1 }];
+	await mockServer(page, control("waiting_for_approval", { awaiting_gate: gate, recovery_summary: stageSummary }), characters);
+	await page.goto("/project/7");
+	await openPanel(page);
+
+	await page.getByRole("list", { name: "本关要审的内容" }).getByRole("button", { name: /小曦/ }).click();
+	await page.getByRole("button", { name: "属性", exact: true }).click();
+	await expect(page.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
+	await page.getByRole("button", { name: "生成", exact: true }).click();
+	await expect(page.getByRole("note").filter({ hasText: "提修改意见" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "重新生成当前角色" })).toBeDisabled();
+});
+
 test("mobile names the step and shows where it is in the six", async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	const stageSummary = { ...summary, current_stage: "shots_approval", next_stage: "render_characters" };
