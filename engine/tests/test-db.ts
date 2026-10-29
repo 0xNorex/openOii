@@ -87,6 +87,7 @@ export function installExecutionLeaseColumns(db: SqliteDatabase.Database): void 
     ["lease_expires_at", "DATETIME"],
     ["cancel_requested_at", "DATETIME"],
     ["context_snapshot", "JSON"],
+    ["gate_feedback", "JSON"],
   ];
   for (const [name, ddl] of additions) {
     if (!existing.has(name)) db.exec(`ALTER TABLE agentrun ADD COLUMN ${name} ${ddl}`);

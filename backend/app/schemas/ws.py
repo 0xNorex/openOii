@@ -27,6 +27,7 @@ WsEventType = Literal[
     "run_failed",
     "run_awaiting_confirm",
     "run_confirmed",
+    "run_feedback",
     "run_cancelled",
     "character_created",
     "character_updated",
@@ -161,6 +162,37 @@ class RunAwaitingConfirmEventData(BaseModel):
     auto_mode: bool | None = None
     story_outline: StoryOutlineRead | None = None
     visual_bible: str | None = None
+    # 本闸门上一轮「要求修改」的结果；None 表示首次到达
+    feedback: GateFeedbackOutcome | None = None
+
+
+FeedbackReceiptState = Literal["received", "regenerating", "revised", "not_applied", "failed"]
+
+
+class GateFeedbackOutcome(BaseModel):
+    id: str | None = None
+    round: int = Field(default=1, ge=1)
+    state: FeedbackReceiptState
+    content: str | None = None
+    reason: str | None = None
+    entity_type: str | None = None
+    entity_ids: list[int] | None = None
+
+
+class RunFeedbackEventData(BaseModel):
+    """Receipt for "request changes" at a gate: 已收到 → 重做中 → 新版本待确认 / 未采纳."""
+
+    run_id: int
+    project_id: int | None = None
+    gate: str | None = None
+    stage: str | None = None
+    feedback_id: str | None = None
+    round: int = Field(default=1, ge=1)
+    state: FeedbackReceiptState
+    content: str | None = None
+    reason: str | None = None
+    entity_type: str | None = None
+    entity_ids: list[int] | None = None
 
 
 class RunConfirmedEventData(BaseModel):

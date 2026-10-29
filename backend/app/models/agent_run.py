@@ -53,6 +53,11 @@ class AgentRun(SQLModel, table=True):
     awaiting_payload: dict[str, object] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
+    # 闸门处的「要求修改」：API 侧写入，engine 消费后清空，按意见重做本阶段并回到同一闸门
+    # none_as_null：None 写成 SQL NULL 而不是 JSON 'null'，「无待处理意见」只有一种表示
+    gate_feedback: dict[str, object] | None = Field(
+        default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
+    )
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 

@@ -395,7 +395,7 @@ async def test_ws_projects_confirm_invalid_run_sends_error(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_ws_projects_confirm_valid_run_saves_feedback_and_triggers_confirm(monkeypatch):
+async def test_ws_projects_confirm_with_feedback_requests_changes_not_approval(monkeypatch):
     events = []
 
     class FakeManager:
@@ -451,6 +451,13 @@ async def test_ws_projects_confirm_valid_run_saves_feedback_and_triggers_confirm
     monkeypatch.setattr(main_module, "init_db", lambda: None)
     monkeypatch.setattr("app.db.session.async_session_maker", FakeAsyncSessionMaker())
     monkeypatch.setattr("app.services.run_signals.trigger_confirm_signal", fake_trigger)
+    feedback_calls = []
+
+    async def fake_submit(run_id, *, project_id, content, entity_type=None, entity_ids=None):
+        feedback_calls.append((run_id, project_id, content))
+        return {"id": "fb1"}
+
+    monkeypatch.setattr("app.services.run_signals.submit_gate_feedback", fake_submit)
 
     fake_ws = _FakeWebSocket(
         [
@@ -467,6 +474,66 @@ async def test_ws_projects_confirm_valid_run_saves_feedback_and_triggers_confirm
 
     await handler(fake_ws, 1)
 
+    # Feedback at a gate is "request changes": it must never set the approve bit.
+    assert trigger_calls == []
+    assert feedback_calls == [(123, 1, "  ok  ")]
+
+
+@pytest.mark.asyncio
+async def test_ws_projects_confirm_without_feedback_approves(monkeypatch):
+    class FakeManager:
+        async def connect(self, project_id, websocket):
+            pass
+
+        async def disconnect(self, project_id, websocket):
+            pass
+
+        async def send_event(self, project_id, event):
+            pass
+
+    class FakeRun:
+        id = 123
+        project_id = 1
+
+    class FakeSessionCtx:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, model, run_id):
+            return FakeRun()
+
+    class FakeAsyncSessionMaker:
+        def __call__(self):
+            return FakeSessionCtx()
+
+    trigger_calls = []
+
+    async def fake_trigger(run_id, *, project_id):
+        trigger_calls.append((run_id, project_id))
+
+    monkeypatch.setattr(main_module, "ws_manager", FakeManager())
+    monkeypatch.setattr(
+        main_module,
+        "get_settings",
+        lambda: SimpleNamespace(
+            app_name="openOii", cors_origins=[], api_v1_prefix="/api/v1", environment="development"
+        ),
+    )
+    monkeypatch.setattr(main_module, "init_db", lambda: None)
+    monkeypatch.setattr("app.db.session.async_session_maker", FakeAsyncSessionMaker())
+    monkeypatch.setattr("app.services.run_signals.trigger_confirm_signal", fake_trigger)
+
+    fake_ws = _FakeWebSocket([{"type": "confirm", "data": {"run_id": 123}}])
+    app = main_module.create_app()
+    handler = next(
+        route.endpoint
+        for route in app.routes
+        if getattr(route, "path", None) == "/ws/projects/{project_id}"
+    )
+    await handler(fake_ws, 1)
     assert trigger_calls == [(123, 1)]
 
 

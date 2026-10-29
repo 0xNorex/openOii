@@ -17,7 +17,7 @@ from app.agents.review_rules import ReviewAgent
 from app.api.deps import SessionDep, SettingsDep, WsManagerDep, get_or_404, require_run_id
 from app.config import Settings
 from app.db.utils import utcnow
-from app.exceptions import BusinessError
+from app.exceptions import AppException, BusinessError
 from app.generated.workflow_contract import GRAPH_STAGE_FOR_AGENT, WORKFLOW_VERSION
 from app.models.agent_run import AgentMessage, AgentRun
 from app.models.message import Message
@@ -27,6 +27,9 @@ from app.schemas.project import (
     CancelRunResponse,
     FeedbackAcceptedResponse,
     FeedbackRequest,
+    GateConfirmAcceptedResponse,
+    GateFeedbackAcceptedResponse,
+    GateFeedbackRequest,
     GenerateRequest,
     ProviderResolution,
     RecoveryControlRead,
@@ -732,6 +735,91 @@ async def cancel_run(
         logger.warning("engine cancel signal failed for run %s; DB intent is durable", run_id)
 
     return CancelRunResponse(status="cancelling", run_ids=[run_id])
+
+
+@router.post(
+    "/runs/{run_id}/confirm",
+    response_model=GateConfirmAcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def confirm_gate(
+    run_id: int,
+    session: AsyncSession = SessionDep,
+):
+    """Approve the gate a run is waiting at.
+
+    Same signal as the WS ``confirm`` message, but with an answer: 409 when
+    the run is not at a gate or a change request is still being redone.
+    """
+    from app.services.run_signals import GateFeedbackRejected, approve_gate
+
+    run = await get_or_404(session, AgentRun, run_id)
+    try:
+        await approve_gate(run_id, project_id=run.project_id)
+    except GateFeedbackRejected as exc:
+        raise AppException(message=str(exc), code=exc.code, status_code=status.HTTP_409_CONFLICT) from exc
+    return GateConfirmAcceptedResponse(run_id=run_id)
+
+
+@router.post(
+    "/runs/{run_id}/gate-feedback",
+    response_model=GateFeedbackAcceptedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def gate_feedback(
+    run_id: int,
+    payload: GateFeedbackRequest,
+    session: AsyncSession = SessionDep,
+    ws: ConnectionManager = WsManagerDep,
+):
+    """Request changes at the gate a run is waiting at.
+
+    Records the decision only. The engine redoes the gate's stage with this
+    feedback and returns to the same gate; it never counts as an approval.
+    """
+    from app.services.run_signals import GateFeedbackRejected, submit_gate_feedback
+
+    run = await get_or_404(session, AgentRun, run_id)
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Feedback content cannot be blank")
+    if payload.entity_ids and payload.entity_type is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Selected feedback targets require entity_type"
+        )
+    try:
+        feedback = await submit_gate_feedback(
+            run_id,
+            project_id=run.project_id,
+            content=content,
+            entity_type=payload.entity_type,
+            entity_ids=payload.entity_ids,
+        )
+    except GateFeedbackRejected as exc:
+        raise AppException(message=str(exc), code=exc.code, status_code=status.HTTP_409_CONFLICT) from exc
+
+    await session.refresh(run)
+    awaiting = run.awaiting_payload if isinstance(run.awaiting_payload, dict) else {}
+    previous = awaiting.get("feedback") if isinstance(awaiting.get("feedback"), dict) else None
+    await ws.send_event(
+        run.project_id,
+        {
+            "type": "run_feedback",
+            "data": {
+                "run_id": run_id,
+                "project_id": run.project_id,
+                "gate": awaiting.get("gate") or run.current_agent,
+                "stage": awaiting.get("current_stage"),
+                "feedback_id": feedback["id"],
+                "round": int(previous.get("round", 0)) + 1 if previous else 1,
+                "state": "received",
+                "content": content,
+                "entity_type": feedback.get("entity_type"),
+                "entity_ids": feedback.get("entity_ids"),
+            },
+        },
+    )
+    return GateFeedbackAcceptedResponse(run_id=run_id, feedback_id=str(feedback["id"]))
 
 
 @router.post(

@@ -1,0 +1,160 @@
+"""Feedback at an approval gate means "request changes", never "approve"."""
+
+from __future__ import annotations
+
+import pytest
+from sqlmodel import select
+
+from app.models.agent_run import AgentRun
+from app.models.message import Message
+from tests.factories import create_project, create_run
+
+GATE_PAYLOAD = {
+    "run_id": 0,
+    "agent": "outline",
+    "gate": "outline",
+    "current_stage": "outline_approval",
+    "stage": "outline_approval",
+    "next_stage": "plan_characters",
+    "recovery_summary": {"current_stage": "outline_approval"},
+    "message": "大纲已完成",
+}
+
+
+async def _gate_run(session, project_id: int) -> AgentRun:
+    run = await create_run(session, project_id=project_id, status="waiting_for_approval")
+    run.awaiting_payload = {**GATE_PAYLOAD, "run_id": run.id, "project_id": project_id}
+    run.current_agent = "outline"
+    session.add(run)
+    await session.commit()
+    await session.refresh(run)
+    return run
+
+
+@pytest.fixture()
+def _shared_maker(monkeypatch, shared_session_maker):
+    monkeypatch.setattr("app.db.session.async_session_maker", shared_session_maker)
+
+
+@pytest.mark.asyncio
+async def test_runs_current_carries_the_pending_gate(async_client, test_session):
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+
+    res = await async_client.get(f"/api/v1/projects/{project.id}/runs/current")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["state"] == "active"
+    assert body["active_run"]["status"] == "waiting_for_approval"
+    # A reload rebuilds the approval card from this, not from a WS replay.
+    assert body["awaiting_gate"]["current_stage"] == "outline_approval"
+    assert body["awaiting_gate"]["run_id"] == run.id
+    assert body["pending_gate_feedback"] is None
+
+
+@pytest.mark.asyncio
+async def test_gate_feedback_requests_changes_without_approving(
+    async_client, test_session, ws_manager, _shared_maker
+):
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+
+    res = await async_client.post(
+        f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "  结局更温暖  "}
+    )
+    assert res.status_code == 202, res.text
+    feedback_id = res.json()["feedback_id"]
+
+    stored = (
+        await test_session.execute(
+            select(AgentRun).where(AgentRun.id == run.id).execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    assert stored.confirm_requested is False
+    assert stored.status == "waiting_for_approval"
+    assert stored.gate_feedback["content"] == "结局更温暖"
+    assert stored.gate_feedback["id"] == feedback_id
+
+    messages = (await test_session.execute(select(Message).where(Message.run_id == run.id))).scalars().all()
+    assert [m.content for m in messages] == ["结局更温暖"]
+
+    receipts = [e for _, e in ws_manager.events if e["type"] == "run_feedback"]
+    assert receipts and receipts[-1]["data"]["state"] == "received"
+    assert receipts[-1]["data"]["stage"] == "outline_approval"
+
+    current = (await async_client.get(f"/api/v1/projects/{project.id}/runs/current")).json()
+    assert current["pending_gate_feedback"]["id"] == feedback_id
+
+    # A second request while the first is unread is refused, not merged silently.
+    again = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "再改"})
+    assert again.status_code == 409
+    assert again.json()["error"]["code"] == "GATE_FEEDBACK_PENDING"
+
+
+@pytest.mark.asyncio
+async def test_gate_feedback_refused_when_not_at_a_gate(async_client, test_session, _shared_maker):
+    project = await create_project(test_session)
+    run = await create_run(test_session, project_id=project.id, status="running")
+
+    res = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "改"})
+    assert res.status_code == 409
+    assert res.json()["error"]["code"] == "RUN_NOT_AT_GATE"
+
+
+@pytest.mark.asyncio
+async def test_gate_feedback_validates_input(async_client, test_session, _shared_maker):
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+
+    blank = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "   "})
+    assert blank.status_code == 422
+    untyped = await async_client.post(
+        f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "改", "entity_ids": [1]}
+    )
+    assert untyped.status_code == 422
+    missing = await async_client.post("/api/v1/runs/987654/gate-feedback", json={"content": "改"})
+    assert missing.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_rest_confirm_approves_the_gate(async_client, test_session, _shared_maker):
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+
+    res = await async_client.post(f"/api/v1/runs/{run.id}/confirm")
+    assert res.status_code == 202, res.text
+    stored = (
+        await test_session.execute(
+            select(AgentRun).where(AgentRun.id == run.id).execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    assert stored.confirm_requested is True
+
+
+@pytest.mark.asyncio
+async def test_rest_confirm_refused_while_changes_are_pending(
+    async_client, test_session, ws_manager, _shared_maker
+):
+    project = await create_project(test_session)
+    run = await _gate_run(test_session, project.id)
+    res = await async_client.post(f"/api/v1/runs/{run.id}/gate-feedback", json={"content": "换个结局"})
+    assert res.status_code == 202
+
+    res = await async_client.post(f"/api/v1/runs/{run.id}/confirm")
+    assert res.status_code == 409
+    assert res.json()["error"]["code"] == "GATE_FEEDBACK_PENDING"
+    stored = (
+        await test_session.execute(
+            select(AgentRun).where(AgentRun.id == run.id).execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+    assert stored.confirm_requested is False
+
+
+@pytest.mark.asyncio
+async def test_rest_confirm_refused_when_not_at_a_gate(async_client, test_session, _shared_maker):
+    project = await create_project(test_session)
+    run = await create_run(test_session, project_id=project.id, status="running")
+    res = await async_client.post(f"/api/v1/runs/{run.id}/confirm")
+    assert res.status_code == 409
+    assert res.json()["error"]["code"] == "RUN_NOT_AT_GATE"

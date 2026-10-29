@@ -5,6 +5,7 @@
  */
 import {
   AGENT_COMPLETION_INFO,
+  APPROVAL_TO_PRODUCED_STAGE,
   GATE_AGENT,
   NEXT_STAGE,
   STAGE_ORDER,
@@ -28,6 +29,7 @@ import {
 import type {
   CharacterRow,
   FrozenStageInput,
+  GateFeedbackSignal,
   ProjectRow,
   ShotRow,
 } from "../shared-db.js";
@@ -594,36 +596,7 @@ export class PipelineRunner {
           continue;
         }
 
-        await this.executeStageAttempt(stage, request, emitter, async (attempt, operation) => {
-          ctx.shared = this.shared.withFrozenStageInput(readFrozenStageInput(attempt));
-          // One operation identity for every provider call in this attempt:
-          // text (pi-ai), image and video all read from the same contract.
-          ctx.operation = operation;
-          ctx.media.setOperation(operation);
-          try {
-            // One span per stage attempt: the run -> stage -> provider tree is
-            // what makes a failed run diagnosable without grepping logs.
-            await withStageSpan(
-              `stage ${stage}`,
-              {
-                "openoii.run_id": request.runId,
-                "openoii.project_id": request.projectId,
-                "openoii.stage": stage,
-                "openoii.stage_attempt_id": attempt.stage_attempt_id,
-                "openoii.execution_attempt": attempt.execution_attempt,
-              },
-              async (span) => {
-                span.setAttribute("openoii.stage_attempt", attempt.attempt);
-                await this.runProduction(stage, ctx, request);
-                span.setAttribute("openoii.status", "succeeded");
-              },
-            );
-          } finally {
-            ctx.operation = null;
-            ctx.media.setOperation(null);
-            ctx.shared = this.shared;
-          }
-        });
+        await this.runProductionAttempt(stage, request, ctx, emitter);
         this.shared.assertExecutionFence();
         if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
         this.db.saveCheckpoint(request.runId, stage, { completed_at: new Date().toISOString() });
@@ -683,6 +656,46 @@ export class PipelineRunner {
       }
       return { status: "failed", error: message };
     }
+  }
+
+  /** One durable attempt of a production stage (shared by the main loop and gate feedback). */
+  private async runProductionAttempt(
+    stage: StageId,
+    request: PipelineRequest,
+    ctx: StageContext,
+    emitter: PipelineEmitter,
+    options: { forceNew?: boolean } = {},
+  ): Promise<void> {
+    await this.executeStageAttempt(stage, request, emitter, async (attempt, operation) => {
+      ctx.shared = this.shared.withFrozenStageInput(readFrozenStageInput(attempt));
+      // One operation identity for every provider call in this attempt:
+      // text (pi-ai), image and video all read from the same contract.
+      ctx.operation = operation;
+      ctx.media.setOperation(operation);
+      try {
+        // One span per stage attempt: the run -> stage -> provider tree is
+        // what makes a failed run diagnosable without grepping logs.
+        await withStageSpan(
+          `stage ${stage}`,
+          {
+            "openoii.run_id": request.runId,
+            "openoii.project_id": request.projectId,
+            "openoii.stage": stage,
+            "openoii.stage_attempt_id": attempt.stage_attempt_id,
+            "openoii.execution_attempt": attempt.execution_attempt,
+          },
+          async (span) => {
+            span.setAttribute("openoii.stage_attempt", attempt.attempt);
+            await this.runProduction(stage, ctx, request);
+            span.setAttribute("openoii.status", "succeeded");
+          },
+        );
+      } finally {
+        ctx.operation = null;
+        ctx.media.setOperation(null);
+        ctx.shared = this.shared;
+      }
+    }, options);
   }
 
   private async runProduction(
@@ -1037,59 +1050,193 @@ export class PipelineRunner {
     const gateAgent = GATE_AGENT[stage] ?? agentForStage(stage);
     const currentStage = stage;
     const nextStage = NEXT_STAGE[stage];
-    const info = ctx.completionInfo ?? AGENT_COMPLETION_INFO[gateAgent] ?? {
-      completed: `「${gateAgent}」已完成`, details: "", next: "继续下一步", question: "是否继续？",
-    };
-    const message = [info.completed, info.details, info.next, info.question]
-      .filter((part) => part && part.trim()).join("\n");
+    let lastFeedback: GateFeedbackOutcome | null = null;
+    let round = 0;
 
-    this.shared.clearConfirmSignal(request.runId);
-    const awaitingPayload: Record<string, unknown> = {
-      run_id: request.runId,
-      project_id: request.projectId,
-      agent: gateAgent,
-      gate: gateAgent,
-      current_stage: currentStage,
-      stage: currentStage,
-      next_stage: nextStage,
-      recovery_summary: {
-        project_id: request.projectId,
+    // A gate only ever leaves on approval (or cancel/timeout). "Request changes"
+    // redoes the gate's own stage with the feedback and comes back here.
+    for (;;) {
+      const info = ctx.completionInfo ?? AGENT_COMPLETION_INFO[gateAgent] ?? {
+        completed: `「${gateAgent}」已完成`, details: "", next: "继续下一步", question: "是否继续？",
+      };
+      const message = [info.completed, info.details, info.next, info.question]
+        .filter((part) => part && part.trim()).join("\n");
+
+      // An approval clicked while a redo was running approved a version the
+      // user has not seen; it must not carry over to the new one.
+      this.shared.clearConfirmSignal(request.runId);
+      const awaitingPayload: Record<string, unknown> = {
         run_id: request.runId,
+        project_id: request.projectId,
+        agent: gateAgent,
+        gate: gateAgent,
         current_stage: currentStage,
-      },
-      preserved_stages: [],
-      message,
-      completed: info.completed,
-      next_step: info.next,
-      question: info.question,
-    };
-    if (gateAgent === "outline") {
-      const project = this.shared.getProject(request.projectId);
-      if (project?.story_outline) {
-        awaitingPayload.story_outline = parseJsonColumn(project.story_outline, null as unknown);
-        awaitingPayload.visual_bible = project.visual_bible;
+        stage: currentStage,
+        next_stage: nextStage,
+        recovery_summary: {
+          project_id: request.projectId,
+          run_id: request.runId,
+          current_stage: currentStage,
+        },
+        preserved_stages: [],
+        message,
+        completed: info.completed,
+        next_step: info.next,
+        question: info.question,
+        feedback: lastFeedback,
+      };
+      if (gateAgent === "outline") {
+        const project = this.shared.getProject(request.projectId);
+        if (project?.story_outline) {
+          awaitingPayload.story_outline = parseJsonColumn(project.story_outline, null as unknown);
+          awaitingPayload.visual_bible = project.visual_bible;
+        }
       }
-    }
 
-    this.shared.updateRun(request.runId, { status: "waiting_for_approval", current_agent: gateAgent });
-    this.shared.setAwaitingPayload(request.runId, awaitingPayload);
-    ctx.emitter.emit("run_awaiting_confirm", awaitingPayload);
+      this.shared.updateRun(request.runId, { status: "waiting_for_approval", current_agent: gateAgent });
+      this.shared.setAwaitingPayload(request.runId, awaitingPayload);
+      ctx.emitter.emit("run_awaiting_confirm", awaitingPayload);
 
-    if (request.autoMode) {
-      this.shared.setAwaitingPayload(request.runId, null);
-      this.shared.updateRun(request.runId, { status: "running" });
-      this.emitGateConfirmed(stage, request, ctx, gateAgent, currentStage, nextStage);
-      return;
-    }
+      if (request.autoMode) {
+        this.shared.setAwaitingPayload(request.runId, null);
+        this.shared.updateRun(request.runId, { status: "running" });
+        this.emitGateConfirmed(stage, request, ctx, gateAgent, currentStage, nextStage);
+        return;
+      }
 
-    const approved = await this.waitForConfirm(request.runId);
-    if (!approved) {
+      const decision = await this.waitForGateDecision(request.runId);
+      if (decision.kind === "timeout") {
+        if (this.shouldCancel(request.runId)) return;
+        throw new Error(`等待确认超时（agent: ${gateAgent}）`);
+      }
+      if (decision.kind === "approve") {
+        this.shared.setAwaitingPayload(request.runId, null);
+        this.shared.updateRun(request.runId, { status: "running" });
+        this.emitGateConfirmed(stage, request, ctx, gateAgent, currentStage, nextStage);
+        return;
+      }
+
+      round += 1;
+      lastFeedback = await this.applyGateFeedback(stage, request, ctx, decision.feedback, round);
       if (this.shouldCancel(request.runId)) return;
-      throw new Error(`等待确认超时（agent: ${gateAgent}）`);
     }
+  }
+
+  /**
+   * Redo the gate's produced stage with the user's feedback.
+   *
+   * Returns the receipt the gate shows next: a new version (`revised`), or an
+   * explicit reason why nothing was redone (`not_applied` / `failed`). It never
+   * advances past the gate.
+   */
+  private async applyGateFeedback(
+    gate: StageId,
+    request: PipelineRequest,
+    ctx: StageContext,
+    feedback: GateFeedbackSignal,
+    round: number,
+  ): Promise<GateFeedbackOutcome> {
+    const gateAgent = GATE_AGENT[gate] ?? agentForStage(gate);
+    const receipt = (state: GateFeedbackOutcome["state"], reason: string | null = null): GateFeedbackOutcome => ({
+      id: feedback.id,
+      round,
+      state,
+      content: feedback.content,
+      reason,
+      entity_type: feedback.entityType,
+      entity_ids: feedback.entityIds.length ? feedback.entityIds : null,
+    });
+    const emitReceipt = (outcome: GateFeedbackOutcome) =>
+      ctx.emitter.emit("run_feedback", {
+        run_id: request.runId,
+        project_id: request.projectId,
+        gate: gateAgent,
+        stage: gate,
+        feedback_id: outcome.id,
+        round: outcome.round,
+        state: outcome.state,
+        content: outcome.content,
+        reason: outcome.reason,
+        entity_type: outcome.entity_type,
+        entity_ids: outcome.entity_ids,
+      });
+    const finish = (outcome: GateFeedbackOutcome): GateFeedbackOutcome => {
+      this.shared.clearGateFeedback(request.runId);
+      emitReceipt(outcome);
+      return outcome;
+    };
+
+    emitReceipt(receipt("received"));
+    const plan = planGateFeedback(gate, feedback);
+    if (plan.kind === "not_applied") return finish(receipt("not_applied", plan.reason));
+
+    // While the stage is redone the run is working, not waiting: a reload shows
+    // 重做中 instead of a stale approval card for the version being replaced.
     this.shared.setAwaitingPayload(request.runId, null);
-    this.shared.updateRun(request.runId, { status: "running" });
-    this.emitGateConfirmed(stage, request, ctx, gateAgent, currentStage, nextStage);
+    this.shared.updateRun(request.runId, { status: "running", current_agent: agentForStage(plan.stages[0] ?? gate) });
+    emitReceipt(receipt("regenerating"));
+
+    const saved = {
+      userFeedback: ctx.userFeedback,
+      targetCharacterIds: ctx.targetCharacterIds,
+      targetShotIds: ctx.targetShotIds,
+      forceCharacterRedraw: ctx.forceCharacterRedraw,
+    };
+    const feedbackRequest: PipelineRequest = { ...request, userFeedback: feedback.content };
+    ctx.userFeedback = feedback.content;
+    if (plan.characters) {
+      // Forced ids: a character that already has an image is redrawn anyway.
+      const ids =
+        plan.characters === "all"
+          ? this.shared.charactersForProject(request.projectId).map((row) => row.id)
+          : plan.characters;
+      ctx.targetCharacterIds = ids;
+      ctx.forceCharacterRedraw = true;
+      this.dropTargetCheckpoints(request.runId, ctx, "character_image", ids);
+    }
+    if (plan.shots) {
+      const ids =
+        plan.shots === "all"
+          ? this.shared.shotsForProject(request.projectId).map((row) => row.id)
+          : plan.shots;
+      ctx.targetShotIds = ids;
+      this.dropTargetCheckpoints(request.runId, ctx, plan.shotKind, ids);
+    }
+    try {
+      for (const stage of plan.stages) {
+        await this.runProductionAttempt(stage, feedbackRequest, ctx, ctx.emitter, { forceNew: true });
+        this.shared.assertExecutionFence();
+        if (this.shouldCancel(request.runId)) return receipt("failed", "已取消");
+        this.db.saveCheckpoint(request.runId, stage, {
+          completed_at: new Date().toISOString(),
+          feedback_round: round,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.startsWith("execution lease lost for run") || this.shouldCancel(request.runId)) {
+        throw error;
+      }
+      // The previous version is still in place; say so and keep waiting.
+      return finish(receipt("failed", `按意见重做失败，已保留上一版：${message}`));
+    } finally {
+      ctx.userFeedback = saved.userFeedback;
+      ctx.targetCharacterIds = saved.targetCharacterIds;
+      ctx.targetShotIds = saved.targetShotIds;
+      ctx.forceCharacterRedraw = saved.forceCharacterRedraw;
+    }
+    return finish(receipt("revised"));
+  }
+
+  private dropTargetCheckpoints(
+    runId: number,
+    ctx: StageContext,
+    kind: "character_image" | "shot_image" | "shot_video",
+    ids: number[],
+  ): void {
+    const checkpoints = ids.map((id) => targetCheckpointStage(kind, id));
+    this.db.deleteCheckpoints(runId, checkpoints);
+    for (const checkpoint of checkpoints) ctx.completedTargets.delete(checkpoint);
   }
 
   private emitGateConfirmed(
@@ -1120,15 +1267,76 @@ export class PipelineRunner {
     });
   }
 
-  private async waitForConfirm(runId: number): Promise<boolean> {
+  private async waitForGateDecision(runId: number): Promise<GateDecision> {
     const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
     while (Date.now() < deadline) {
       this.shared.assertExecutionFence();
-      if (this.shouldCancel(runId)) return false;
-      if (this.shared.consumeConfirmSignal(runId)) return true;
+      if (this.shouldCancel(runId)) return { kind: "timeout" };
+      // Feedback first: "request changes" must never be read as an approval.
+      const feedback = this.shared.peekGateFeedback(runId);
+      if (feedback) return { kind: "changes", feedback };
+      if (this.shared.consumeConfirmSignal(runId)) return { kind: "approve" };
       await sleep(CONFIRM_POLL_MS);
     }
-    return false;
+    return { kind: "timeout" };
+  }
+
+}
+
+interface GateFeedbackOutcome {
+  id: string | null;
+  round: number;
+  state: "received" | "regenerating" | "revised" | "not_applied" | "failed";
+  content: string;
+  reason: string | null;
+  entity_type: "character" | "shot" | null;
+  entity_ids: number[] | null;
+}
+
+type GateDecision =
+  | { kind: "approve" }
+  | { kind: "changes"; feedback: GateFeedbackSignal }
+  | { kind: "timeout" };
+
+type GateFeedbackPlan =
+  | { kind: "not_applied"; reason: string }
+  | {
+      kind: "redo";
+      stages: StageId[];
+      characters?: number[] | "all";
+      shots?: number[] | "all";
+      shotKind: "shot_image" | "shot_video";
+    };
+
+/**
+ * What "request changes" at a gate redoes. The gate's produced stage comes from
+ * the workflow contract; entity targets narrow image work to what was selected.
+ */
+export function planGateFeedback(gate: StageId, feedback: GateFeedbackSignal): GateFeedbackPlan {
+  const produced = APPROVAL_TO_PRODUCED_STAGE[gate];
+  if (!produced) return { kind: "not_applied", reason: "这一步没有可重做的产出" };
+  const ids = feedback.entityIds.length ? feedback.entityIds : null;
+  switch (gate) {
+    case "character_images_approval":
+      if (feedback.entityType === "shot") {
+        return { kind: "not_applied", reason: "现在确认的是角色形象，选中的是镜头；镜头意见请在分镜画面这一步提" };
+      }
+      return { kind: "redo", stages: [produced], characters: ids ?? "all", shotKind: "shot_image" };
+    case "shot_images_approval":
+      if (feedback.entityType === "character") {
+        return { kind: "not_applied", reason: "现在确认的是分镜画面，选中的是角色；角色形象已在上一步确认" };
+      }
+      return { kind: "redo", stages: [produced], shots: ids ?? "all", shotKind: "shot_image" };
+    case "compose_approval":
+      if (feedback.entityType === "shot" && ids) {
+        return { kind: "redo", stages: ["compose_videos", "compose_merge"], shots: ids, shotKind: "shot_video" };
+      }
+      return {
+        kind: "not_applied",
+        reason: "成片已合成：请先选中要改的镜头再提意见；整片重做请用「重新生成」",
+      };
+    default:
+      return { kind: "redo", stages: [produced], shotKind: "shot_image" };
   }
 }
 

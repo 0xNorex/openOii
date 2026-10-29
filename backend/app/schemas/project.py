@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -366,6 +366,27 @@ class RecoveryControlRead(BaseModel):
     )
     active_run: AgentRunRead
     recovery_summary: RecoverySummaryRead
+    # 运行停在审批闸门时的 run_awaiting_confirm 载荷：刷新 / 重连后据此重建「待确认」
+    awaiting_gate: dict[str, Any] | None = None
+    # 已提交、engine 尚未接手的闸门修改意见
+    pending_gate_feedback: dict[str, Any] | None = None
+
+
+class GateFeedbackRequest(BaseModel):
+    content: str = Field(min_length=1)
+    entity_type: Literal["character", "shot"] | None = None
+    entity_ids: list[int] | None = None
+
+
+class GateConfirmAcceptedResponse(BaseModel):
+    run_id: int
+    status: Literal["accepted"] = "accepted"
+
+
+class GateFeedbackAcceptedResponse(BaseModel):
+    run_id: int
+    feedback_id: str
+    status: Literal["accepted"] = "accepted"
 
 
 class FeedbackRequest(BaseModel):

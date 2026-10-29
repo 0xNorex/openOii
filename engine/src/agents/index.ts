@@ -554,7 +554,7 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
             universeStyle: ctx.universeStyle,
             userFeedback: ctx.userFeedback,
           })
-        : `角色立绘：${character.name}。${character.description ?? ""} ${characterForRender.visual_notes ?? ""} ${ctx.shared.getProject(ctx.projectId)?.visual_bible ?? ""}`.trim();
+        : `角色立绘：${character.name}。${character.description ?? ""} ${characterForRender.visual_notes ?? ""} ${ctx.shared.getProject(ctx.projectId)?.visual_bible ?? ""}${ctx.userFeedback ? ` 修改要求：${ctx.userFeedback}` : ""}`.trim();
       const imageUrl = await ctx.media.generateImageUrl({ prompt });
       let faceEmbedding: string | null = null;
       try {
@@ -699,6 +699,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             shot.scene ? `场景：${shot.scene}` : "",
             shot.lighting ? `光线：${shot.lighting}` : "",
             names.length ? `角色：${names.join("、")}` : "",
+            ctx.userFeedback ? `修改要求：${ctx.userFeedback}` : "",
           ]
             .filter(Boolean)
             .join("。");

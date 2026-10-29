@@ -46,6 +46,39 @@ export interface AgentRunRow {
   lease_expires_at: string | null;
   cancel_requested_at: string | null;
   context_snapshot: string | null;
+  /** Pending "request changes" at a gate (absent on pre-0029 schemas). */
+  gate_feedback?: string | null;
+}
+
+export interface GateFeedbackSignal {
+  id: string | null;
+  content: string;
+  entityType: "character" | "shot" | null;
+  entityIds: number[];
+}
+
+export function parseGateFeedback(raw: string): GateFeedbackSignal | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const content = typeof record.content === "string" ? record.content.trim() : "";
+  if (!content) return null;
+  const entityType =
+    record.entity_type === "character" || record.entity_type === "shot" ? record.entity_type : null;
+  const entityIds = Array.isArray(record.entity_ids)
+    ? record.entity_ids.filter((id): id is number => Number.isInteger(id) && (id as number) > 0)
+    : [];
+  return {
+    id: typeof record.id === "string" ? record.id : null,
+    content,
+    entityType: entityIds.length ? entityType : null,
+    entityIds: entityType ? entityIds : [],
+  };
 }
 
 export interface CharacterRow {
@@ -565,6 +598,42 @@ export class SharedDb {
 
   clearConfirmSignal(runId: number): void {
     this.updateRun(runId, { confirm_requested: 0 });
+  }
+
+  /**
+   * The pending "request changes" decision for a gate, if any. Written by the
+   * API gateway (agentrun.gate_feedback). It stays set while the engine redoes
+   * the stage, so a crash mid-redo resumes into the same request, and is
+   * cleared with {@link clearGateFeedback} once the gate is back.
+   */
+  peekGateFeedback(runId: number): GateFeedbackSignal | null {
+    if (!this.hasRunColumn("gate_feedback")) return null;
+    const row = this.db
+      .prepare("SELECT gate_feedback FROM agentrun WHERE id = ?")
+      .get(runId) as { gate_feedback: string | null } | undefined;
+    if (!row?.gate_feedback || row.gate_feedback === "null") return null;
+    const parsed = parseGateFeedback(row.gate_feedback);
+    // An unreadable payload must not wedge the gate: drop it.
+    if (!parsed) this.updateRun(runId, { gate_feedback: null });
+    return parsed;
+  }
+
+  clearGateFeedback(runId: number): void {
+    if (!this.hasRunColumn("gate_feedback")) return;
+    this.updateRun(runId, { gate_feedback: null });
+  }
+
+  private runColumns: Set<string> | null = null;
+
+  private hasRunColumn(name: string): boolean {
+    if (!this.runColumns) {
+      this.runColumns = new Set(
+        (this.db.prepare("PRAGMA table_info(agentrun)").all() as Array<{ name: string }>).map(
+          (column) => column.name,
+        ),
+      );
+    }
+    return this.runColumns.has(name);
   }
 
   setAwaitingPayload(runId: number, payload: unknown | null): void {

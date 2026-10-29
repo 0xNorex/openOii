@@ -219,6 +219,16 @@ async def build_recovery_control_surface(
     detail = (
         "Project already has an active run" if state == "active" else "Project has a resumable run"
     )
+    awaiting_gate = (
+        run.awaiting_payload
+        if state == "active"
+        and run.status == "waiting_for_approval"
+        and isinstance(run.awaiting_payload, dict)
+        else None
+    )
+    pending_gate_feedback = (
+        run.gate_feedback if state == "active" and isinstance(run.gate_feedback, dict) else None
+    )
     return RecoveryControlRead(
         state=state,
         detail=(
@@ -229,4 +239,6 @@ async def build_recovery_control_surface(
         available_actions=["resume", "cancel"] if summary.resumable else ["cancel"],
         active_run=AgentRunRead.model_validate(run),
         recovery_summary=summary,
+        awaiting_gate=awaiting_gate,
+        pending_gate_feedback=pending_gate_feedback,
     )
