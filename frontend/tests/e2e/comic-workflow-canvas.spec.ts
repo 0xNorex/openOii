@@ -348,3 +348,23 @@ test("mobile studio is one readable column at 390×844", async ({ page }) => {
 	);
 	expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("panels re-fit the board until the user pans", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/project/7");
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
+	const viewport = page.locator(".react-flow__viewport");
+	const transform = () => viewport.getAttribute("style");
+
+	const before = await transform();
+	await page.getByRole("button", { name: "收起检查器" }).click();
+	await expect.poll(transform).not.toBe(before);
+
+	await page.mouse.move(720, 400);
+	await page.mouse.wheel(0, 120);
+	await page.waitForTimeout(300);
+	const panned = await transform();
+	await page.getByRole("button", { name: "展开检查器" }).click();
+	await page.waitForTimeout(500);
+	expect(await transform()).toBe(panned);
+});

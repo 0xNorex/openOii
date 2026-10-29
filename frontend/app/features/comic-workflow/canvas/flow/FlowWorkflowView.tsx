@@ -134,6 +134,8 @@ function FlowInner({
 	const [tool, setTool] = useState<"select" | "hand">("select");
 	const selectedRef = useRef<string[]>([]);
 	const fittedRef = useRef(false);
+	// 用户自己平移/缩放之后，面板开合不再挪动画板
+	const autoFitRef = useRef(true);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const insetsRef = useRef(fitInsets);
 	insetsRef.current = fitInsets;
@@ -155,6 +157,7 @@ function FlowInner({
 			if (!el || target.length === 0) return;
 			const bounds = flow.getNodesBounds(target);
 			if (bounds.width === 0 || bounds.height === 0) return;
+			autoFitRef.current = true;
 			void flow.setViewport(
 				storyboardViewport(
 					bounds,
@@ -172,6 +175,13 @@ function FlowInner({
 		fittedRef.current = true;
 		requestAnimationFrame(() => fit(0));
 	}, [fit, nodes.length]);
+
+	const insetLeft = fitInsets?.left ?? 0;
+	const insetRight = fitInsets?.right ?? 0;
+	useEffect(() => {
+		if (!fittedRef.current || !autoFitRef.current) return;
+		fit(motionDuration("normal"));
+	}, [fit, insetLeft, insetRight]);
 
 	const applySelection = useCallback(
 		(ids: string[]) => {
@@ -243,13 +253,25 @@ function FlowInner({
 	}, [fit, storageKey]);
 
 	const animation = { duration: motionDuration("fast") };
+	const manual = () => {
+		autoFitRef.current = false;
+	};
 	const controls: CanvasViewControls = {
 		tool,
 		setTool,
 		zoomPercent: Math.round(zoom * 100),
-		zoomIn: () => void flow.zoomIn(animation),
-		zoomOut: () => void flow.zoomOut(animation),
-		zoomReset: () => void flow.zoomTo(1, animation),
+		zoomIn: () => {
+			manual();
+			void flow.zoomIn(animation);
+		},
+		zoomOut: () => {
+			manual();
+			void flow.zoomOut(animation);
+		},
+		zoomReset: () => {
+			manual();
+			void flow.zoomTo(1, animation);
+		},
 		fit: () => fit(motionDuration("normal")),
 	};
 
@@ -262,6 +284,10 @@ function FlowInner({
 				onNodesChange={onNodesChange}
 				onSelectionChange={handleSelectionChange}
 				onNodeDragStop={handleDragStop}
+				onMoveStart={(event) => {
+					// event 为 null 表示程序触发（适配、动画），只有用户手势才算手动
+					if (event) manual();
+				}}
 				colorMode={theme === "dark" ? "dark" : "light"}
 				minZoom={0.2}
 				maxZoom={2}
