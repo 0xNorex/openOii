@@ -134,18 +134,6 @@
     text-transform: uppercase;
   }
 
-  /* 字标双版：青版垫底，群青版叠印 */
-  .wordmark-cyan {
-    fill: oklch(var(--cmyk-cyan));
-  }
-  .wordmark-key {
-    fill: rgb(var(--color-primary));
-    mix-blend-mode: multiply;
-  }
-  [data-theme="dark"] .wordmark-key {
-    mix-blend-mode: screen;
-  }
-
   /* 标题字体：Unbounded（拉丁/数字）+ 庆科黄油体（中文子集）。只用于固定文案；
      Unbounded 很宽，拉丁部分收一点字距，避免顶栏/卡片标题溢出 */
   .display {

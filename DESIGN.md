@@ -38,7 +38,7 @@ colors:
   dark-error: "#FF8A80"
 typography:
   wordmark:
-    note: "a ⊕ registration mark in primary plus openOii in font-sans 700, tracking-tight; no webfont"
+    note: "openOii in Instrument Serif Italic, inlined as SVG outlines (open = ink, Oii = primary); no webfont load"
   sans:
     fontFamily: "system CJK stack: -apple-system, PingFang SC, Microsoft YaHei, Noto Sans CJK SC, system-ui"
   mono:
@@ -92,7 +92,7 @@ components:
 
 **Authority:** `frontend/app/styles/tokens.css` is the source of truth. This document is human-readable; update it in the **same PR** when tokens change (ADR 0002).
 
-**Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents are print-craft marks: the ⊕ registration mark in the wordmark, crop and registration marks on the canvas, and halftone in waiting states. They appear only on the wordmark, the canvas cards, the final-video card and moment, and empty states (`docs/research/craft-direction.md`). Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
+**Direction (ADR 0010, supersedes D2):** professional creation studio with light comic accents. Light **and** dark themes (default follows the system). Comic accents are print-craft marks: crop and registration marks on the canvas, and halftone in waiting states. They appear only on the wordmark, the canvas cards, the final-video card and moment, and empty states (`docs/research/craft-direction.md`). Not cold SaaS grey; not heavy comic. Spec: `docs/specs/frontend-studio-redesign.md`.
 
 **Shell geometry (tokens):**
 
@@ -159,7 +159,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 
 1. **No document scroll** — `html`/`body`/`#root` overflow hidden; only `.page-body` / panel panes scroll.
 2. **Interaction soft freeze** — selection binding, the activity timeline and inbox, cell regenerate, generate/confirm/cancel keep meaning (ADR 0003).
-3. **No display face** — the wordmark is a mark plus the system sans; `font-brand` is banned.
+3. **No display face in chrome or data** — the wordmark is inlined SVG outlines and `.display` is only for fixed headings; `font-brand` is banned.
 4. **Dense chrome** — header/toolbar use `--touch-target-dense` for chips; primary actions keep `--touch-target-min` (44px).
 5. **Shell classes** — TopBar → `.chrome-row` + `data-shell="topbar"`; StudioControls (status pill, run actions) → TopBar `center` slot, `data-shell="studio-controls"`; pages → `.page-shell` / `.page-body`.
 6. **常驻非浮动面上限 3** — 第 4 个功能面一律走浮层/抽屉（yuuvis viewport architecture）。各面最小宽之和放不下时必须换布局模式，**不许按百分比切完再让面板重叠**。
@@ -173,7 +173,7 @@ focus ring 不手写：全局 `:focus-visible` 已是 2px primary outline，别�
 openOii is a tool for making comic videos, so the work (the storyboard) gets the screen and the chrome stays quiet.
 The workbench is a full-bleed React Flow canvas; the agent panel, the inspector and the PromptBar float over it.
 Warm grey paper and ink neutrals, one ultramarine (群青) brand hue, the system CJK font stack.
-The comic identity survives only as print-craft marks: the ⊕ wordmark, crop marks on the selected panel, registration marks on
+The comic identity survives only as print-craft marks: crop marks on the selected panel, registration marks on
 the final-video card and its completion moment, halftone while waiting, and corner marks on empty slots.
 
 It rejects three looks: cold grey SaaS (Jira), the generic AI generator (white card grids and purple gradients),
@@ -190,7 +190,7 @@ and heavy comic everywhere (offset shadows, halftone and display type on every s
 
 One brand hue (ultramarine, 群青) on calm warm-grey neutrals. Light and dark themes; the first visit follows `prefers-color-scheme`, the toggle persists (`data-theme="light" | "dark"`).
 
-- **Primary** `#2F4BC3` (dark `#96ACFE`): primary actions, selection, focus ring, links, the wordmark and the favicon dot. Also legal as text on every surface (≥ 6:1 light, ≥ 7:1 dark).
+- **Primary** `#2F4BC3` (dark `#96ACFE`): primary actions, selection, focus ring, links, the `Oii` of the wordmark and the favicon. Also legal as text on every surface (≥ 6:1 light, ≥ 7:1 dark).
 - **Primary ramp**: `primary-hover` `#243BB2` / `primary-pressed` `#1B2C9D` (dark `#A6BCFF` / `#8499E9`, lighter on dark). Filled primary controls use `hover:bg-primary-hover active:bg-primary-pressed`, not alpha. `primary-content` stays ≥ 4.5:1 on all three; `themeContrast.test.ts` checks it.
 - Ultramarine was chosen to stay clear of the teal `info` and storyboard accents and of the `error` red. The CMYK `--cmyk-magenta` plate on the final-video card is a print-registration accent, not the brand.
 - **Neutrals**: `paper-100` page bg, `paper-200` sunken panes, `paper-300` sunken-on-sunken fills, `line` (ink 12%) hairline borders and dividers, `line-strong` (ink 22%) dashed drop zones, `surface` raised cards/dialogs, `border-strong` input/control borders (≥ 3:1).
@@ -223,7 +223,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
   - `.label-caps` is 12px mono 500, uppercase, `--tracking-label` 0.14em, for section labels such as BRIEF or `universe / 3`.
 - **Line-height:** `--leading-normal` 1.6 for CJK body text; `--leading-snug` 1.35 and `--leading-tight` 1.15 for headings and chrome.
 - **Numerals:** the whole app uses `tabular-nums` so progress, durations and counts don't jitter.
-- **Wordmark** (`components/layout/Wordmark.tsx`, direction C "misregistered"): `open` in ink plus `Oii` printed twice, a `--cmyk-cyan` plate offset by 0.042em under a `primary` plate (multiply in light, screen in dark), like a two-colour print slightly off register. Glyphs are Schibsted Grotesk 800 outlines with hand kerning, inlined as paths so it never waits for a font. Static copies: `public/brand/openoii-wordmark-{light,dark}.svg`; `public/favicon.svg` is the same idea on a single "O" ring and follows `prefers-color-scheme`.
+- **Wordmark** (`components/layout/Wordmark.tsx`): `open` in ink and `Oii` in `primary`, set in **Instrument Serif Italic** (SIL OFL 1.1, notice in `public/fonts/OFL-InstrumentSerif.txt`). Plain type, no marks or offsets. The glyphs are inlined as SVG outlines, so no font file loads; n→O is opened by 10/1000 em and O→i closed by 15/1000 em. In the top bar it is `h-6` (24px tall, x-height ≈ 12px) so the thin italic holds its own next to the 12px nav. Static copies: `public/brand/openoii-wordmark-{light,dark}.svg`. `public/favicon.svg` is an italic `Oi` monogram in `primary` on a paper tile with a 0.45px same-colour stroke for weight at 16px, and it follows `prefers-color-scheme`.
 - Chinese text has no letter-spacing and no italics. `text-autospace` adds the CJK/Latin gap where the browser supports it.
 - **Browser surfaces:** a selection tinted with `primary`, a `primary` caret, thin ink scrollbars, `color-scheme` and a `theme-color` meta that follow the theme. See `docs/research/craft-direction.md`.
 

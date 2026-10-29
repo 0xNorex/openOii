@@ -84,12 +84,20 @@
 
 做了 4 个字标方向和 6 组标题字体对比（对比图在 `.devdata/screens/logo-options.png`、`display-type-options.png`），选定：
 
-- **字标 C「套版错位」：** 只有「Oii」印成青、群青两版并错开 0.042em，「open」保持单色。这样小到顶栏 16px 高时「open」仍然清楚，错位只落在品牌名的那半边。favicon 用同样的两版错位圆环。
+- **字标 C「套版错位」（第四轮已换掉）：** 只有「Oii」印成青、群青两版并错开 0.042em，「open」保持单色。这样小到顶栏 16px 高时「open」仍然清楚，错位只落在品牌名的那半边。favicon 用同样的两版错位圆环。
 - **标题字体 P5：** 拉丁用 Unbounded 700，中文用站酷庆科黄油体。两者都是方正、宽、带一点圆角的几何字，放在一起像同一套印刷标题字。
   - 中文只子集化标题用到的字（约 70 字，18.2 KB），字表在 `public/fonts/display-cjk.chars.txt`，测试会拦住缺字的新标题。
   - 只给固定文案用；含用户内容的标题用 `plainTitle` 退回正文字体，避免缺字时混出两种中文字形。
   - Unbounded 很宽，所以只用在短标题上，字距收 −0.01em。
 - **预算：** 字体共 87.4 KB，仍在 120 KB 内；标题字体不预加载。
+
+## 字标字体（第四轮）
+
+字标 C 的错位在顶栏尺寸下显得单调又多余。对比了 6 种只含字的字标（`.devdata/screens/logo-type-options.png`：Unbounded 500、Syne 800、Bricolage Grotesque 窄体、Instrument Serif Italic、Fraunces、Darker Grotesque），选定 **Instrument Serif Italic**：
+
+- 「open」墨色、「Oii」群青，只有字，去掉了青版错位和相关样式。
+- 方正宽大的庆科黄油体 / Unbounded 标题配一个细的衬线斜体字标，对比很强：标题像分镜稿上的大字，字标像片头的署名。
+- 字形转成路径内联，不加载字体。favicon 用斜体「Oi」：单个斜体 O 在 16px 下像数字 0。
 
 ## 图标决定（第二轮）
 
