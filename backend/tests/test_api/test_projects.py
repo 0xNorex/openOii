@@ -499,7 +499,17 @@ async def test_get_final_video_download(test_session, monkeypatch, tmp_path):
 
     assert response.status_code == 200
     content_disposition = response.headers.get("content-disposition", "")
-    assert "merged-final.mp4" in content_disposition
+    # saved under the project title, not the storage file name
+    assert "Test%20Project.mp4" in content_disposition
+
+
+@pytest.mark.asyncio
+async def test_final_video_download_name_is_safe():
+    from app.api.v1.routes.projects import _download_name
+
+    assert _download_name("末班地铁 / 橘猫: 名字?", 3, ".mp4") == "末班地铁   橘猫  名字.mp4"
+    assert _download_name("  ..  ", 3, ".mp4") == "openoii-3.mp4"
+    assert _download_name(None, 3, "") == "openoii-3.mp4"
 
 
 @pytest.mark.asyncio

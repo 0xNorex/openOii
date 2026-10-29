@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import cast
 
@@ -219,7 +220,16 @@ async def download_final_video(project_id: int, session: AsyncSession = SessionD
     if path is None or not path.exists():
         raise HTTPException(status_code=404, detail="Final video not found")
 
-    return FileResponse(path, filename=path.name)
+    return FileResponse(path, filename=_download_name(project.title, project_id, path.suffix))
+
+
+_UNSAFE_FILENAME = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
+
+
+def _download_name(title: str | None, project_id: int, suffix: str) -> str:
+    """Name the saved file after the project instead of the storage UUID."""
+    stem = _UNSAFE_FILENAME.sub(" ", title or "").strip(" .")[:60].strip()
+    return f"{stem or f'openoii-{project_id}'}{suffix or '.mp4'}"
 
 
 @router.put("/{project_id}", response_model=ProjectRead)

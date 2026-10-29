@@ -159,7 +159,7 @@ test("text streams in incrementally: thinking first, then typed-out output", asy
 	const to = Array.from(PART_2).length;
 	expect(lengths.some((n) => n > from && n < to)).toBe(true);
 	expect(lengths.at(-1)).toBe(to);
-	for (let i = 1; i < lengths.length; i += 1) expect(lengths[i]).toBeGreaterThanOrEqual(lengths[i - 1]!);
+	for (let i = 1; i < lengths.length; i += 1) expect(lengths[i], JSON.stringify(lengths)).toBeGreaterThanOrEqual(lengths[i - 1]!);
 	await expect(row).toContainText("90 字符");
 
 	// A finished call leaves no live row.

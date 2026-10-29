@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
+import { MonoRuns } from "~/components/ui/MonoRuns";
 import { AGENT_NAME_MAP } from "~/types";
 import { type LiveStream, useTypewriter } from "./liveStream";
 
@@ -39,7 +40,9 @@ export function LiveStreamRow({ stream }: { stream: LiveStream }) {
 						{label} · {failed ? "输出中断" : writing ? "正在输出" : "正在思考"}
 					</span>
 					{writing ? (
-						<span className="shrink-0 font-mono text-xs tabular-nums text-ink-muted">{stream.chars} 字符</span>
+						<span className="shrink-0 text-xs tabular-nums text-ink-muted">
+							<MonoRuns text={`${stream.chars} 字符`} />
+						</span>
 					) : null}
 				</div>
 				<div

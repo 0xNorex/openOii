@@ -252,6 +252,13 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(page.getByRole("region", { name: "故事" })).toHaveCount(0);
 	await expect(page.getByRole("button", { name: "一致性评估" })).toHaveCount(0);
 
+	// 每个「下载成片」都走 final-video 端点（attachment 存盘），不是直链到 mp4
+	const downloads = page.getByRole("link", { name: /下载成片/ });
+	await expect(downloads.first()).toBeAttached();
+	for (const link of await downloads.all()) {
+		await expect(link).toHaveAttribute("href", /\/api\/v1\/projects\/7\/final-video$/);
+	}
+
 	// 窄于 1440px 时 Agent 面板默认收起成胶囊，不挡画布
 	const agentPanel = page.locator("aside[aria-label='工作流活动']");
 	await expect(page.getByRole("button", { name: "展开活动面板" })).toBeVisible();

@@ -552,9 +552,10 @@ function OutputCard({
 				<div className="mt-2 flex gap-1.5" onPointerDown={stopAll}>
 					{videoUrl ? (
 						<a
-							href={videoUrl}
+							// 成片在另一个源上，download 属性会被忽略；跟顶栏、移动端一样走 final-video
+							// 端点（attachment），浏览器直接存盘而不是在新标签里播放。新标签只兜底出错页
+							href={getStaticUrl(`/api/v1/projects/${node.projectId}/final-video`) ?? videoUrl}
 							download
-							// 成片在另一个源上，download 属性会被忽略；新标签打开，工作台留在原处
 							target="_blank"
 							rel="noopener"
 							onClick={stopAll}
