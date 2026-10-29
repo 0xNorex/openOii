@@ -450,7 +450,7 @@ export function useRunController(args: {
 			entityIds = characterIds;
 			const character = characters.find((item) => item.id === characterIds[0]);
 			contextLabel = characterIds.length === 1
-				? character?.name ? `（角色：${character.name}）` : `（角色 #${characterIds[0]}）`
+				? character?.name ? `（角色：${character.name}）` : "（1 个角色）"
 				: `（${characterIds.length} 个角色）`;
 		}
 
@@ -507,7 +507,8 @@ export function useRunController(args: {
 				.map((id) => {
 					if (id.startsWith("shot:")) {
 						const shotId = Number(id.split(":")[1]);
-						return `格${shots.find((item) => item.id === shotId)?.order ?? shotId}`;
+						const order = shots.find((item) => item.id === shotId)?.order;
+						return order === undefined ? "一格分镜" : `S${String(order).padStart(2, "0")}`;
 					}
 					if (id.startsWith("character:")) {
 						const characterId = Number(id.split(":")[1]);

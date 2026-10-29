@@ -35,7 +35,6 @@ export function SelectionSection({ node }: { node: ComicWorkflowNode }) {
 		return (
 			<FieldList
 				items={[
-					["宫格", `格 ${node.gridCell ?? node.shot.order}`],
 					["顺序", node.shot.order],
 					["场景", node.shot.scene || "未设置"],
 					["机位", node.shot.camera || "未设置"],

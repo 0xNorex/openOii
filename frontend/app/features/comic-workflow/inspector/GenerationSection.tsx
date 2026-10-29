@@ -114,7 +114,7 @@ export function GenerationSection({
 				await shotsApi.regenerate(entityId, type);
 			}
 			const cell =
-				node.kind === "shot" ? `格 ${node.gridCell ?? node.shot.order}` : "当前角色";
+				node.kind === "shot" ? node.title : "当前角色";
 			toast.success({
 				title:
 					node.kind === "character"
@@ -189,7 +189,7 @@ export function GenerationSection({
 		});
 
 	const shotCellLabel =
-		node.kind === "shot" ? `格 ${node.gridCell ?? node.shot.order}` : null;
+		node.kind === "shot" ? node.title : null;
 
 	return (
 		<ActionStack>

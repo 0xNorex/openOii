@@ -398,14 +398,11 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 			</div>
 			<div className="flex min-h-0 flex-1 flex-col p-3">
 				<CardHeader node={node} icon="shot" compact />
-				<p className="m-0 mt-1 label text-ink-muted">
-					格 <span className="font-mono">{cell}</span>
-				</p>
 				<div className="mt-1.5">
 					<InlineEditableText
 						value={node.shot.description}
 						placeholder="添加画面描述"
-						ariaLabel={`格 ${cell} 画面描述`}
+						ariaLabel={`${node.title} 画面描述`}
 						rows={3}
 						disabled={editLocked}
 						displayClassName="line-clamp-3 p-0.5 text-xs leading-relaxed text-ink-muted"
@@ -421,7 +418,7 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 					<InlineEditableText
 						value={node.shot.dialogue}
 						placeholder="添加对白"
-						ariaLabel={`格 ${cell} 对白`}
+						ariaLabel={`${node.title} 对白`}
 						rows={2}
 						disabled={editLocked}
 						displayClassName="line-clamp-2 p-0.5 text-xs italic text-primary"
@@ -524,7 +521,7 @@ function OutputCard({
 					<ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-xs leading-relaxed text-ink">
 						{node.blockingClips.map((clip) => (
 							<li key={clip.shot_id}>
-								格 {clip.order} · {clip.reason}
+								S{String(clip.order).padStart(2, "0")} · {clip.reason}
 							</li>
 						))}
 					</ul>
