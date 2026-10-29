@@ -178,6 +178,23 @@
     transition-timing-function: var(--ease-standard);
   }
 
+  /* 对位标：未就绪时青版偏出 1.5px（没套准）；成片就绪时套准并转成群青 */
+  .registration-mark {
+    color: rgb(var(--color-ink) / 0.7);
+    transition: color var(--duration-slow) var(--ease-standard);
+  }
+  .registration-mark-ghost {
+    color: oklch(var(--cmyk-cyan) / 0.7);
+    transform: translate(1.5px, 1px);
+    transition: transform var(--duration-slow) var(--ease-standard);
+  }
+  .registration-mark[data-done] {
+    color: rgb(var(--color-primary));
+  }
+  .registration-mark[data-done] .registration-mark-ghost {
+    transform: none;
+  }
+
   .panel-marks[data-selected] .crop-marks {
     opacity: 1;
     transform: none;
@@ -210,9 +227,14 @@
   }
 
   /* 媒体占位（ui/media.ts）：加载前 paper 微光，就绪后淡入 */
+  /* 等待态 = 印刷网点：一层 6px 网点（≤9% 墨色）上扫过一道纸色光，像版子正在上墨。
+   * 纯 CSS，无图片；reduced-motion 下只剩静止网点。 */
   .media-placeholder:not([data-ready]) {
-    background: linear-gradient(100deg, rgb(var(--color-paper-200)) 35%, rgb(var(--color-paper-300)) 50%, rgb(var(--color-paper-200)) 65%) 0 0 / 300% 100%;
-    animation: shimmer 1.4s linear infinite;
+    background:
+      linear-gradient(100deg, transparent 35%, rgb(var(--color-paper-100) / 0.7) 50%, transparent 65%) 0 0 / 300% 100%,
+      radial-gradient(rgb(var(--color-ink) / 0.09) 1px, transparent 1.5px) 0 0 / 6px 6px,
+      rgb(var(--color-paper-200));
+    animation: ink-sweep 1.6s linear infinite;
   }
   .media-placeholder[data-ready="true"] {
     animation: fade-in var(--duration-slow) var(--ease-standard);
@@ -220,8 +242,30 @@
   .media-placeholder[data-ready="error"] {
     background: rgb(var(--color-paper-300));
   }
-  @keyframes shimmer {
-    to { background-position: -150% 0; }
+  @keyframes ink-sweep {
+    to { background-position: -150% 0, 0 0; }
+  }
+
+  /* 还没有内容的媒体位：静止的稀疏网点，读作“空版”，不是灰块 */
+  .media-blank {
+    background:
+      radial-gradient(rgb(var(--color-ink) / 0.07) 1px, transparent 1.5px) 0 0 / 6px 6px,
+      rgb(var(--color-paper-200));
+  }
+
+  /* 分镜稿空格：四角 10px 角线（墨色 25%），代替居中大图标 */
+  .corner-marks {
+    --corner: rgb(var(--color-ink) / 0.25);
+    background:
+      linear-gradient(var(--corner), var(--corner)) left top / 10px 1px,
+      linear-gradient(var(--corner), var(--corner)) left top / 1px 10px,
+      linear-gradient(var(--corner), var(--corner)) right top / 10px 1px,
+      linear-gradient(var(--corner), var(--corner)) right top / 1px 10px,
+      linear-gradient(var(--corner), var(--corner)) left bottom / 10px 1px,
+      linear-gradient(var(--corner), var(--corner)) left bottom / 1px 10px,
+      linear-gradient(var(--corner), var(--corner)) right bottom / 10px 1px,
+      linear-gradient(var(--corner), var(--corner)) right bottom / 1px 10px;
+    background-repeat: no-repeat;
   }
 
   .spinner-doodle {

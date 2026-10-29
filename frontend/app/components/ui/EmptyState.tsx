@@ -20,14 +20,14 @@ export function EmptyState({
 	return (
 		<div
 			className={clsx(
-				"flex flex-col items-center justify-center text-center",
+				"corner-marks flex flex-col items-center justify-center text-center",
 				compact ? "px-3 py-8" : "px-4 py-10",
 				className,
 			)}
 			data-shell="empty-state"
 		>
 			{icon ? (
-				<div className="mb-2 text-ink-subtle opacity-80" aria-hidden="true">
+				<div className="mb-2 text-ink-subtle" aria-hidden="true">
 					{icon}
 				</div>
 			) : null}

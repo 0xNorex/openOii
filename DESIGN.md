@@ -225,6 +225,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - **Dialogs:** `shadow-dialog` on `.dialog-panel`.
 - **Comic accent** (spec §7.6): `.comic-frame` — a 2px ink border plus two registration marks (⊕) centred above and below the card. Only on the final-video card. There are no hard offset shadows. `designContract.test.ts` bans `shadow-brutal*`, `shadow-comic*`, `halftone*` and keeps `comic-frame` in its whitelist file.
 - **Selected canvas card:** the 2px primary ring plus `.crop-marks`, which puts printer's crop marks at the four corners. Canvas cards use `rounded-sm` (4px), like cut paper.
+- **Waiting and empty:** `.media-placeholder` is a 6px halftone with an ink sweep; `.media-blank` is a still halftone; `.corner-marks` draws storyboard-sheet corners on empty slots and `EmptyState`. The output's registration marks sit misregistered (with a cyan ghost) until the video is ready, then register and turn primary.
 - No hover lift. Pressing a button scales it to 0.97 for 120ms, with no bounce.
 - **Motion:** one easing, `--ease-standard` = `cubic-bezier(0.22, 1, 0.36, 1)`. Only transform, opacity, filter and colours animate. Reduced motion makes every change instant.
 

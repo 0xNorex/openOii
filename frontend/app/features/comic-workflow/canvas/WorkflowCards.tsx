@@ -242,7 +242,7 @@ function EmptyMedia({ label, busy = false }: { label: string; busy?: boolean }) 
 	// 生成中：同一套媒体微光占位，告诉用户“图正在来”而不是“没有图”
 	return (
 		<div
-			className={`flex h-full w-full items-center justify-center text-xs text-ink-muted ${busy ? MEDIA : "bg-paper-300"}`}
+			className={`flex h-full w-full items-center justify-center text-xs text-ink-muted ${busy ? MEDIA : "media-blank"}`}
 			data-busy={busy || undefined}
 		>
 			{busy ? "生成中…" : label}
@@ -680,15 +680,23 @@ const EMPTY_HINT: Partial<Record<ComicWorkflowSection, string>> = {
 };
 
 /** 对位标（⊕）：成片卡上下居中各一个，代替原来的硬投影。 */
-function RegistrationMark({ className }: { className: string }) {
+function RegistrationMark({ className, done }: { className: string; done: boolean }) {
+	// 未就绪：青版偏出一点（没套准）；成片就绪：两版合一、转成群青——完成时唯一的“仪式感”
+	const mark = (
+		<>
+			<circle cx="7" cy="7" r="3.5" fill="none" stroke="currentColor" strokeWidth="1" />
+			<path d="M7 0v14M0 7h14" stroke="currentColor" strokeWidth="1" />
+		</>
+	);
 	return (
 		<svg
 			aria-hidden="true"
-			viewBox="0 0 14 14"
-			className={`pointer-events-none absolute left-1/2 h-3.5 w-3.5 -translate-x-1/2 text-ink ${className}`}
+			viewBox="-2 -2 18 18"
+			data-done={done || undefined}
+			className={`registration-mark pointer-events-none absolute left-1/2 h-4 w-4 -translate-x-1/2 ${className}`}
 		>
-			<circle cx="7" cy="7" r="3.5" fill="none" stroke="currentColor" strokeWidth="1" />
-			<path d="M7 0v14M0 7h14" stroke="currentColor" strokeWidth="1" />
+			<g className="registration-mark-ghost">{mark}</g>
+			<g>{mark}</g>
 		</svg>
 	);
 }
@@ -722,7 +730,7 @@ export function WorkflowFrameView({
 				) : null}
 			</div>
 			{hint ? (
-				<p className="m-0 flex flex-1 items-center justify-center px-6 text-center text-sm text-ink-muted">
+				<p className="corner-marks m-0 mt-3 flex flex-1 items-center justify-center px-6 text-center text-sm text-ink-muted">
 					{hint}
 				</p>
 			) : null}
@@ -765,8 +773,8 @@ export function WorkflowCardView({
 			<span className="crop-marks" aria-hidden="true" />
 			{output ? (
 				<>
-					<RegistrationMark className="-top-3.5" />
-					<RegistrationMark className="-bottom-3.5" />
+					<RegistrationMark className="-top-3.5" done={node.status === "ready"} />
+					<RegistrationMark className="-bottom-3.5" done={node.status === "ready"} />
 				</>
 			) : null}
 		</div>
