@@ -20,6 +20,14 @@ interface WorkflowInspectorProps {
 	universeId?: number | null;
 }
 
+/** 检查器眉题：节点类型的中文名（原先直接露出 brief / shot 这类内部枚举）。 */
+const KIND_LABELS: Record<ComicWorkflowNode["kind"], string> = {
+	brief: "项目概要",
+	character: "角色",
+	shot: "分镜",
+	output: "成片",
+};
+
 const TAB_LABELS: Record<InspectorTab, string> = {
 	selection: "选区",
 	properties: "属性",
@@ -73,9 +81,7 @@ export function WorkflowInspector({
 	return (
 		<div className="flex h-full min-h-0 flex-col bg-paper-100" data-shell="inspector">
 			<div className="border-b border-line px-2 py-1.5">
-				<p className="m-0 font-mono text-xs uppercase text-ink-muted">
-					{selectedNode.kind}
-				</p>
+				<p className="m-0 label text-ink-muted">{KIND_LABELS[selectedNode.kind]}</p>
 				<h2 className="m-0 truncate text-sm font-bold">
 					{selectedNode.title}
 				</h2>

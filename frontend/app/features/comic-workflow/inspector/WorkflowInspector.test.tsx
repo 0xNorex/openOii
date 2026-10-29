@@ -95,6 +95,12 @@ describe("WorkflowInspector", () => {
 		expect(screen.getByRole("button", { name: "保存" })).toBeInTheDocument();
 	});
 
+	it("names the node kind in Chinese instead of the internal enum", () => {
+		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
+		expect(screen.getByText("角色", { selector: "p" })).toBeInTheDocument();
+		expect(screen.queryByText("character")).toBeNull();
+	});
+
 	it("at a gate lets you edit properties, and says how to change results instead of a bare lock", async () => {
 		const user = userEvent.setup();
 		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked atGate />);

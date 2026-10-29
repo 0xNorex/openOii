@@ -121,6 +121,9 @@ components:
 
 1. **画布占满，面板浮在上面。** Agent 面板在左（360px），检查器在右（320px），都能收成胶囊。
    窄于 1440px 时 Agent 面板默认收起；窄于 1280px 时两者互斥，开一个就收另一个。
+   **画板只画在两面板之间：** 点阵铺满整屏，但 xyflow 的根只占面板之间那一栏（`--canvas-cover-left/right`），
+   节点不会压在面板底下，也不会在面板外沿露出半截字；靠面板一侧淡入 24px。适配、缩放中心、拖拽换算都按这一栏算；
+   左栏开合时视口同帧反向平移，画上的东西不跳。守卫：`comic-workflow-canvas.spec.ts`（画板边 = 面板边、节点文字不被遮挡）。
    手机（`<sm`）上没有画布：单列显示状态、待处理（同一个 InboxPanel）、成片/分镜预览和最近 5 条动态，
    底部提示用桌面端编辑完整画布。重试只在待处理和 TopBar。
 2. **检查器承载一切属性面**，包括 Brief。未选中任何卡片时显示“项目”视图（Brief + 宇宙时间线）；
@@ -283,6 +286,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 
 ### Chips / Tags
 - **Style:** Rounded-full, thin border, paper-200 surface. Selected state uses a primary tint.
+- **One line:** a pill never wraps. Long content (camera notes, cast lists) uses `inline-block max-w-full truncate` with the full text in `title`; `inline-flex` does not ellipsise, and a wrapped pill turns into a blob cut by the card edge.
 - **State:** Unselected: paper-200 background, ink text. Selected: primary/10 background, primary text and border.
 
 ### Navigation
