@@ -45,6 +45,39 @@ export function ConfigInput({ item, value, onChange }: ConfigInputProps) {
 	const fieldClass =
 		"input-doodle  h-9 touch-target-dense w-full border border-line-strong bg-paper-100 px-2.5 font-mono text-xs";
 
+	const lowered = value.trim().toLowerCase();
+	if (!isSensitive && (lowered === "true" || lowered === "false")) {
+		const on = lowered === "true";
+		return (
+			<button
+				id={item.key}
+				type="button"
+				role="switch"
+				aria-checked={on}
+				onClick={() =>
+					onChange({
+						target: { name: item.key, value: on ? "false" : "true" },
+					} as React.ChangeEvent<HTMLInputElement>)
+				}
+				className="touch-target-dense inline-flex h-9 items-center gap-2 text-xs font-semibold"
+			>
+				<span
+					aria-hidden
+					className={`relative inline-block h-5 w-9 rounded-full border transition-colors duration-fast ${
+						on ? "border-primary bg-primary" : "border-line-strong bg-paper-300"
+					}`}
+				>
+					<span
+						className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-paper-100 shadow-sm transition-transform duration-fast ${
+							on ? "translate-x-[1.125rem]" : "translate-x-0.5"
+						}`}
+					/>
+				</span>
+				{on ? "开启" : "关闭"}
+			</button>
+		);
+	}
+
 	if (isSensitive) {
 		const displayValue = isRevealed ? value : isMasked ? value : "••••••••";
 

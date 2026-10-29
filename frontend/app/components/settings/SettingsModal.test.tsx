@@ -106,6 +106,11 @@ describe("SettingsModal", () => {
 		vi.clearAllMocks();
 	});
 
+	// 设置默认打开第一类（文本生成）；数据库相关用例先切到「数据库」
+	const openDatabaseTab = async () => {
+		await userEvent.click(await screen.findByRole("tab", { name: /数据库/ }));
+	};
+
 	const renderComponent = () => {
 		return render(
 			<QueryClientProvider client={queryClient}>
@@ -125,8 +130,10 @@ describe("SettingsModal", () => {
 		expect(container.firstChild).toBeNull();
 	});
 
-	it("渲染模态框并加载配置数据", async () => {
+	it("渲染模态框并默认打开第一类（文本生成）", async () => {
 		renderComponent();
+		expect(await screen.findByRole("tab", { name: /文本生成/ })).toHaveAttribute("aria-selected", "true");
+		await openDatabaseTab();
 
 		// 验证标题
 		expect(screen.getByRole("heading", { name: /系统设置/ })).toBeInTheDocument();
@@ -147,6 +154,7 @@ describe("SettingsModal", () => {
 	it("切换标签页", async () => {
 		const user = userEvent.setup();
 		renderComponent();
+		await openDatabaseTab();
 
 		// 等待数据加载完成
 		await waitFor(
@@ -391,6 +399,7 @@ describe("SettingsModal", () => {
 	it("切换标签页并保持输入值", async () => {
 		const user = userEvent.setup();
 		renderComponent();
+		await openDatabaseTab();
 
 		const dbInput = await screen.findByDisplayValue("redis://localhost:6379/0");
 		await user.clear(dbInput);
@@ -563,6 +572,7 @@ describe("SettingsModal", () => {
 	it("修改配置值", async () => {
 		const user = userEvent.setup();
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -589,6 +599,7 @@ describe("SettingsModal", () => {
 		});
 
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -624,6 +635,7 @@ describe("SettingsModal", () => {
 	it("没有配置变更时不提交更新请求", async () => {
 		const user = userEvent.setup();
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -651,6 +663,7 @@ describe("SettingsModal", () => {
 		});
 
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -692,6 +705,7 @@ describe("SettingsModal", () => {
 		});
 
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -719,6 +733,7 @@ describe("SettingsModal", () => {
 		vi.mocked(configApi.update).mockRejectedValue(new Error("网络错误"));
 
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -745,6 +760,7 @@ describe("SettingsModal", () => {
 	it("取消操作恢复原始值", async () => {
 		const user = userEvent.setup();
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -866,6 +882,7 @@ describe("SettingsModal", () => {
 
 	it("敏感配置显示脱敏值", async () => {
 		renderComponent();
+		await openDatabaseTab();
 
 		// 等待数据加载完成
 		await waitFor(
@@ -905,6 +922,7 @@ describe("SettingsModal", () => {
 		});
 
 		renderComponent();
+		await openDatabaseTab();
 
 		await waitFor(() => {
 			expect(
@@ -933,5 +951,13 @@ describe("SettingsModal", () => {
 		await waitFor(() => {
 			expect(screen.queryByText("保存成功")).not.toBeInTheDocument();
 		});
+	});
+
+	it("数据库类没有可测服务时说明测试连接为何不可用", async () => {
+		renderComponent();
+		await openDatabaseTab();
+		const testButton = screen.getByRole("button", { name: /测试连接/ });
+		expect(testButton).toBeDisabled();
+		expect(testButton).toHaveAccessibleDescription(/没有外部服务可测/);
 	});
 });

@@ -23,6 +23,26 @@ describe("ConfigInput", () => {
 		vi.clearAllMocks();
 	});
 
+	it("布尔配置渲染成开关，点击切换为相反值", async () => {
+		const user = userEvent.setup();
+		const item: ConfigItem = {
+			key: "ENABLE_IMAGE_TO_VIDEO",
+			value: "true",
+			is_sensitive: false,
+			is_masked: false,
+			source: "db",
+		};
+
+		render(<ConfigInput item={item} value="true" onChange={mockOnChange} />);
+
+		const toggle = screen.getByRole("switch");
+		expect(toggle).toHaveAttribute("aria-checked", "true");
+		await user.click(toggle);
+		expect(mockOnChange).toHaveBeenCalledWith({
+			target: { name: "ENABLE_IMAGE_TO_VIDEO", value: "false" },
+		});
+	});
+
 	it("渲染普通文本输入框", () => {
 		const item: ConfigItem = {
 			key: "APP_NAME",

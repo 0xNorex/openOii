@@ -26,7 +26,7 @@ export function SettingsModal() {
 	const [initialFormState, setInitialFormState] = useState<
 		Record<string, ConfigValue>
 	>({});
-	const [activeTab, setActiveTab] = useState("database");
+	const [activeTab, setActiveTab] = useState("text");
 	const [isTestingConnection, setIsTestingConnection] = useState(false);
 	const [alertState, setAlertState] = useState<AlertState>({
 		show: false,
@@ -334,8 +334,10 @@ export function SettingsModal() {
 						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-paper-200 px-3 py-2 sm:px-4">
 							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-info-fg">
 								<InformationCircleIcon className="h-4 w-4 shrink-0" />
-								<span className="truncate">
-									大部分配置保存后立即生效，数据库/Redis 配置需重启
+								<span className="truncate" id="settings-footer-hint">
+									{testServiceFor(activeTab)
+										? "大部分配置保存后立即生效，数据库/Redis 配置需重启"
+										: "这一类没有外部服务可测，测试连接只对文本、图像、视频服务可用"}
 								</span>
 							</div>
 
@@ -361,6 +363,8 @@ export function SettingsModal() {
 									isTestingConnection ||
 									!testServiceFor(activeTab)
 								}
+								title={testServiceFor(activeTab) ? undefined : "这一类没有外部服务可测"}
+								aria-describedby={testServiceFor(activeTab) ? undefined : "settings-footer-hint"}
 							>
 								{isTestingConnection && (
 									<span className="spinner-doodle h-3 w-3" />
