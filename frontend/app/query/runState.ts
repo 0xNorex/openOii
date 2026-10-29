@@ -7,7 +7,9 @@ import type {
   WorkflowStage,
 } from "~/types";
 import type { LiveStream } from "~/features/comic-workflow/agent/liveStream";
+import type { StageId } from "~/generated/workflowContract";
 import { toSimplifiedStage } from "~/utils/workflowStage";
+import { isStageId } from "~/utils/workflowSteps";
 import { appQueryClient } from "./client";
 import { projectQueryKeys } from "./queryKeys";
 
@@ -24,6 +26,8 @@ export interface RunState {
 	revision: number;
 	isGenerating: boolean;
   currentStage: WorkflowStage;
+  /** 细粒度阶段（contracts/workflow.json）：状态胶囊按它显示「分镜画面 · 5/6」 */
+  currentStep: StageId | null;
   currentAgent: string | null;
   progress: number;
   currentRunId: number | null;
@@ -47,6 +51,7 @@ export const INITIAL_RUN_STATE: RunState = {
 	revision: 0,
 	isGenerating: false,
   currentStage: "plan",
+  currentStep: null,
   currentAgent: null,
   progress: 0,
   currentRunId: null,
@@ -112,6 +117,19 @@ export function receiptFromGate(gate: RunAwaitingConfirmEventData | null | undef
 	};
 }
 
+/** 闸门上：闸门本身；运行中：WS 帧更新，没有时退回检查点的下一步。 */
+function stepFromActive(
+	gate: RunAwaitingConfirmEventData | null,
+	summary: RecoverySummaryRead | null | undefined,
+	live: StageId | null,
+): StageId | null {
+	const gateStage = gate?.current_stage ?? gate?.stage;
+	if (isStageId(gateStage)) return gateStage;
+	if (live) return live;
+	const next = summary?.next_stage ?? summary?.current_stage;
+	return isStageId(next) ? next : null;
+}
+
 /**
  * 用服务端 runs/current 重建运行态（纯函数）。服务端是真相：
  * - 没有活跃/可恢复运行 → 清掉生成中、待确认、可恢复；
@@ -134,6 +152,7 @@ export function reconcileRunState(
 			awaitingAgent: null,
 			recoveryControl: null,
 			recoveryGate: null,
+			currentStep: null,
 			feedbackReceipt: null,
 			// 刚失败的那次调用留在屏幕上，其余的流随运行一起结束
 			liveStream: live.liveStream?.status === "error" ? live.liveStream : null,
@@ -157,6 +176,8 @@ export function reconcileRunState(
 		return {
 			...base,
 			...(stageFromSummary ? { currentStage: stageFromSummary } : {}),
+			// 中断时停在哪一步（与收件箱「运行中断于…」同源）
+			currentStep: isStageId(summary?.current_stage) ? summary.current_stage : null,
 			isGenerating: false,
 			currentRunId: null,
 			currentAgent: null,
@@ -194,6 +215,7 @@ export function reconcileRunState(
 	return {
 		...base,
 		...(gateStage ? { currentStage: gateStage } : stageFromSummary && !sameRun ? { currentStage: stageFromSummary } : {}),
+		currentStep: stepFromActive(gate, summary, sameRun ? live.currentStep : null),
 		isGenerating: true,
 		currentRunId: run.id,
 		currentAgent: run.current_agent ?? live.currentAgent,

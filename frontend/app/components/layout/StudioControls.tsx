@@ -1,9 +1,9 @@
-import { STAGE_PIPELINE, getPipelineStageIndex } from "~/utils/pipeline";
 import { IconButton } from "~/components/ui/IconButton";
 import { BUTTON_BASE, BUTTON_VARIANTS, Button } from "~/components/ui/Button";
 import {
 	type StudioStatus,
 	studioStatusDotClass,
+	studioStatusText,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { useEffect, useRef, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
@@ -84,11 +84,6 @@ export function StudioControls({
 		document.addEventListener("pointerdown", closeOnOutsideClick);
 		return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
 	}, [toolsOpen]);
-	// 阶段与进度只在运行活跃时出现（stage / progress 由 deriveStudioStatus 置空）
-	const stageIndex = studioStatus.stage ? getPipelineStageIndex(studioStatus.stage) : -1;
-	const stageLabel = stageIndex >= 0 ? STAGE_PIPELINE[stageIndex].label : null;
-	const progressPercent =
-		studioStatus.progress === null ? null : Math.round(studioStatus.progress * 100);
 	// “从失败阶段重试”只在收件箱；这里只有开始 / 重新生成
 	const idle = studioStatus.state === "idle";
 	const generateLabel = idle ? "开始生成" : "重新生成";
@@ -101,9 +96,8 @@ export function StudioControls({
 	);
 	// 成片可用时：下载是主操作，重新生成退为次要
 	const finished = studioStatus.state === "ready" && Boolean(downloadUrl) && !isGenerating;
-	const pillText = [studioStatus.label, stageLabel, progressPercent === null ? null : `${progressPercent}%`]
-		.filter(Boolean)
-		.join(" · ");
+	// 步骤只在运行活跃时出现：按六步计数，不再显示会卡在 50% 的百分比
+	const pillText = studioStatusText(studioStatus);
 
 	return (
 		<>
@@ -124,7 +118,7 @@ export function StudioControls({
 				aria-label={`状态：${pillText}，打开待处理`}
 			>
 				<span
-					className={`h-2 w-2 shrink-0 rounded-full ${studioStatusDotClass(studioStatus)}`}
+					className={`h-2 w-2 shrink-0 rounded-full ${awaitingConfirm ? "bg-primary-content" : studioStatusDotClass(studioStatus)}`}
 					aria-hidden="true"
 				/>
 				<span className="truncate">{pillText}</span>

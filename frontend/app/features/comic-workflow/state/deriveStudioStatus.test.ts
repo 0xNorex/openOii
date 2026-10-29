@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecoveryControlRead } from "~/types";
-import { deriveStudioStatus } from "./deriveStudioStatus";
+import { deriveStudioStatus, studioStatusText } from "./deriveStudioStatus";
 
 function recoveryControl(
 	state: RecoveryControlRead["state"],
@@ -151,11 +151,26 @@ describe("deriveStudioStatus", () => {
 		).toMatchObject({
 			state: "awaitingConfirm",
 			label: "待确认",
-			tone: "warning",
+			tone: "primary",
 			stage: "plan_approval",
 			progress: null,
 			pendingCount: 1,
 		});
+	});
+
+	it("names the step: counted while generating, the gate while waiting or interrupted", () => {
+		const generating = deriveStudioStatus({ ...baseInput, isGenerating: true, currentStep: "render_shots" });
+		expect(studioStatusText(generating)).toBe("生成中 · 分镜画面 · 5/6");
+		const waiting = deriveStudioStatus({ ...baseInput, isGenerating: true, awaitingConfirm: true, currentStep: "shots_approval" });
+		expect(studioStatusText(waiting)).toBe("待确认 · 分镜脚本");
+		const interrupted = deriveStudioStatus({
+			...baseInput,
+			recoveryControl: { state: "recoverable" } as never,
+			currentStep: "shots_approval",
+		});
+		expect(studioStatusText(interrupted)).toBe("可恢复 · 分镜脚本确认");
+		const done = deriveStudioStatus({ ...baseInput, projectVideoUrl: "/v.mp4", currentStep: "compose_approval" });
+		expect(studioStatusText(done)).toBe("成片可用");
 	});
 
 	it("ranks a finished cut above a cancelled last run", () => {

@@ -48,10 +48,17 @@ describe("StudioControls", () => {
 	it("names the stage and progress while generating, with a stop action", async () => {
 		const user = userEvent.setup();
 		const onCancel = vi.fn();
-		const status: StudioStatus = { ...getStudioStatusMeta("generating"), stage: "render", progress: 0.42 };
+		const status: StudioStatus = {
+			...getStudioStatusMeta("generating"),
+			stage: "render",
+			progress: 0.42,
+			step: { index: 4, label: "分镜画面", atGate: false },
+		};
 		renderControls({ isGenerating: true, studioStatus: status, onCancel });
 
-		expect(pill()).toHaveTextContent("生成中 · 渲染 · 42%");
+		// 步骤计数，不是会卡在 50% 的百分比
+		expect(pill()).toHaveTextContent("生成中 · 分镜画面 · 5/6");
+		expect(pill()).not.toHaveTextContent("%");
 		expect(screen.queryByRole("button", { name: /开始生成|重新生成/ })).toBeNull();
 		await user.click(screen.getByRole("button", { name: "停止" }));
 		expect(onCancel).toHaveBeenCalledTimes(1);

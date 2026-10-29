@@ -2,7 +2,23 @@ import { MEDIA, imageReady, videoReady } from "~/components/ui/media";
 import { useMemo, type ReactNode } from "react";
 import { getStaticUrl } from "~/services/api";
 import type { Character, Shot } from "~/types";
-import { type StudioStatus, studioStatusDotClass } from "../state/deriveStudioStatus";
+import { type StudioStatus, studioStatusDotClass, studioStatusText } from "../state/deriveStudioStatus";
+import { WORKFLOW_STEPS } from "~/utils/workflowSteps";
+
+/** 六步进度：做完的实心，当前一步品牌色，后面的留空（移动端也看得到走到哪了） */
+function StepMeter({ current }: { current: number }) {
+	return (
+		<ol className="m-0 mt-2 flex list-none gap-1 p-0" aria-label={`第 ${current + 1} 步，共 ${WORKFLOW_STEPS.length} 步`}>
+			{WORKFLOW_STEPS.map((step, index) => (
+				<li
+					key={step.key}
+					title={step.label}
+					className={`h-1 flex-1 rounded-full ${index < current ? "bg-ink/35" : index === current ? "bg-primary" : "bg-paper-300"}`}
+				/>
+			))}
+		</ol>
+	);
+}
 import { SvgIcon } from "~/components/ui/SvgIcon";
 
 interface MobileWorkbenchPreviewProps {
@@ -49,12 +65,13 @@ export function MobileWorkbenchPreview({
 						aria-hidden="true"
 					/>
 					<h2 className="m-0 text-sm font-bold">
-						{studioStatus.label}
+						{studioStatusText(studioStatus)}
 					</h2>
 				</div>
 				<p className="m-0 mt-1 text-xs text-ink-muted">
 					{studioStatus.description}
 				</p>
+				{studioStatus.step ? <StepMeter current={studioStatus.step.index} /> : null}
 			</div>
 
 			{inbox ? (

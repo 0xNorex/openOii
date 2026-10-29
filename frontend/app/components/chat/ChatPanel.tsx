@@ -7,8 +7,8 @@ import { useRunState } from "~/hooks/useRunState";
 import { ActivityTimeline } from "~/features/comic-workflow/agent/ActivityTimeline";
 import { deriveActivityTimeline } from "~/features/comic-workflow/agent/activityTimeline";
 import { Button } from "~/components/ui/Button";
-import { AGENT_NAME_MAP, type WorkflowStage } from "~/types";
-import { getWorkflowStageInfo } from "~/utils/workflowStage";
+import { AGENT_NAME_MAP } from "~/types";
+import { formatStep, stepForStage } from "~/utils/workflowSteps";
 import type { AgentMessage } from "~/types";
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import { SyncStatus } from "~/features/comic-workflow/agent/SyncStatus";
@@ -25,10 +25,11 @@ interface ChatPanelProps {
 	limit?: number;
 }
 
-function getStageIcon(stage: WorkflowStage): IconName {
-  if (stage === "compose") return "render";
-  if (stage === "render" || stage === "render_approval") return "brush";
-  if (stage === "plan" || stage === "plan_approval") return "lightbulb";
+/** 六步：前三步是文字（规划），后两步出图，最后合成视频；没有运行时是活动记录 */
+function getStepIcon(index: number | null): IconName {
+  if (index === null) return "book-open";
+  if (index >= 5) return "render";
+  if (index >= 3) return "brush";
   return "lightbulb";
 }
 
@@ -43,7 +44,7 @@ export function ChatPanel({
   const {
     currentAgent,
     awaitingConfirm,
-    currentStage,
+    currentStep,
     liveStream,
     feedbackReceipt,
     syncedAt,
@@ -82,12 +83,12 @@ export function ChatPanel({
     return limit ? all.slice(-limit) : all;
   }, [messages, feedbackReceipt, isGenerating, awaitingConfirm, limit]);
 
-  const fallbackStage = currentStage || "plan";
-  const info = getWorkflowStageInfo(fallbackStage) ?? {
-    title: "规划阶段",
-    description: "正在生成剧本、角色与镜头规划",
-  };
-  const stageIcon = getStageIcon(fallbackStage);
+  // 标题跟状态胶囊同一套步骤名；没有运行（含已完成）时不再挂着「规划阶段」
+  const step = isGenerating ? stepForStage(currentStep) : null;
+  const headerTitle = step ? (awaitingConfirm ? `${step.label} · 待确认` : formatStep(step)) : "活动记录";
+  const stageIcon = getStepIcon(step?.index ?? null);
+  const workingOn =
+    currentAgent === "critic" ? "质量审查" : step?.label || agentNameMap[currentAgent || ""] || currentAgent || "处理中";
   const runMode = useEditorStore((s) => s.runMode);
   const isYolo = runMode === "yolo";
 
@@ -98,7 +99,7 @@ export function ChatPanel({
         <div className="flex min-w-0 items-center gap-1.5">
           <SvgIcon name={stageIcon} size={14} className="shrink-0 text-primary" />
           <span className="truncate text-xs font-bold">
-            {info.title}
+            {headerTitle}
           </span>
         </div>
         <SyncStatus
@@ -113,7 +114,7 @@ export function ChatPanel({
         <div className="flex items-center justify-between border-b border-line px-2 py-0.5">
           <div className="flex items-center gap-1.5 text-xs text-ink-muted">
 			<span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
-            {agentNameMap[currentAgent || ""] || currentAgent || "处理中"}…
+            {workingOn}…
             {isYolo && (
 				<span className="inline-flex items-center gap-0.5 rounded-full border border-primary/30 px-1.5 text-xs text-primary">
                 <SvgIcon name="zap" size={8} /> 快速

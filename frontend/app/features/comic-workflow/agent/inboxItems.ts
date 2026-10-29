@@ -7,6 +7,7 @@ import {
 } from "~/types";
 import type { ComicWorkflowSection } from "../graph/types";
 import { describeRunError } from "~/utils/runErrors";
+import { stepForStage } from "~/utils/workflowSteps";
 import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
@@ -98,14 +99,19 @@ export interface DeriveInboxInput {
 }
 
 /** 每个审批门审的是什么、在画布哪一块：标题写具体产物，画布平移过去。 */
-export const GATE_COPY: Record<string, { name: string; section: ComicWorkflowSection | null }> = {
-	outline_approval: { name: "故事大纲", section: null },
-	characters_approval: { name: "角色设定", section: "elements" },
-	shots_approval: { name: "分镜脚本", section: "shotline" },
-	character_images_approval: { name: "角色形象图", section: "elements" },
-	shot_images_approval: { name: "分镜画面", section: "shotline" },
-	compose_approval: { name: "成片", section: "output" },
+const GATE_SECTIONS: Record<string, ComicWorkflowSection | null> = {
+	outline_approval: null,
+	characters_approval: "elements",
+	shots_approval: "shotline",
+	character_images_approval: "elements",
+	shot_images_approval: "shotline",
+	compose_approval: "output",
 };
+
+/** 审批门名字就是它所在那一步的名字（与状态胶囊、PromptBar chip 同源）。 */
+export const GATE_COPY: Record<string, { name: string; section: ComicWorkflowSection | null }> = Object.fromEntries(
+	Object.entries(GATE_SECTIONS).map(([gate, section]) => [gate, { name: stepForStage(gate)?.label ?? gate, section }]),
+);
 
 export function gateSection(gate: RunAwaitingConfirmEventData | null | undefined) {
 	const stage = gate?.current_stage ?? gate?.stage ?? null;

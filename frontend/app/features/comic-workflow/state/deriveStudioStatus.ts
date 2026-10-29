@@ -1,4 +1,6 @@
+import type { StageId } from "~/generated/workflowContract";
 import type { BlockingClip, RecoveryControlRead, WorkflowStage } from "~/types";
+import { formatStep, stepForStage, type WorkflowStep } from "~/utils/workflowSteps";
 
 /**
  * 工作台状态的唯一真相（spec §6.1）。状态文案、色调、阶段高亮和进度条
@@ -18,7 +20,7 @@ export type StudioStatusState =
 
 export type LastRunTerminalStatus = "cancelled" | null;
 
-export type StudioStatusTone = "neutral" | "info" | "warning" | "success" | "error";
+export type StudioStatusTone = "neutral" | "info" | "primary" | "warning" | "success" | "error";
 
 export interface StudioStatus {
 	state: StudioStatusState;
@@ -29,6 +31,8 @@ export interface StudioStatus {
 	stage: WorkflowStage | null;
 	/** 仅 generating 时有值（0–1） */
 	progress: number | null;
+	/** 六步里的第几步（仅 generating / awaitingConfirm / recoverable） */
+	step: WorkflowStep | null;
 	/** 待处理（审批 / 恢复）条目数 */
 	pendingCount: number;
 }
@@ -43,6 +47,8 @@ export interface DeriveStudioStatusInput {
 	blockingClips?: BlockingClip[] | null;
 	lastRunStatus?: LastRunTerminalStatus;
 	currentStage?: WorkflowStage | null;
+	/** 细粒度阶段，换算成六步 */
+	currentStep?: StageId | string | null;
 	progress?: number | null;
 }
 
@@ -63,7 +69,8 @@ const STUDIO_STATUS_COPY: Record<
 	awaitingConfirm: {
 		label: "待确认",
 		description: "正在等待创作者确认后继续",
-		tone: "warning",
+		// 要你动手的事用品牌色；警告色留给「可恢复 / 需重合成」
+		tone: "primary",
 	},
 	recoverable: {
 		label: "可恢复",
@@ -104,6 +111,7 @@ export function getStudioStatusMeta(state: StudioStatusState): StudioStatus {
 		...STUDIO_STATUS_COPY[state],
 		stage: null,
 		progress: null,
+		step: null,
 		pendingCount: state === "awaitingConfirm" || state === "recoverable" ? 1 : 0,
 	};
 }
@@ -124,7 +132,20 @@ export function deriveStudioStatus(input: DeriveStudioStatusInput): StudioStatus
 			meta.state === "generating"
 				? Math.max(0, Math.min(1, input.progress ?? 0))
 				: null,
+		step: stepForStage(input.currentStep),
 	};
+}
+
+/**
+ * 胶囊文案（一处定义，顶栏、移动端、标签页标题共用）：
+ * 生成中 · 分镜画面 · 5/6｜待确认 · 分镜画面｜可恢复 · 分镜脚本确认
+ */
+export function studioStatusText(status: Pick<StudioStatus, "state" | "label" | "step">): string {
+	const { step } = status;
+	if (!step) return status.label;
+	if (status.state === "generating") return `${status.label} · ${formatStep(step)}`;
+	if (status.state === "recoverable" && step.atGate) return `${status.label} · ${step.label}确认`;
+	return `${status.label} · ${step.label}`;
 }
 
 // 优先级见 spec §6.1：awaitingConfirm > recoverable > generating > failed >
@@ -180,6 +201,7 @@ function deriveState(input: DeriveStudioStatusInput): StudioStatusState {
 const TONE_DOT: Record<StudioStatusTone, string> = {
 	neutral: "bg-ink/35",
 	info: "bg-info",
+	primary: "bg-primary",
 	warning: "bg-warning",
 	success: "bg-success",
 	error: "bg-error",

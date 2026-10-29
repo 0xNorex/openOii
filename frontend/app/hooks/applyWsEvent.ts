@@ -1,3 +1,4 @@
+import { isStageId } from "~/utils/workflowSteps";
 import { appendMessage, readMessageFeed, updateMessageFeed } from "~/query/messageFeed";
 import { patchRunState, readRunState, receiptFromGate, resetRunState } from "~/query/runState";
 import type { RunMode } from "~/stores/editorStore";
@@ -135,6 +136,8 @@ function receiptFromEvent(data: RunFeedbackEventData, previous: FeedbackReceipt 
 function applyStage(projectId: number, data: Record<string, unknown>): void {
 	const stage = resolveEventStage(data);
 	if (stage) patchRunState(projectId, { currentStage: stage });
+	const raw = data.stage ?? data.current_stage;
+	if (isStageId(raw)) patchRunState(projectId, { currentStep: raw });
 }
 
 type AutoConfirmFn = (runId: number) => void;

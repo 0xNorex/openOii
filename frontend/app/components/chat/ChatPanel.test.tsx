@@ -204,27 +204,23 @@ describe("ChatPanel", () => {
 		expect(toastInfo).toHaveBeenCalled();
 	});
 
-	it("shows render stage icon when currentStage is render", () => {
-		seedRunState({ currentStage: "render" as WorkflowStage });
-
-		renderChatPanel(false);
-
-		expect(screen.getByText("渲染阶段")).toBeInTheDocument();
+	it("names the step it is on while a run is active", () => {
+		seedRunState({ currentStep: "render_shots" });
+		renderChatPanel(true);
+		expect(screen.getByText("分镜画面 · 5/6")).toBeInTheDocument();
+		expect(screen.getByText("分镜画面…")).toBeInTheDocument();
 	});
 
-	it("shows render_approval stage icon when currentStage is render_approval", () => {
-		seedRunState({ currentStage: "render_approval" as WorkflowStage });
-
-		renderChatPanel(false);
-
-		expect(screen.getByText("渲染阶段")).toBeInTheDocument();
+	it("names the gate while waiting for approval", () => {
+		seedRunState({ currentStep: "character_images_approval", awaitingConfirm: true });
+		renderChatPanel(true);
+		expect(screen.getByText("角色形象 · 待确认")).toBeInTheDocument();
 	});
 
-	it("shows compose stage icon when currentStage is compose", () => {
-		seedRunState({ currentStage: "compose" as WorkflowStage });
-
+	it("does not claim a planning stage when nothing is running", () => {
+		seedRunState({ currentStage: "plan" as WorkflowStage, currentStep: "plan_outline" });
 		renderChatPanel(false);
-
-		expect(screen.getByText("合成阶段")).toBeInTheDocument();
+		expect(screen.getByText("活动记录")).toBeInTheDocument();
+		expect(screen.queryByText("规划阶段")).not.toBeInTheDocument();
 	});
 });

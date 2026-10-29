@@ -21,9 +21,11 @@ import { ChatPanel } from "~/components/chat/ChatPanel";
 import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
 import { PromptBar, type PromptChip } from "~/features/workbench/PromptBar";
+import { stepForStage } from "~/utils/workflowSteps";
 import { KeyboardLayer } from "~/features/workbench/KeyboardLayer";
 import {
 	deriveStudioStatus,
+	studioStatusText,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { MobileWorkbenchPreview } from "~/features/comic-workflow/mobile/MobileWorkbenchPreview";
 import { useIsMobileWorkbench } from "~/features/comic-workflow/mobile/useIsMobileWorkbench";
@@ -225,8 +227,11 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			return [{ id, label }];
 		});
 	}, [project, characters, shots, selectedNodeIds, runIsGenerating]);
+	// 和状态胶囊、审批卡同一套步骤名（「分镜画面 · 待确认」）
 	const gateLabel = runAwaitingConfirm
-		? (AGENT_NAME_MAP[runState.awaitingAgent ?? ""] ?? "当前阶段")
+		? (stepForStage(runState.recoveryGate?.current_stage ?? runState.recoveryGate?.stage ?? runState.currentStep)?.label ??
+			AGENT_NAME_MAP[runState.awaitingAgent ?? ""] ??
+			"当前阶段")
 		: null;
 	const removeSelection = useCallback(
 		(id: string) => {
@@ -339,6 +344,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				blockingClips: project?.blocking_clips,
 				lastRunStatus,
 				currentStage: runCurrentStage,
+				currentStep: runState.currentStep,
 				progress: runProgress,
 			}),
 		[
@@ -351,6 +357,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			project?.blocking_clips,
 			lastRunStatus,
 			runCurrentStage,
+			runState.currentStep,
 			runProgress,
 		],
 	);
@@ -365,11 +372,11 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	useEffect(() => {
 		if (projectTitle === undefined) return;
 		const previous = document.title;
-		document.title = `${studioStatus.label} · ${projectTitle || "漫剧工作台"} - openOii`;
+		document.title = `${studioStatusText(studioStatus)} · ${projectTitle || "漫剧工作台"} - openOii`;
 		return () => {
 			document.title = previous;
 		};
-	}, [studioStatus.label, projectTitle]);
+	}, [studioStatus, projectTitle]);
 
 
 	const handleOpenVersions = () => {
