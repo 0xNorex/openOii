@@ -26,6 +26,18 @@ interface StudioControlsProps {
 	exportBusy?: boolean;
 	/** 成片下载地址；完成后它是顶栏主按钮（CapCut / Runway 的「导出」位置） */
 	downloadUrl?: string | null;
+	/** 正在创建运行（POST runs 在途）：按钮立刻进入忙碌态 */
+	generatePending?: boolean;
+	/**
+	 * 已有产物时的「重新生成」：收进 ··· 菜单，先弹确认（重做什么、多久、多少调用）。
+	 * 不传时退回旧行为（顶栏主按钮直接重新生成）。
+	 */
+	onRegenerate?: () => void;
+	/** 恢复重新生成之前的那一版 */
+	onRestorePrevious?: () => void;
+	restoreBusy?: boolean;
+	/** 重新生成进行中时，上一版成片仍可下载 */
+	previousDownloadUrl?: string | null;
 }
 
 const chromeBtn =
@@ -56,6 +68,11 @@ export function StudioControls({
 	onExport,
 	exportBusy = false,
 	downloadUrl = null,
+	generatePending = false,
+	onRegenerate,
+	onRestorePrevious,
+	restoreBusy = false,
+	previousDownloadUrl = null,
 }: StudioControlsProps) {
 	const [toolsOpen, setToolsOpen] = useState(false);
 	const toolsRef = useRef<HTMLDivElement>(null);
@@ -73,8 +90,15 @@ export function StudioControls({
 	const progressPercent =
 		studioStatus.progress === null ? null : Math.round(studioStatus.progress * 100);
 	// “从失败阶段重试”只在收件箱；这里只有开始 / 重新生成
-	const generateLabel = studioStatus.state === "idle" ? "开始生成" : "重新生成";
-	const hasTools = Boolean(onOpenVersions || onExport);
+	const idle = studioStatus.state === "idle";
+	const generateLabel = idle ? "开始生成" : "重新生成";
+	const canStart = !isGenerating && !hasRecovery && !awaitingConfirm;
+	// 有产物之后，重新生成不再是一个随手就点到的主按钮
+	const regenerateInMenu = Boolean(onRegenerate) && !idle;
+	const showMainGenerate = Boolean(onGenerate) && (generatePending || (canStart && !regenerateInMenu));
+	const hasTools = Boolean(
+		onOpenVersions || onExport || regenerateInMenu || onRestorePrevious || previousDownloadUrl,
+	);
 	// 成片可用时：下载是主操作，重新生成退为次要
 	const finished = studioStatus.state === "ready" && Boolean(downloadUrl) && !isGenerating;
 	const pillText = [studioStatus.label, stageLabel, progressPercent === null ? null : `${progressPercent}%`]
@@ -128,6 +152,50 @@ export function StudioControls({
 							aria-label="工作台工具菜单"
 							className="animate-enter absolute right-0 top-full z-popover mt-1 w-44 list-none rounded-md border border-line bg-surface p-1 shadow-panel"
 						>
+							{regenerateInMenu && onRegenerate ? (
+								<li role="none">
+									<PlainButton
+										role="menuitem"
+										className="gap-2 text-xs"
+										onClick={() => { setToolsOpen(false); runMenuAction(onRegenerate); }}
+										disabled={!canStart || generatePending || generateDisabled}
+										aria-label="重新生成（先确认）"
+									>
+										<SvgIcon name="sparks" size={14} />
+										重新生成…
+									</PlainButton>
+								</li>
+							) : null}
+							{onRestorePrevious ? (
+								<li role="none">
+									<PlainButton
+										role="menuitem"
+										className="gap-2 text-xs"
+										onClick={() => { setToolsOpen(false); runMenuAction(onRestorePrevious); }}
+										disabled={restoreBusy || isGenerating}
+										aria-label="恢复上一版"
+									>
+										<SvgIcon name="refresh-cw" size={14} />
+										{restoreBusy ? "恢复中…" : "恢复上一版"}
+									</PlainButton>
+								</li>
+							) : null}
+							{previousDownloadUrl ? (
+								<li role="none">
+									<a
+										role="menuitem"
+										href={previousDownloadUrl}
+										download
+										target="_blank"
+										rel="noopener"
+										className="flex w-full touch-target-dense items-center gap-2 rounded-md px-2 text-xs text-ink hover:bg-paper-200"
+										onClick={() => setToolsOpen(false)}
+									>
+										<SvgIcon name="download" size={14} />
+										下载上一版成片
+									</a>
+								</li>
+							) : null}
 							{onOpenVersions ? (
 								<li role="none">
 									<PlainButton
@@ -171,16 +239,21 @@ export function StudioControls({
 						停止
 					</Button>
 				) : null}
-				{!isGenerating && !hasRecovery && !awaitingConfirm && onGenerate ? (
+				{showMainGenerate && onGenerate ? (
 					<Button
 						variant={finished ? "secondary" : "primary"}
 						size="sm"
 						className={chromeBtn}
 						onClick={onGenerate}
-						disabled={generateDisabled}
+						disabled={generateDisabled || generatePending}
+						aria-busy={generatePending}
 					>
-						<SvgIcon name="sparks" size={14} />
-						{generateLabel}
+						{generatePending ? (
+							<span className="spinner-doodle h-3.5 w-3.5" aria-hidden="true" />
+						) : (
+							<SvgIcon name="sparks" size={14} />
+						)}
+						{generatePending ? "正在创建…" : generateLabel}
 					</Button>
 				) : null}
 				{finished && downloadUrl ? (

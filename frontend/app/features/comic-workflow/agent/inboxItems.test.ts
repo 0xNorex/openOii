@@ -60,6 +60,24 @@ describe("deriveInboxItems", () => {
 		expect(item).toMatchObject({ kind: "recoverable", title: "运行中断于渲染阶段", detail: "已保留 2 个阶段的产物，可以继续" });
 	});
 
+	it("names the gate a run stopped at, not the stage after it, and explains the error in Chinese", () => {
+		const [item] = deriveInboxItems({
+			...base,
+			recoveryControl: {
+				...recoverable,
+				recovery_summary: { ...recoverable.recovery_summary!, current_stage: "shots_approval", next_stage: "shots_approval" },
+				active_run: { ...recoverable.active_run!, error: "Execution lease expired; run is safe to resume" },
+			} as RecoveryControlRead,
+		});
+		expect(item).toMatchObject({
+			kind: "recoverable",
+			title: "运行中断于分镜脚本确认",
+			detail: "执行中断（引擎租约过期），已完成的步骤都保留着，可以继续。已保留 2 个阶段的产物",
+			rawError: "Execution lease expired; run is safe to resume",
+		});
+		expect(item.kind === "recoverable" && item.title).not.toContain("渲染");
+	});
+
 	it("offers only cancel when the run cannot be resumed", () => {
 		const [item] = deriveInboxItems({
 			...base,

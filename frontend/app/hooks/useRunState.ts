@@ -20,6 +20,17 @@ export function noteRunLifecycleEvent(projectId: number): void {
  * 每次取数都用 runs/current（+ 闸门载荷）重建：服务端是真相，WS 只是通知。
  * 页面加载、WS 重连、用户操作结束、生命周期事件后都会失效重取。
  */
+/**
+ * 停在审批闸门时没有 WS 事件可等：引擎这时重启（心跳没了）也不会有人通知。
+ * 每 30 秒问一次 runs/current，服务端发现执行引擎已换人就会把运行标成可恢复，
+ * 不用等 2 分钟的租约过期。
+ */
+export const GATE_POLL_MS = 30_000;
+
+export function runStateRefetchInterval(state: RunState | undefined): number | false {
+	return state?.awaitingConfirm ? GATE_POLL_MS : false;
+}
+
 export function useRunState(projectId: number): RunState {
 	const { data } = useQuery({
 		queryKey: projectQueryKeys.runState(projectId),
@@ -34,6 +45,7 @@ export function useRunState(projectId: number): RunState {
 		},
 		staleTime: 0,
 		refetchOnWindowFocus: true,
+		refetchInterval: (query) => runStateRefetchInterval(query.state.data as RunState | undefined),
 	});
 	return data ?? readRunState(projectId);
 }

@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	lazy,
 	Suspense,
@@ -28,8 +28,11 @@ import {
 import { MobileWorkbenchPreview } from "~/features/comic-workflow/mobile/MobileWorkbenchPreview";
 import { useIsMobileWorkbench } from "~/features/comic-workflow/mobile/useIsMobileWorkbench";
 import { useRunController } from "~/features/run/useRunController";
+import { RegenerateDialog } from "~/features/run/RegenerateDialog";
+import { ConfirmModal } from "~/components/ui/ConfirmModal";
+import { projectQueryKeys } from "~/query/queryKeys";
 import { useProjectData } from "~/features/projects/useProjectData";
-import { exportApi, getStaticUrl } from "~/services/api";
+import { exportApi, getStaticUrl, projectsApi } from "~/services/api";
 import { useRunState } from "~/hooks/useRunState";
 import { useEditorStore } from "~/stores/editorStore";
 import { readRunState as readRunStateSnapshot } from "~/query/runState";
@@ -117,6 +120,17 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		editor.setHighlightedMessage(null);
 	}, [projectId]);
 
+	// 已有产物时「重新生成」先确认；空项目的「开始生成」直接开始
+	const hasContent = Boolean(project?.video_url || characters.length > 0 || shots.length > 0);
+	const [regenerateOpen, setRegenerateOpen] = useState(false);
+	const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+	const { data: regeneratePlan } = useQuery({
+		queryKey: projectQueryKeys.regeneratePlan(projectId),
+		queryFn: () => projectsApi.getRegeneratePlan(projectId),
+		enabled: projectId > 0 && Boolean(project) && hasContent,
+	});
+	const previousVersion = regeneratePlan?.previous_version ?? null;
+
 	const {
 		handleGenerate,
 		handleFeedback,
@@ -126,6 +140,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		generatePending,
 		gateDecisionPending,
 		lastRunStatus,
+		handleRestorePrevious,
+		restorePending,
 	} = useRunController({
 		projectId,
 		project,
@@ -137,7 +153,14 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		recoveryControl: runRecoveryControl,
 		selectedNodeId,
 		selectedNodeIds,
+		onRequestRegenerate: hasContent ? () => setRegenerateOpen(true) : undefined,
 	});
+	// 正在跑的就是那次重新生成：上一版成片还能下载
+	const regeneratingFromPrevious =
+		previousVersion !== null && hasActiveRun && previousVersion.run_id === runCurrentRunId;
+	const previousDownloadUrl =
+		regeneratingFromPrevious && previousVersion?.video_url ? getStaticUrl(previousVersion.video_url) : null;
+	const canRestorePrevious = Boolean(previousVersion?.restorable) && !hasActiveRun && !hasRecovery;
 
 	useEffect(() => {
 		if (!runIsGenerating) {
@@ -293,7 +316,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		},
 		onResume: handleResume,
 		onCancel: handleCancel,
-		onRetry: handleGenerate,
+		onRetry: hasContent ? () => setRegenerateOpen(true) : handleGenerate,
 		onSelectShot: (shotId) => canvasEvents.emit("select-workflow-node", { nodeId: `shot:${shotId}` }),
 		retryDisabled: generatePending,
 		gatePending: gateDecisionPending,
@@ -477,10 +500,15 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 						studioStatus={studioStatus}
 						awaitingConfirm={runAwaitingConfirm}
 						hasRecovery={hasRecovery}
-						onGenerate={handleGenerate}
+						onGenerate={hasContent ? () => setRegenerateOpen(true) : handleGenerate}
 						onCancel={handleCancel}
 						onOpenInbox={openInbox}
 						generateDisabled={generatePending || hasActiveRun}
+						generatePending={generatePending}
+						onRegenerate={hasContent ? () => setRegenerateOpen(true) : undefined}
+						onRestorePrevious={canRestorePrevious ? () => setRestoreConfirmOpen(true) : undefined}
+						restoreBusy={restorePending}
+						previousDownloadUrl={previousDownloadUrl}
 						onOpenVersions={handleOpenVersions}
 						onExport={handleExportWebtoon}
 						exportBusy={exporting}
@@ -598,6 +626,31 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 					<AssetDrawer open projectId={projectId} onClose={() => setAssetsOpen(false)} />
 				</Suspense>
 			) : null}
+
+			<RegenerateDialog
+				open={regenerateOpen}
+				projectId={projectId}
+				pending={generatePending}
+				onClose={() => setRegenerateOpen(false)}
+				onConfirm={() => {
+					handleGenerate();
+					setRegenerateOpen(false);
+				}}
+			/>
+
+			<ConfirmModal
+				isOpen={restoreConfirmOpen}
+				onClose={() => setRestoreConfirmOpen(false)}
+				onConfirm={() => {
+					if (previousVersion) handleRestorePrevious(previousVersion.run_id);
+					setRestoreConfirmOpen(false);
+				}}
+				title="恢复上一版？"
+				message={`成片、大纲和画布（${previousVersion?.character_count ?? 0} 个角色、${previousVersion?.shot_count ?? 0} 个分镜）会回到这次重新生成之前；重新生成得到的这一版会被替换。`}
+				confirmText="恢复上一版"
+				variant="warning"
+				isLoading={restorePending}
+			/>
 
 			{versionOpen && (
 				<Suspense fallback={null}>

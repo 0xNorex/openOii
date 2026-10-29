@@ -211,4 +211,21 @@ describe("applyServerEvent", () => {
     });
     expect(shots.find((item) => item.id === 1)?.tts_url).toBeUndefined();
   });
+
+  it("project_restored refetches the restored project, canvas and run state", () => {
+    const client = new QueryClient();
+    client.setQueryData(projectQueryKeys.characters(7), [character(1)]);
+    client.setQueryData(projectQueryKeys.shots(7), [shot(1, 1)]);
+    client.setQueryData(projectQueryKeys.regeneratePlan(7), { project_id: 7 });
+
+    applyServerEvent(client, 7, event("project_restored", { project_id: 7, run_id: 3, reason: "stopped" }));
+
+    for (const key of [
+      projectQueryKeys.characters(7),
+      projectQueryKeys.shots(7),
+      projectQueryKeys.regeneratePlan(7),
+    ]) {
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    }
+  });
 });

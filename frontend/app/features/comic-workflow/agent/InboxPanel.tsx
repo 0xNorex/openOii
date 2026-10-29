@@ -94,6 +94,12 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 				if (item.kind === "recoverable") {
 					return (
 						<Card key={item.id} tone="warning" title={item.title} detail={item.detail}>
+							{item.rawError ? (
+								<details className="text-xs text-ink-muted">
+									<summary className="cursor-pointer select-none">详细信息</summary>
+									<p className="m-0 mt-1 break-words font-mono">{item.rawError}</p>
+								</details>
+							) : null}
 							<div className="flex gap-2">
 								{item.resumable ? (
 									<Button variant="primary" size="sm" className="flex-1" onClick={actions.onResume}>

@@ -298,6 +298,37 @@ export interface RecoverySummaryRead {
 	resumable: boolean;
 }
 
+/** 一次「重新生成」替换掉的上一版（保存在那次运行上）。 */
+export interface PreviousVersionRead {
+	run_id: number;
+	run_status: string;
+	captured_at: string | null;
+	video_url: string | null;
+	character_count: number;
+	shot_count: number;
+	restorable: boolean;
+	restored_at: string | null;
+}
+
+/** 重新生成会重做什么、大概多久、调用多少次模型。 */
+export interface RegeneratePlanRead {
+	project_id: number;
+	has_content: boolean;
+	character_count: number;
+	shot_count: number;
+	has_final_video: boolean;
+	stages: string[];
+	estimate: {
+		seconds_low: number;
+		seconds_high: number;
+		text_calls: number;
+		image_calls: number;
+		video_calls: number;
+		basis: "history" | "heuristic";
+	};
+	previous_version: PreviousVersionRead | null;
+}
+
 export interface RecoveryControlRead {
 	state: "active" | "recoverable";
 	detail: string;
@@ -478,6 +509,7 @@ export type WsEventType =
 	| "bible_updated"
 	| "version_created"
 	| "version_rollback"
+	| "project_restored"
 	| "audio_generated"
 	| "export_completed"
 	| "consistency_eval_completed";
@@ -696,6 +728,7 @@ export const AGENT_NAME_MAP: Record<string, string> = {
 	compose: "合成",
 	review: "审查",
 	critic: "质量审查",
+	version: "版本",
 };
 
 export interface Asset {

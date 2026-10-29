@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { clearMessageFeed, replaceMessageFeed } from "~/query/messageFeed";
+import { clearMessageFeed, messagesToFeed, replaceMessageFeed } from "~/query/messageFeed";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { patchRunState, readRunState } from "~/query/runState";
 import { recallFailedStream } from "~/features/comic-workflow/agent/liveStream";
@@ -65,18 +65,7 @@ export function useProjectData(projectId: number): {
 	useEffect(() => {
 		if (!messages || messagesLoadedRef.current) return;
 		messagesLoadedRef.current = true;
-		replaceMessageFeed(
-			projectId,
-			messages.map((message) => ({
-				id: `db_${message.id}`,
-				agent: message.agent,
-				role: message.role,
-				content: message.content,
-				timestamp: message.created_at,
-				progress: message.progress ?? undefined,
-				isLoading: false,
-			})),
-		);
+		replaceMessageFeed(projectId, messagesToFeed(messages));
 	}, [messages, projectId]);
 
 	// A reload of a failed project brings back the output that was cut off.

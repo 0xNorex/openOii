@@ -83,6 +83,16 @@ describe("ChatPanel", () => {
 		useEditorStore.getState().setRunMode("manual");
 	});
 
+	it("shows a creating-run placeholder right after 开始生成", () => {
+		resetRunState(1);
+		setChatFeed([]);
+		seedRunState({ startingRun: true });
+		renderChatPanel(false);
+		expect(screen.getByTestId("run-starting")).toHaveTextContent("正在创建运行");
+		expect(screen.queryByText("暂无活动记录")).toBeNull();
+		resetRunState(1);
+	});
+
 	it("keeps global generation out of the empty chat state", () => {
 		renderChatPanel(false);
 

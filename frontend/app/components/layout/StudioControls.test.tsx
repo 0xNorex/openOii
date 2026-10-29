@@ -120,4 +120,39 @@ describe("StudioControls", () => {
 		await user.click(exportItem);
 		expect(onExport).not.toHaveBeenCalled();
 	});
+
+	describe("regenerate behind the ··· menu", () => {
+		const finished = { studioStatus: getStudioStatusMeta("ready"), downloadUrl: "http://x/final.mp4" };
+
+		it("moves 重新生成 into the menu and opens the confirm step instead of starting", async () => {
+			const user = userEvent.setup();
+			const onGenerate = vi.fn();
+			const onRegenerate = vi.fn();
+			renderControls({ ...finished, onGenerate, onRegenerate });
+
+			expect(screen.queryByRole("button", { name: "重新生成" })).toBeNull();
+			await user.click(screen.getByRole("button", { name: "工作台工具" }));
+			await user.click(screen.getByRole("menuitem", { name: "重新生成（先确认）" }));
+			expect(onRegenerate).toHaveBeenCalledTimes(1);
+			expect(onGenerate).not.toHaveBeenCalled();
+		});
+
+		it("offers 恢复上一版 and the previous cut download from the menu", async () => {
+			const user = userEvent.setup();
+			const onRestorePrevious = vi.fn();
+			renderControls({ ...finished, onRegenerate: vi.fn(), onRestorePrevious, previousDownloadUrl: "http://x/old.mp4" });
+
+			await user.click(screen.getByRole("button", { name: "工作台工具" }));
+			expect(screen.getByRole("menuitem", { name: /下载上一版成片/ })).toHaveAttribute("href", "http://x/old.mp4");
+			await user.click(screen.getByRole("menuitem", { name: "恢复上一版" }));
+			expect(onRestorePrevious).toHaveBeenCalledTimes(1);
+		});
+
+		it("shows a busy 开始生成 button while the run is being created", () => {
+			renderControls({ generatePending: true, generateDisabled: true });
+			const busy = screen.getByRole("button", { name: /正在创建/ });
+			expect(busy).toBeDisabled();
+			expect(busy).toHaveAttribute("aria-busy", "true");
+		});
+	});
 });

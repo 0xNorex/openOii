@@ -6,6 +6,7 @@ import {
 	type RunAwaitingConfirmEventData,
 } from "~/types";
 import type { ComicWorkflowSection } from "../graph/types";
+import { describeRunError } from "~/utils/runErrors";
 import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
@@ -20,7 +21,15 @@ export type InboxItem =
 			/** 意见还没处理完：先别批准，等新版本 */
 			confirmBlocked?: boolean;
 		}
-	| { kind: "recoverable"; id: "recoverable"; title: string; detail: string; resumable: boolean }
+	| {
+			kind: "recoverable";
+			id: "recoverable";
+			title: string;
+			detail: string;
+			resumable: boolean;
+			/** 原始错误（英文/技术细节），放在「详细信息」里 */
+			rawError?: string | null;
+	  }
 	| { kind: "blocked"; id: "blocked"; title: string; clips: BlockingClip[] }
 	| { kind: "failed"; id: "failed"; title: string; detail: string };
 
@@ -51,6 +60,8 @@ export function gateSection(gate: RunAwaitingConfirmEventData | null | undefined
 }
 
 function stageTitle(stage: string | null | undefined): string | null {
+	// 审批门有自己的名字：停在「分镜脚本确认」不能显示成下一步的「渲染阶段」
+	if (stage && GATE_COPY[stage]) return `${GATE_COPY[stage].name}确认`;
 	const simplified = toSimplifiedStage(stage);
 	return simplified ? getWorkflowStageInfo(simplified).title : null;
 }
@@ -104,19 +115,23 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		const kept = summary?.preserved_stages?.length ?? 0;
 		// 旧后端可能不带 available_actions：缺省时按可继续处理，不能让收件箱崩掉
 		const resumable = input.recoveryControl.available_actions?.includes("resume") !== false;
-		// 失败和中断是同一件事：一张卡，原因写在里面
-		const reason = input.recoveryControl.active_run?.error?.trim();
-		const next = !resumable
-			? "这次运行无法接着跑，取消后可以重新生成"
-			: kept > 0
-				? `已保留 ${kept} 个阶段的产物，可以继续`
-				: "可以继续或取消";
+		// 失败和中断是同一件事：一张卡，原因用中文写在里面，原文收进「详细信息」
+		const error = describeRunError(input.recoveryControl.active_run?.error);
+		const keptText = kept > 0 ? `已保留 ${kept} 个阶段的产物` : null;
+		const detail = !resumable
+			? [error?.summary, "这次运行无法接着跑，取消后可以重新生成"].filter(Boolean).join("。")
+			: error
+				? [error.summary, keptText].filter(Boolean).join("。")
+				: keptText
+					? `${keptText}，可以继续`
+					: "可以继续或取消";
 		items.push({
 			kind: "recoverable",
 			id: "recoverable",
 			title: `运行中断于${stage}`,
-			detail: reason ? `${reason.length > 80 ? `${reason.slice(0, 80)}…` : reason}。${next}` : next,
+			detail,
 			resumable,
+			rawError: error?.raw ?? null,
 		});
 	}
 

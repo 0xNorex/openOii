@@ -1,4 +1,4 @@
-import { appendMessage, updateMessageFeed } from "~/query/messageFeed";
+import { appendMessage, readMessageFeed, updateMessageFeed } from "~/query/messageFeed";
 import { patchRunState, readRunState, receiptFromGate, resetRunState } from "~/query/runState";
 import type { RunMode } from "~/stores/editorStore";
 import type {
@@ -96,13 +96,23 @@ export function setFeedbackReceipt(projectId: number, next: FeedbackReceipt | nu
 		}
 	}
 	if (next) {
-		// 同一张回执已经归档过（例如恢复运行时先清空、再回到同一闸门）：归档处也跟着更新
+		// 回执一出现就落进时间线（排在这一轮重做的输出之前）；之后的状态就地更新
 		const id = `receipt_${next.id}`;
-		updateMessageFeed(projectId, (messages) =>
-			messages.some((msg) => msg.id === id)
-				? messages.map((msg) => (msg.id === id ? { ...msg, receipt: next } : msg))
-				: messages,
-		);
+		const archived = readMessageFeed(projectId).some((msg) => msg.id === id);
+		if (archived) {
+			updateMessageFeed(projectId, (messages) =>
+				messages.map((msg) => (msg.id === id ? { ...msg, receipt: next } : msg)),
+			);
+		} else {
+			appendMessage(projectId, {
+				id,
+				agent: "system",
+				role: "feedback",
+				content: next.content,
+				receipt: next,
+				timestamp: new Date().toISOString(),
+			});
+		}
 	}
 	patchRunState(projectId, { feedbackReceipt: next });
 }
@@ -449,6 +459,22 @@ export function applyWsEvent(
 				agent: "system",
 				role: "info",
 				content: `${rollbackData.entity_type === "character" ? "角色" : "分镜"} ${rollbackData.entity_id} 已从 v${rollbackData.from_version} 回滚到 v${rollbackData.to_version}`,
+				timestamp: new Date().toISOString(),
+			});
+			break;
+		}
+
+		case "project_restored": {
+			// 与服务端落库的那条同文（刷新后由 messages 接口还原）
+			const reason = event.data.reason as string | undefined;
+			appendMessage(projectId, {
+				id: generateMessageId(),
+				agent: "version",
+				role: "assistant",
+				content:
+					reason === "restored"
+						? "已恢复到上一版"
+						: "已停止，项目放回了重新生成之前的版本（成片、角色、分镜都还在）",
 				timestamp: new Date().toISOString(),
 			});
 			break;

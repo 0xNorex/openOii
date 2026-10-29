@@ -84,4 +84,19 @@ describe("gate feedback projection", () => {
 		send("run_feedback", { run_id: 99, feedback_id: "x", round: 1, state: "received", content: "?" });
 		expect(readRunState(1).feedbackReceipt).toBeNull();
 	});
+
+	it("the receipt card sits before the redo output in the timeline", () => {
+		send("run_awaiting_confirm", gate());
+		send("run_feedback", { run_id: 9, feedback_id: "fb9", round: 2, state: "received", content: "更悬疑", stage: "outline_approval" });
+		send("run_feedback", { run_id: 9, feedback_id: "fb9", round: 2, state: "regenerating" });
+		send("run_message", { agent: "outline", role: "assistant", content: "重新写了大纲" });
+		send("run_awaiting_confirm", gate({ feedback: { id: "fb9", round: 2, state: "revised", content: "更悬疑" } }));
+		const feed = readMessageFeed(1);
+		const receiptAt = feed.findIndex((msg) => msg.id === "receipt_fb9");
+		const outputAt = feed.findIndex((msg) => msg.content === "重新写了大纲");
+		expect(receiptAt).toBeGreaterThanOrEqual(0);
+		expect(receiptAt).toBeLessThan(outputAt);
+		expect(feed.filter((msg) => msg.id === "receipt_fb9")).toHaveLength(1);
+		expect(feed[receiptAt]?.receipt).toMatchObject({ state: "revised", round: 2 });
+	});
 });

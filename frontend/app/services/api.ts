@@ -223,6 +223,12 @@ export const runsApi = {
 			{ method: "POST" },
 		),
 
+	/** 把重新生成之前的那一版放回来（成片、角色、分镜、大纲）。 */
+	restorePrevious: (runId: number) =>
+		fetchApi<{ run_id: number; restored: boolean }>(`/api/v1/runs/${runId}/restore-previous`, {
+			method: "POST",
+		}),
+
 	resume: (runId: number) =>
 		fetchApi<import("~/types").AgentRun>(`/api/v1/runs/${runId}/resume`, {
 			method: "POST",
@@ -239,7 +245,7 @@ export const runsApi = {
 		runId: number,
 		payload: { content: string; entity_type?: "character" | "shot"; entity_ids?: number[] },
 	) =>
-		fetchApi<{ run_id: number; feedback_id: string; status: "accepted" }>(
+		fetchApi<{ run_id: number; feedback_id: string; round?: number | null; status: "accepted" }>(
 			`/api/v1/runs/${runId}/gate-feedback`,
 			{ method: "POST", body: JSON.stringify(payload) },
 		),
@@ -313,6 +319,12 @@ export const projectsApi = {
 			method: "PUT",
 			body: JSON.stringify(data),
 		}),
+
+	/** 重新生成前的确认信息：重做哪些阶段、大概多久、多少次调用、上一版。 */
+	getRegeneratePlan: (id: number, warm = false) =>
+		fetchApi<import("~/types").RegeneratePlanRead>(
+			`/api/v1/projects/${id}/runs/regenerate-plan${warm ? "?warm=true" : ""}`,
+		),
 
 	getMessages: (id: number) =>
 		fetchApi<import("~/types").Message[]>(`/api/v1/projects/${id}/messages`),

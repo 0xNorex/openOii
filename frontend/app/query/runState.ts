@@ -39,6 +39,8 @@ export interface RunState {
   feedbackReceipt: FeedbackReceipt | null;
   /** 最近一次用服务端 runs/current 校准的时间（ms）；null = 还没校准过。 */
   syncedAt: number | null;
+  /** 已点「开始/重新生成」、运行还没建好（POST runs 在途）：时间线先放占位。 */
+  startingRun: boolean;
 }
 
 export const INITIAL_RUN_STATE: RunState = {
@@ -57,6 +59,7 @@ export const INITIAL_RUN_STATE: RunState = {
   liveStream: null,
   feedbackReceipt: null,
   syncedAt: null,
+  startingRun: false,
 };
 
 export function readRunState(projectId: number): RunState {

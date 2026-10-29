@@ -3,6 +3,7 @@ import { appQueryClient } from "./client";
 import {
   appendMessage,
   clearMessageFeed,
+  messagesToFeed,
   readMessageFeed,
   replaceMessageFeed,
   updateMessageFeed,
@@ -83,5 +84,38 @@ describe("message feed", () => {
 
   it("treats an absent project feed as empty", () => {
     expect(readMessageFeed(999)).toEqual([]);
+  });
+});
+
+
+describe("messagesToFeed", () => {
+  const row = (id: number, role: string, content: string, summary: string | null = null) => ({
+    id,
+    project_id: 1,
+    run_id: 3,
+    agent: "outline",
+    role,
+    content,
+    summary,
+    progress: null,
+    is_loading: false,
+    created_at: `2026-01-01T00:00:0${id}.000Z`,
+  });
+
+  it("restores persisted receipts as receipt cards in their original order", () => {
+    const feed = messagesToFeed([
+      row(1, "user", "更悬疑"),
+      row(2, "feedback_receipt", JSON.stringify({ id: "fb1", round: 1, state: "revised", content: "更悬疑", stage: "outline_approval" }), "fb1"),
+      row(3, "assistant", "新大纲"),
+      row(4, "feedback_receipt", JSON.stringify({ id: "fb2", round: 2, state: "not_applied", content: "x", reason: "原因", stage: "outline_approval" }), "fb2"),
+    ]);
+    expect(feed.map((msg) => msg.id)).toEqual(["db_1", "receipt_fb1", "db_3", "receipt_fb2"]);
+    expect(feed[1]).toMatchObject({ role: "feedback", receipt: { id: "fb1", round: 1, state: "revised", gate: "outline_approval" } });
+    expect(feed[3]?.receipt).toMatchObject({ round: 2, state: "not_applied", reason: "原因" });
+  });
+
+  it("drops unreadable receipt rows instead of showing raw JSON", () => {
+    const feed = messagesToFeed([row(1, "feedback_receipt", "not json"), row(2, "feedback_receipt", "{}")]);
+    expect(feed).toEqual([]);
   });
 });

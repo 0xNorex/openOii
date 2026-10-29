@@ -47,6 +47,7 @@ export function ChatPanel({
     liveStream,
     feedbackReceipt,
     syncedAt,
+    startingRun,
   } = useRunState(projectId);
 
   // The chat feed is server state, so it is read from the query cache rather
@@ -58,7 +59,8 @@ export function ChatPanel({
   }).data ?? EMPTY_MESSAGES;
 
   const entries = useMemo(() => {
-    // 当前闸门的回执排在最后；已经归档进消息流的同一张就地换成最新状态，不重复
+    // 回执出现时已经落进消息流（排在重做输出之前），这里就地换成最新状态；
+    // 只有还没归档的（极少数，例如运行态先于消息流恢复）才补在末尾
     const receiptId = feedbackReceipt ? `receipt_${feedbackReceipt.id}` : null;
     let feed: AgentMessage[] = messages;
     if (feedbackReceipt) {
@@ -130,7 +132,18 @@ export function ChatPanel({
         </div>
       )}
 
-      {entries.length === 0 && !isGenerating && !liveStream ? (
+      {startingRun && !isGenerating ? (
+        <div
+          className="flex items-center gap-2 border-b border-line px-3 py-2 text-xs text-ink-muted"
+          role="status"
+          data-testid="run-starting"
+        >
+          <span className="spinner-doodle h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          正在创建运行…首次检查模型服务可能要几秒
+        </div>
+      ) : null}
+
+      {startingRun && !isGenerating ? null : entries.length === 0 && !isGenerating && !liveStream ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 text-center">
           <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
             <SvgIcon name={stageIcon} size={14} className="text-primary" />

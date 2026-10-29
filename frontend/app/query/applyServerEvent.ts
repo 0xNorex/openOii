@@ -213,6 +213,26 @@ export function applyServerEvent(
       clearBlockingClips(queryClient, projectId);
       void queryClient.invalidateQueries({ queryKey: projectQueryKeys.runState(projectId) });
       void queryClient.invalidateQueries({ queryKey: projectQueryKeys.project(projectId) });
+      void queryClient.invalidateQueries({ queryKey: projectQueryKeys.regeneratePlan(projectId) });
+      if (event.type === "run_cancelled") {
+        // 停止一次重新生成会把上一版放回来：角色和分镜也要重新读
+        void queryClient.invalidateQueries({ queryKey: projectQueryKeys.characters(projectId) });
+        void queryClient.invalidateQueries({ queryKey: projectQueryKeys.shots(projectId) });
+      }
+      return;
+    }
+
+    case "project_restored": {
+      // 上一版（成片、大纲、角色、分镜）已经放回：整份重新读
+      for (const key of [
+        projectQueryKeys.project(projectId),
+        projectQueryKeys.characters(projectId),
+        projectQueryKeys.shots(projectId),
+        projectQueryKeys.runState(projectId),
+        projectQueryKeys.regeneratePlan(projectId),
+      ]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
       return;
     }
 

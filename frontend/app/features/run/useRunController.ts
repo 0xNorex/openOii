@@ -51,6 +51,8 @@ export function useRunController(args: {
 	recoveryControl: RecoveryControlRead | null;
 	selectedNodeId: string | null;
 	selectedNodeIds: string[];
+	/** 有产物时，画布上的「重新合成」等入口先走重新生成确认框 */
+	onRequestRegenerate?: () => void;
 }) {
 	const {
 		projectId,
@@ -63,6 +65,7 @@ export function useRunController(args: {
 		recoveryControl,
 		selectedNodeId,
 		selectedNodeIds,
+		onRequestRegenerate,
 	} = args;
 	const [searchParams, setSearchParams] = useSearchParams();
 	const { send } = useProjectWebSocket(projectId);
@@ -164,7 +167,12 @@ export function useRunController(args: {
 				details: import.meta.env.DEV ? JSON.stringify(apiError?.details) : undefined,
 			});
 		},
-		onSettled: () => resyncRunState(projectId, { project: true }),
+		onSettled: () => {
+			patchRunState(projectId, { startingRun: false });
+			// 新运行带着上一版：菜单里的「下载上一版成片」随之更新
+			void appQueryClient.invalidateQueries({ queryKey: projectQueryKeys.regeneratePlan(projectId) });
+			resyncRunState(projectId, { project: true });
+		},
 	});
 
 	const feedbackMutation = useMutation({
@@ -277,7 +285,8 @@ export function useRunController(args: {
 			if (previous?.id === result.feedback_id) return;
 			setFeedbackReceipt(projectId, {
 				id: result.feedback_id,
-				round: (state.recoveryGate?.feedback?.round ?? 0) + 1,
+				// 轮次由服务端按已保存的回执算出；旧后端没有时才本地推
+				round: result.round ?? (state.recoveryGate?.feedback?.round ?? 0) + 1,
 				state: "received",
 				content: args.content,
 				reason: null,
@@ -370,13 +379,42 @@ export function useRunController(args: {
 		onSettled: () => resyncRunState(projectId, { project: true }),
 	});
 
+	const restoreMutation = useMutation({
+		mutationFn: (runId: number) => runsApi.restorePrevious(runId),
+		onSuccess: (result) => {
+			toast.success({
+				title: result.restored ? "已恢复上一版" : "已经是上一版",
+				message: result.restored ? "成片、大纲、角色和分镜都回到了重新生成之前" : "没有需要恢复的改动",
+			});
+		},
+		onError: (error: Error | ApiError) => {
+			const apiError = error instanceof ApiError ? error : null;
+			toast.error({ title: "恢复失败", message: apiError?.message || error.message || "请重试" });
+		},
+		onSettled: () => {
+			for (const key of [
+				projectQueryKeys.characters(projectId),
+				projectQueryKeys.shots(projectId),
+				projectQueryKeys.regeneratePlan(projectId),
+			]) {
+				void appQueryClient.invalidateQueries({ queryKey: key });
+			}
+			resyncRunState(projectId, { project: true });
+		},
+	});
+
+	const handleRestorePrevious = (runId: number) => {
+		if (!restoreMutation.isPending) restoreMutation.mutate(runId);
+	};
+
 	const handleGenerate = () => {
 		if (generateMutation.isPending || hasActiveRun) return;
 		const requestToken = requestTokenRef.current + 1;
 		requestTokenRef.current = requestToken;
 		setLastRunStatus(null);
 		clearMessageFeed(projectId);
-		patchRunState(projectId, { currentStage: "plan" });
+		// 创建运行要等服务端确认：按钮和时间线先给出「正在创建」
+		patchRunState(projectId, { currentStage: "plan", startingRun: true });
 		generateMutation.mutate({
 			requestToken,
 			skillId: searchParams.get("skill") || project?.skill_id || null,
@@ -504,6 +542,7 @@ export function useRunController(args: {
 	useEffect(() => {
 		return canvasEvents.on("request-regenerate", () => {
 			if (recoveryControl?.state === "recoverable") handleResume();
+			else if (onRequestRegenerate) onRequestRegenerate();
 			else handleGenerate();
 		});
 	});
@@ -518,7 +557,7 @@ export function useRunController(args: {
 			requestTokenRef.current = requestToken;
 			setLastRunStatus(null);
 			clearMessageFeed(projectId);
-			patchRunState(projectId, { currentStage: "plan" });
+			patchRunState(projectId, { currentStage: "plan", startingRun: true });
 			const useYolo = project.creation_mode
 				? project.creation_mode === "quick"
 				: skillId === "quick-short";
@@ -534,6 +573,8 @@ export function useRunController(args: {
 		handleCancel,
 		handleResume,
 		generatePending: generateMutation.isPending,
+		handleRestorePrevious,
+		restorePending: restoreMutation.isPending,
 		gateDecisionPending: confirmMutation.isPending || gateFeedbackMutation.isPending,
 		lastRunStatus,
 	};

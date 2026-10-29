@@ -70,6 +70,20 @@ describe("InboxPanel", () => {
 		expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
 	});
 
+	it("keeps the raw error behind a 详细信息 disclosure", async () => {
+		render(
+			<InboxPanel
+				items={[{ kind: "recoverable", id: "recoverable", title: "运行中断于分镜脚本确认", detail: "执行中断（引擎租约过期）", resumable: true, rawError: "run lease expired" }]}
+				actions={actions()}
+			/>,
+		);
+		expect(screen.getByText("执行中断（引擎租约过期）")).toBeVisible();
+		const raw = screen.getByText("run lease expired");
+		expect(raw).not.toBeVisible();
+		await userEvent.click(screen.getByText("详细信息"));
+		expect(raw).toBeVisible();
+	});
+
 	it("selects a blocking shot and retries a failed run", async () => {
 		const a = actions();
 		render(
