@@ -1,6 +1,6 @@
-import { AGENT_NAME_MAP, type AgentMessage } from "~/types";
+import { AGENT_NAME_MAP, type AgentMessage, type FeedbackReceipt } from "~/types";
 
-export type ActivityKind = "run" | "handoff" | "step" | "message" | "user" | "error";
+export type ActivityKind = "run" | "handoff" | "step" | "message" | "user" | "error" | "feedback";
 export type ActivityStatus = "running" | "done" | "error";
 
 export interface ActivityChild {
@@ -19,6 +19,8 @@ export interface ActivityEntry {
 	status: ActivityStatus;
 	durationMs?: number;
 	children: ActivityChild[];
+	/** kind === "feedback"：闸门修改意见回执 */
+	receipt?: FeedbackReceipt;
 }
 
 /** Tool/step detail rows that hang under the current step instead of standing alone. */
@@ -137,6 +139,22 @@ export function deriveActivityTimeline(
 			push({ ...base, kind: "error", title: msg.content.trim(), detail: msg.details ?? undefined, status: "error" }, msg);
 		} else if (msg.role === "user") {
 			push({ ...base, kind: "user", title: msg.content.trim() }, msg);
+		} else if (msg.role === "feedback" && msg.receipt) {
+			// 回执卡里已经引用了这条意见：同内容的用户行不再单列
+			const quoted = msg.receipt.content.trim();
+			let dup = -1;
+			for (let i = entries.length - 1; quoted && i >= 0; i--) {
+				if (entries[i].kind === "user" && entries[i].title === quoted) {
+					dup = i;
+					break;
+				}
+			}
+			if (dup >= 0) {
+				entries.splice(dup, 1);
+				starts.splice(dup, 1);
+				ends.splice(dup, 1);
+			}
+			push({ ...base, kind: "feedback", title: quoted, receipt: msg.receipt }, msg);
 		} else {
 			const title = msg.content.trim();
 			const match = PROGRESS.exec(title);

@@ -1,9 +1,11 @@
 import { appendMessage, updateMessageFeed } from "~/query/messageFeed";
-import { patchRunState, readRunState, resetRunState } from "~/query/runState";
+import { patchRunState, readRunState, receiptFromGate, resetRunState } from "~/query/runState";
 import type { RunMode } from "~/stores/editorStore";
 import type {
 	AgentMessage,
 	AgentThinkingEventData,
+	FeedbackReceipt,
+	RunFeedbackEventData,
 	LlmStreamEventData,
 	VersionCreatedEventData,
 	VersionRollbackEventData,
@@ -66,6 +68,51 @@ function cleanupStaleMessages(projectId: number, completedAgent?: string): void 
 	);
 }
 
+/**
+ * 换掉当前回执。被换下的那张（批准、换闸门、下一轮意见）留进活动时间线，
+ * 让每轮「要求修改 → 结果」都有记录。
+ */
+export function setFeedbackReceipt(projectId: number, next: FeedbackReceipt | null): void {
+	const previous = readRunState(projectId).feedbackReceipt;
+	if (previous && previous.id !== next?.id) {
+		const id = `receipt_${previous.id}`;
+		let found = false;
+		updateMessageFeed(projectId, (messages) =>
+			messages.map((msg) => {
+				if (msg.id !== id) return msg;
+				found = true;
+				return { ...msg, receipt: previous };
+			}),
+		);
+		if (!found) {
+			appendMessage(projectId, {
+				id,
+				agent: "system",
+				role: "feedback",
+				content: previous.content,
+				receipt: previous,
+				timestamp: new Date().toISOString(),
+			});
+		}
+	}
+	patchRunState(projectId, { feedbackReceipt: next });
+}
+
+function receiptFromEvent(data: RunFeedbackEventData, previous: FeedbackReceipt | null): FeedbackReceipt {
+	const id = data.feedback_id || data.id || previous?.id || `round-${data.round}`;
+	const same = previous?.id === id ? previous : null;
+	return {
+		id,
+		round: data.round || same?.round || 1,
+		state: data.state,
+		content: data.content ?? same?.content ?? "",
+		reason: data.reason ?? null,
+		gate: data.stage ?? data.gate ?? same?.gate ?? null,
+		entityType: data.entity_type ?? same?.entityType ?? null,
+		entityIds: data.entity_ids ?? same?.entityIds ?? null,
+	};
+}
+
 function applyStage(projectId: number, data: Record<string, unknown>): void {
 	const stage = resolveEventStage(data);
 	if (stage) patchRunState(projectId, { currentStage: stage });
@@ -110,6 +157,7 @@ export function applyWsEvent(
 
 		case "run_started": {
 			const d = event.data as unknown as RunStartedEventData;
+			setFeedbackReceipt(projectId, null);
 			patchRunState(projectId, { isGenerating: true });
 			patchRunState(projectId, { progress: 0 });
 			appendMessage(projectId, {
@@ -223,6 +271,8 @@ export function applyWsEvent(
 			patchRunState(projectId, { awaitingConfirm: true, awaitingAgent: gate.agent, currentRunId: gate.run_id, liveStream: null });
 			patchRunState(projectId, { recoveryGate: gate });
 			patchRunState(projectId, { recoverySummary: gate.recovery_summary });
+			// 同一闸门重做后回来时带着上一轮结果；首次到达没有回执
+			setFeedbackReceipt(projectId, receiptFromGate(gate));
 			applyStage(projectId, event.data);
 			appendMessage(projectId, {
 				id: generateMessageId(),
@@ -237,8 +287,27 @@ export function applyWsEvent(
 			break;
 		}
 
+		case "run_feedback": {
+			const data = event.data as unknown as RunFeedbackEventData;
+			const state = readRunState(projectId);
+			if (state.currentRunId !== null && data.run_id !== state.currentRunId) break;
+			const receipt = receiptFromEvent(data, state.feedbackReceipt);
+			setFeedbackReceipt(projectId, receipt);
+			if (data.state === "regenerating") {
+				// 重做期间不在闸门上：确认按钮收起，显示进行中
+				patchRunState(projectId, {
+					awaitingConfirm: false,
+					awaitingAgent: null,
+					recoveryGate: null,
+					isGenerating: true,
+				});
+			}
+			break;
+		}
+
 		case "run_confirmed": {
 			const confirmed = event.data as unknown as RunConfirmedEventData;
+			setFeedbackReceipt(projectId, null);
 			patchRunState(projectId, { awaitingConfirm: false, awaitingAgent: null });
 			patchRunState(projectId, { recoveryGate: null });
 			if (confirmed.recovery_summary) patchRunState(projectId, { recoverySummary: confirmed.recovery_summary });
@@ -256,6 +325,7 @@ export function applyWsEvent(
 		case "run_completed": {
 			clearLoadingStates(projectId);
 			const d = event.data as unknown as RunCompletedEventData;
+			setFeedbackReceipt(projectId, null);
 			cleanupStaleMessages(projectId);
 			resetRunState(projectId);
 			patchRunState(projectId, { progress: 1 });
@@ -279,6 +349,7 @@ export function applyWsEvent(
 			clearLoadingStates(projectId);
 			cleanupStaleMessages(projectId);
 			const d = event.data as unknown as RunFailedEventData;
+			setFeedbackReceipt(projectId, null);
 			// Keep the interrupted output on screen next to the failure.
 			const interrupted = readRunState(projectId).liveStream;
 			resetRunState(projectId);
@@ -313,6 +384,7 @@ export function applyWsEvent(
 				(data.run_id !== activeRunId && !data.run_ids?.includes(activeRunId))
 			) break;
 			clearLoadingStates(projectId);
+			setFeedbackReceipt(projectId, null);
 			resetRunState(projectId);
 			patchRunState(projectId, { progress: 0 });
 			appendMessage(projectId, {

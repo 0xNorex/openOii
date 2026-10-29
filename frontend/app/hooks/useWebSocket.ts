@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { applyServerEvent } from "~/query/applyServerEvent";
 import { appQueryClient } from "~/query/client";
+import { noteServerActivity, setConnectionState } from "~/query/connectionStatus";
+import { resyncRunState } from "~/query/resyncRunState";
+import { noteRunLifecycleEvent } from "./useRunState";
 import { useEditorStore } from "~/stores/editorStore";
 import type { WsEvent } from "~/types";
 import { getWsBase } from "~/utils/runtimeBase";
@@ -15,6 +18,19 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const WS_CURSOR_PREFIX = "openoii.ws.cursor.";
 
 type DurableWsEvent = WsEvent & { event_id?: number };
+
+/** 改变运行“在哪一步”的事件：收到后用 runs/current 再校准一次。 */
+const RUN_LIFECYCLE_EVENTS = new Set<string>([
+	"run_started",
+	"run_awaiting_confirm",
+	"run_confirmed",
+	"run_feedback",
+	"run_failed",
+	"run_cancelled",
+	"run_completed",
+]);
+const RUN_TERMINAL_EVENTS = new Set<string>(["run_failed", "run_cancelled", "run_completed"]);
+
 
 const globalConnections = new Map<number, WebSocket>();
 
@@ -96,12 +112,17 @@ export function useProjectWebSocket(projectId: number | null) {
 			const after = persistedCursor === null ? "" : `?after=${persistedCursor}`;
 			ws = new WebSocket(`${WS_BASE}/ws/projects/${projectId}${after}`);
 			globalConnections.set(projectId, ws);
+			setConnectionState(projectId, "connecting");
 		}
 
 		ws.onopen = () => {
 			const wasReconnecting = reconnectAttempts.current > 0;
 			if (import.meta.env.DEV) console.debug("[WS] 已连接到项目", projectId);
 			reconnectAttempts.current = 0;
+			setConnectionState(projectId, "open");
+			noteServerActivity(projectId);
+			// 断线期间错过的闸门/终态：重连后以服务端为准
+			if (wasReconnecting) resyncRunState(projectId, { project: true });
 			if (wasReconnecting) {
 				toast.success({
 					title: "重新连接成功",
@@ -126,8 +147,13 @@ export function useProjectWebSocket(projectId: number | null) {
 					return;
 				}
 
+				noteServerActivity(projectId);
+				const lifecycle = RUN_LIFECYCLE_EVENTS.has(data.type);
+				if (lifecycle) noteRunLifecycleEvent(projectId);
 				applyServerEvent(appQueryClient, projectId, data);
 				applyWsEvent(projectId, data, useEditorStore.getState().runMode, scheduleAutoConfirm);
+				if (lifecycle) resyncRunState(projectId, { project: RUN_TERMINAL_EVENTS.has(data.type) });
+				else if (data.type === "connected") resyncRunState(projectId);
 
 				if (eventId !== null) {
 					lastEventIdRef.current = eventId;
@@ -164,6 +190,7 @@ export function useProjectWebSocket(projectId: number | null) {
 		ws.onclose = () => {
 			if (import.meta.env.DEV) console.debug("[WS] 连接断开");
 			globalConnections.delete(projectId);
+			setConnectionState(projectId, "closed");
 			if (reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
 				reconnectAttempts.current += 1;
 				toast.warning({

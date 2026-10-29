@@ -89,3 +89,48 @@ describe("deriveInboxItems", () => {
 		expect(deriveInboxItems({ ...base, projectStatus: "failed", isGenerating: true })).toEqual([]);
 	});
 });
+
+describe("deriveInboxItems: gate feedback receipts", () => {
+	const gate = { agent: "outline", current_stage: "outline_approval" } as RunAwaitingConfirmEventData;
+	const atGate = { ...base, awaitingConfirm: true, awaitingAgent: "outline", recoveryGate: gate, isGenerating: true };
+	const receipt = (state: "received" | "revised" | "not_applied" | "failed", reason: string | null = null) => ({
+		id: "fb1",
+		round: 1,
+		state,
+		content: "更温暖",
+		reason,
+		gate: "outline_approval",
+	});
+
+	it("blocks approval while the change request is pending", () => {
+		const [item] = deriveInboxItems({ ...atGate, feedbackReceipt: receipt("received") });
+		expect(item).toMatchObject({ kind: "gate", confirmBlocked: true, title: "已收到修改意见，故事大纲重做中" });
+	});
+
+	it("a revised version waits at the same gate as 第 2 版", () => {
+		const [item] = deriveInboxItems({ ...atGate, feedbackReceipt: receipt("revised") });
+		expect(item).toMatchObject({ kind: "gate", id: "gate:outline_approval", confirmBlocked: false, title: "故事大纲第 2 版，等待确认" });
+	});
+
+	it("not_applied shows the explicit reason", () => {
+		const [item] = deriveInboxItems({ ...atGate, feedbackReceipt: receipt("not_applied", "请先选中镜头") });
+		expect(item).toMatchObject({ title: "故事大纲没有改动，等待确认", detail: "请先选中镜头" });
+	});
+});
+
+describe("deriveInboxItems: one card for failed + recoverable", () => {
+	it("merges the failure reason into the recoverable card", () => {
+		const control = {
+			...recoverable,
+			active_run: { id: 3, error: "图像服务超时" },
+		} as unknown as RecoveryControlRead;
+		const items = deriveInboxItems({ ...base, recoveryControl: control, projectStatus: "failed" });
+		expect(items.map((item) => item.kind)).toEqual(["recoverable"]);
+		expect(items[0]).toMatchObject({ detail: expect.stringContaining("图像服务超时") });
+	});
+
+	it("keeps the failed card when nothing can be resumed", () => {
+		const items = deriveInboxItems({ ...base, projectStatus: "failed" });
+		expect(items.map((item) => item.kind)).toEqual(["failed"]);
+	});
+});

@@ -8,7 +8,8 @@ interface OutlinePreviewCardProps {
 	visualBible?: string | null;
 	/** 省略时不显示“确认大纲”（审批按钮只在收件箱卡片上）。 */
 	onConfirm?: () => void;
-	onRegenerate: (feedback: string) => void;
+	/** 省略时不显示“按意见重做”（意见还在处理时）。 */
+	onRegenerate?: (feedback: string) => void;
 }
 
 function safeJson(value: StoryOutline): string {
@@ -31,7 +32,7 @@ export function OutlinePreviewCard({
 		if (draft.trim() && draft.trim() !== safeJson(outline)) {
 			parts.push(`请按以下编辑后的大纲方向重新生成：\n${draft.trim()}`);
 		}
-		onRegenerate(parts.join("\n\n") || "请重新生成故事大纲");
+		onRegenerate?.(parts.join("\n\n") || "请重新生成故事大纲");
 	};
 
 	return (
@@ -57,7 +58,7 @@ export function OutlinePreviewCard({
 
 			<div className="space-y-1">
 				{outline.acts.map((act) => (
-					<div key={`${act.act}-${act.title}`} className="border-l-2 border-primary/40 pl-2">
+					<div key={`${act.act}-${act.title}`} className="border-l border-primary/40 pl-2">
 						<p className="font-bold text-xs">
 							第 {act.act} 幕 · {act.title}
 						</p>
@@ -108,9 +109,11 @@ export function OutlinePreviewCard({
 						确认大纲
 					</Button>
 				) : null}
-				<Button size="sm" variant="secondary" onClick={handleRegenerate} className="flex-1">
-					重新生成
-				</Button>
+				{onRegenerate ? (
+					<Button size="sm" variant="secondary" onClick={handleRegenerate} className="flex-1">
+						按意见重做
+					</Button>
+				) : null}
 			</div>
 		</div>
 	);

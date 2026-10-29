@@ -32,6 +32,47 @@ const baseProject = {
 	updated_at: "2026-05-05T00:00:00Z",
 };
 
+type MockServer = {
+	generateCalls: number;
+	resumeCalls: number;
+	feedbackCalls: number;
+	/** What GET runs/current answers: the server's view of the run. */
+	current: JsonValue;
+};
+
+/** The server writes the run to the DB, then announces it over WS. */
+function serverRunAfter(event: { type: string; data: Record<string, unknown> }, previous: JsonValue): JsonValue {
+	const { type, data } = event;
+	if (type === "run_completed" || type === "run_failed" || type === "run_cancelled") return null;
+	if (!["run_started", "run_progress", "run_confirmed", "run_awaiting_confirm"].includes(type)) return previous;
+	const atGate = type === "run_awaiting_confirm";
+	return {
+		state: "active",
+		detail: "运行中",
+		available_actions: ["cancel"],
+		active_run: {
+			id: (data.run_id as number | undefined) ?? 901,
+			project_id: 7,
+			status: atGate ? "waiting_for_approval" : "running",
+			current_agent: (data.current_agent ?? data.agent ?? null) as string | null,
+			progress: (data.progress as number | undefined) ?? 0,
+			provider_snapshot: null,
+		},
+		recovery_summary: (data.recovery_summary as Record<string, unknown> | undefined) ?? {
+			current_stage: data.current_stage ?? data.stage ?? "plan",
+			next_stage: null,
+			preserved_stages: [],
+		},
+		awaiting_gate: atGate ? data : null,
+		pending_gate_feedback: null,
+	};
+}
+
+async function push(page: Page, server: MockServer, event: { type: string; data: Record<string, unknown> }) {
+	server.current = serverRunAfter(event, server.current);
+	await page.evaluate((frame) => window.__mockWs.dispatch(frame), event);
+}
+
 async function installMockWebSocket(page: Page) {
 	await page.addInitScript(() => {
 		class MockWebSocket {
@@ -95,10 +136,11 @@ async function mockProjectPageApis(
 		resumeResponse?: JsonValue;
 	},
 ) {
-	const state = {
+	const state: MockServer = {
 		generateCalls: 0,
 		resumeCalls: 0,
 		feedbackCalls: 0,
+		current: null,
 	};
 
 	const project = options?.project ?? baseProject;
@@ -144,12 +186,14 @@ async function mockProjectPageApis(
 		}
 
 		if (path === "/api/v1/projects/7/runs/current" && method === "GET") {
-			return fulfillJson(null);
+			return fulfillJson(state.current);
 		}
 
 		if (path === "/api/v1/projects/7/runs" && method === "POST") {
 			state.generateCalls += 1;
 			if (options?.generateResponse) {
+				// a 409 answer is the run the server already has
+				if (options.generateResponse.status === 409) state.current = options.generateResponse.body;
 				return fulfillJson(
 					options.generateResponse.body,
 					options.generateResponse.status,
@@ -164,8 +208,16 @@ async function mockProjectPageApis(
 			});
 		}
 
+		if (/^\/api\/v1\/runs\/\d+\/confirm$/.test(path) && method === "POST") {
+			return fulfillJson({ run_id: Number(path.split("/")[4]), status: "accepted" }, 202);
+		}
+
 		if (path === "/api/v1/runs/2002/resume" && method === "POST") {
 			state.resumeCalls += 1;
+			state.current = serverRunAfter(
+				{ type: "run_started", data: { run_id: 2002, current_agent: "plan", progress: 0.33 } },
+				state.current,
+			);
 			return fulfillJson(
 				options?.resumeResponse ?? {
 					id: 901,
@@ -209,7 +261,7 @@ async function openChatPanel(page: Page) {
 test("canvas progressively reveals sections following 3-stage plan→render→compose pipeline", async ({
 	page,
 }) => {
-	await mockProjectPageApis(page);
+	const routes = await mockProjectPageApis(page);
 
 	await page.goto("/project/7");
 	await page.waitForLoadState("networkidle");
@@ -221,86 +273,76 @@ test("canvas progressively reveals sections following 3-stage plan→render→co
 	await openChatPanel(page);
 	await expect(page.getByText("规划阶段")).toBeVisible();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_progress",
-			data: {
-				current_agent: "plan",
-				current_stage: "plan",
-				stage: "plan",
-				progress: 0.33,
-			},
-		});
+	await push(page, routes, {
+		type: "run_progress",
+		data: {
+			current_agent: "plan",
+			current_stage: "plan",
+			stage: "plan",
+			progress: 0.33,
+		},
 	});
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_awaiting_confirm",
-			data: {
-				run_id: 901,
-				agent: "plan",
-				message: "规划已完成，请确认后继续。",
+	await push(page, routes, {
+		type: "run_awaiting_confirm",
+		data: {
+			run_id: 901,
+			agent: "plan",
+			message: "规划已完成，请确认后继续。",
+			current_stage: "plan_approval",
+			stage: "plan_approval",
+			recovery_summary: {
 				current_stage: "plan_approval",
-				stage: "plan_approval",
-				recovery_summary: {
-					current_stage: "plan_approval",
-					next_stage: "render",
-					preserved_stages: ["plan"],
-				},
+				next_stage: "render",
+				preserved_stages: ["plan"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
 	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_progress",
-			data: {
-				current_agent: "render",
-				current_stage: "render",
-				stage: "render",
-				progress: 0.5,
-			},
-		});
+	await push(page, routes, {
+		type: "run_progress",
+		data: {
+			current_agent: "render",
+			current_stage: "render",
+			stage: "render",
+			progress: 0.5,
+		},
 	});
 
 	// 审批门把面板切到了收件箱；阶段头在活动流里
 	await page.getByRole("tab", { name: "活动" }).click();
 	await expect(page.getByText("渲染阶段")).toBeVisible();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_awaiting_confirm",
-			data: {
-				run_id: 901,
-				agent: "render",
-				message: "渲染已完成，请确认后继续。",
+	await push(page, routes, {
+		type: "run_awaiting_confirm",
+		data: {
+			run_id: 901,
+			agent: "render",
+			message: "渲染已完成，请确认后继续。",
+			current_stage: "render_approval",
+			stage: "render_approval",
+			recovery_summary: {
 				current_stage: "render_approval",
-				stage: "render_approval",
-				recovery_summary: {
-					current_stage: "render_approval",
-					next_stage: "compose",
-					preserved_stages: ["plan", "render"],
-				},
+				next_stage: "compose",
+				preserved_stages: ["plan", "render"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
 	await expect(page.getByRole("button", { name: "确认继续" })).toHaveCount(1);
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_progress",
-			data: {
-				current_agent: "compose",
-				current_stage: "compose",
-				stage: "compose",
-				progress: 0.83,
-			},
-		});
+	await push(page, routes, {
+		type: "run_progress",
+		data: {
+			current_agent: "compose",
+			current_stage: "compose",
+			stage: "compose",
+			progress: 0.83,
+		},
 	});
 
 	await page.getByRole("tab", { name: "活动" }).click();
@@ -413,7 +455,7 @@ test("full business flow: generate → plan → confirm → render → confirm �
 		},
 	];
 
-	await mockProjectPageApis(page, { characters, shots });
+	const routes = await mockProjectPageApis(page, { characters, shots });
 
 	await page.goto("/project/7");
 	await page.waitForLoadState("networkidle");
@@ -430,49 +472,43 @@ test("full business flow: generate → plan → confirm → render → confirm �
 	await page.getByRole("button", { name: /开始生成|重新生成/ }).click();
 	await runStarted;
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_started",
-			data: {
-				run_id: 901,
-				current_agent: "plan",
-				current_stage: "plan",
-				stage: "plan",
-				progress: 0,
-			},
-		});
+	await push(page, routes, {
+		type: "run_started",
+		data: {
+			run_id: 901,
+			current_agent: "plan",
+			current_stage: "plan",
+			stage: "plan",
+			progress: 0,
+		},
 	});
 
 	await expect(page.getByText("规划阶段")).toBeVisible();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_progress",
-			data: {
-				current_agent: "plan",
-				current_stage: "plan",
-				stage: "plan",
-				progress: 0.33,
-			},
-		});
+	await push(page, routes, {
+		type: "run_progress",
+		data: {
+			current_agent: "plan",
+			current_stage: "plan",
+			stage: "plan",
+			progress: 0.33,
+		},
 	});
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_awaiting_confirm",
-			data: {
-				run_id: 901,
-				agent: "plan",
-				message: "规划已完成，请确认剧本和角色设计。",
+	await push(page, routes, {
+		type: "run_awaiting_confirm",
+		data: {
+			run_id: 901,
+			agent: "plan",
+			message: "规划已完成，请确认剧本和角色设计。",
+			current_stage: "plan_approval",
+			stage: "plan_approval",
+			recovery_summary: {
 				current_stage: "plan_approval",
-				stage: "plan_approval",
-				recovery_summary: {
-					current_stage: "plan_approval",
-					next_stage: "render",
-					preserved_stages: ["plan"],
-				},
+				next_stage: "render",
+				preserved_stages: ["plan"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
@@ -480,72 +516,64 @@ test("full business flow: generate → plan → confirm → render → confirm �
 
 	await page.getByRole("button", { name: "确认继续" }).click();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_confirmed",
-			data: {
-				agent: "plan",
-				run_id: 901,
-				stage: "render",
-				recovery_summary: {
-					current_stage: "render",
-					next_stage: "compose",
-					preserved_stages: ["plan", "render"],
-				},
+	await push(page, routes, {
+		type: "run_confirmed",
+		data: {
+			agent: "plan",
+			run_id: 901,
+			stage: "render",
+			recovery_summary: {
+				current_stage: "render",
+				next_stage: "compose",
+				preserved_stages: ["plan", "render"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText("渲染阶段")).toBeVisible();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_awaiting_confirm",
-			data: {
-				run_id: 901,
-				agent: "render",
-				message: "渲染已完成，请确认角色图和分镜画面。",
+	await push(page, routes, {
+		type: "run_awaiting_confirm",
+		data: {
+			run_id: 901,
+			agent: "render",
+			message: "渲染已完成，请确认角色图和分镜画面。",
+			current_stage: "render_approval",
+			stage: "render_approval",
+			recovery_summary: {
 				current_stage: "render_approval",
-				stage: "render_approval",
-				recovery_summary: {
-					current_stage: "render_approval",
-					next_stage: "compose",
-					preserved_stages: ["plan", "render"],
-				},
+				next_stage: "compose",
+				preserved_stages: ["plan", "render"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText(/已完成，等待确认/)).toBeVisible();
 
 	await page.getByRole("button", { name: "确认继续" }).click();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_confirmed",
-			data: {
-				agent: "render",
-				run_id: 901,
-				stage: "compose",
-				recovery_summary: {
-					current_stage: "compose",
-					preserved_stages: ["plan", "render", "compose"],
-				},
+	await push(page, routes, {
+		type: "run_confirmed",
+		data: {
+			agent: "render",
+			run_id: 901,
+			stage: "compose",
+			recovery_summary: {
+				current_stage: "compose",
+				preserved_stages: ["plan", "render", "compose"],
 			},
-		});
+		},
 	});
 
 	await expect(page.getByText("合成阶段")).toBeVisible();
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_completed",
-			data: {
-				run_id: 901,
-				current_stage: "compose",
-				message: "视频合成完成！",
-			},
-		});
+	await push(page, routes, {
+		type: "run_completed",
+		data: {
+			run_id: 901,
+			current_stage: "compose",
+			message: "视频合成完成！",
+		},
 	});
 
 	await expect(page.getByText("合成阶段")).toBeVisible();
@@ -557,15 +585,13 @@ test("feedback sends with correct feedback_type for plan feedback", async ({ pag
 	await page.goto("/project/7");
 	await page.waitForLoadState("networkidle");
 
-	await page.evaluate(() => {
-		window.__mockWs.dispatch({
-			type: "run_completed",
-			data: {
-				run_id: 901,
-				current_stage: "compose",
-				message: "完成",
-			},
-		});
+	await push(page, routes, {
+		type: "run_completed",
+		data: {
+			run_id: 901,
+			current_stage: "compose",
+			message: "完成",
+		},
 	});
 
 	await openChatPanel(page);

@@ -11,6 +11,8 @@ import { AGENT_NAME_MAP, type WorkflowStage } from "~/types";
 import { getWorkflowStageInfo } from "~/utils/workflowStage";
 import type { AgentMessage } from "~/types";
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
+import { SyncStatus } from "~/features/comic-workflow/agent/SyncStatus";
+import { resyncRunState } from "~/query/resyncRunState";
 
 /** Stable empty array so the query's fallback does not churn identity. */
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -43,6 +45,8 @@ export function ChatPanel({
     awaitingConfirm,
     currentStage,
     liveStream,
+    feedbackReceipt,
+    syncedAt,
   } = useRunState(projectId);
 
   // The chat feed is server state, so it is read from the query cache rather
@@ -54,9 +58,24 @@ export function ChatPanel({
   }).data ?? EMPTY_MESSAGES;
 
   const entries = useMemo(() => {
-    const all = deriveActivityTimeline(messages, { running: isGenerating && !awaitingConfirm });
+    // 当前闸门的回执排在最后；已经归档进消息流的同一张不重复
+    const receiptId = feedbackReceipt ? `receipt_${feedbackReceipt.id}` : null;
+    const feed: AgentMessage[] =
+      feedbackReceipt && !messages.some((msg) => msg.id === receiptId)
+        ? [
+            ...messages,
+            {
+              id: receiptId ?? undefined,
+              agent: "system",
+              role: "feedback",
+              content: feedbackReceipt.content,
+              receipt: feedbackReceipt,
+            },
+          ]
+        : messages;
+    const all = deriveActivityTimeline(feed, { running: isGenerating && !awaitingConfirm });
     return limit ? all.slice(-limit) : all;
-  }, [messages, isGenerating, awaitingConfirm, limit]);
+  }, [messages, feedbackReceipt, isGenerating, awaitingConfirm, limit]);
 
   const fallbackStage = currentStage || "plan";
   const info = getWorkflowStageInfo(fallbackStage) ?? {
@@ -77,7 +96,12 @@ export function ChatPanel({
             {info.title}
           </span>
         </div>
-
+        <SyncStatus
+          projectId={projectId}
+          syncedAt={syncedAt}
+          expectingEvents={isGenerating && !awaitingConfirm}
+          onResync={() => resyncRunState(projectId, { project: true })}
+        />
       </div>
 
       {isGenerating && !awaitingConfirm && (

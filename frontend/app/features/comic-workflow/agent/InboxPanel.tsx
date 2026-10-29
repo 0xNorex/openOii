@@ -6,7 +6,7 @@ import type { InboxItem } from "./inboxItems";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 
 export interface InboxActions {
-	onConfirm: (feedback?: string) => void;
+	onConfirm: (feedback?: string) => Promise<boolean> | void;
 	/** 聚焦 PromptBar，让用户写修改意见（审批时发送即带上意见继续）。 */
 	onRequestChanges: () => void;
 	onResume: () => void;
@@ -14,6 +14,8 @@ export interface InboxActions {
 	onRetry: () => void;
 	onSelectShot: (shotId: number) => void;
 	retryDisabled?: boolean;
+	/** 确认/意见请求在途 */
+	gatePending?: boolean;
 }
 
 function Card({
@@ -60,15 +62,28 @@ export function InboxPanel({ items, actions }: { items: InboxItem[]; actions: In
 								<OutlinePreviewCard
 									outline={outline}
 									visualBible={item.gate?.visual_bible}
-									onRegenerate={(feedback) => actions.onConfirm(feedback)}
+									onRegenerate={item.confirmBlocked ? undefined : (feedback) => actions.onConfirm(feedback)}
 								/>
 							) : null}
 							<div className="flex gap-2">
-								<Button variant="primary" size="sm" className="flex-1" onClick={() => actions.onConfirm()}>
+								<Button
+									variant="primary"
+									size="sm"
+									className="flex-1"
+									onClick={() => actions.onConfirm()}
+									disabled={item.confirmBlocked || actions.gatePending}
+									title={item.confirmBlocked ? "修改意见还在处理，新版本出来后再确认" : undefined}
+								>
 									<SvgIcon name="check" size={14} />
-									确认继续
+									{item.receipt?.state === "revised" ? "确认新版本" : "确认继续"}
 								</Button>
-								<Button variant="secondary" size="sm" className="flex-1" onClick={actions.onRequestChanges}>
+								<Button
+									variant="secondary"
+									size="sm"
+									className="flex-1"
+									onClick={actions.onRequestChanges}
+									disabled={item.confirmBlocked}
+								>
 									<SvgIcon name="pencil" size={14} />
 									提修改意见
 								</Button>

@@ -6,6 +6,8 @@ import { appQueryClient } from "~/query/client";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { patchRunState, readRunState, resetRunState } from "~/query/runState";
 import { useProjectWebSocket } from "~/hooks/useWebSocket";
+import { resyncRunState } from "~/query/resyncRunState";
+import { setFeedbackReceipt } from "~/hooks/applyWsEvent";
 import { useEditorStore } from "~/stores/editorStore";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { projectsApi, runsApi } from "~/services/api";
@@ -162,6 +164,7 @@ export function useRunController(args: {
 				details: import.meta.env.DEV ? JSON.stringify(apiError?.details) : undefined,
 			});
 		},
+		onSettled: () => resyncRunState(projectId, { project: true }),
 	});
 
 	const feedbackMutation = useMutation({
@@ -228,6 +231,63 @@ export function useRunController(args: {
 				message: apiError?.message || error.message || "无法发送反馈，请重试",
 			});
 		},
+		onSettled: () => resyncRunState(projectId, { project: true }),
+	});
+
+	/** 闸门处的两个决定：批准，或要求修改（重做本阶段后回到同一闸门）。 */
+	const gateDecisionError = (error: Error | ApiError, fallback: string) => {
+		const apiError = error instanceof ApiError ? error : null;
+		if (apiError?.status === 409) {
+			toast.info({ title: "运行状态已变化", message: apiError.message || fallback });
+			return;
+		}
+		toast.error({ title: fallback, message: apiError?.message || error.message || "请重试" });
+	};
+
+	const confirmMutation = useMutation({
+		mutationFn: ({ runId }: { runId: number }) => runsApi.confirm(runId),
+		onError: (error: Error | ApiError, { runId }) => {
+			if (!(error instanceof ApiError) || error.status === 0 || error.status === undefined) {
+				// 网络失败时退回 WS 信号，按钮不能失效
+				send({ type: "confirm", data: { run_id: runId } });
+				return;
+			}
+			gateDecisionError(error, "确认没有生效");
+		},
+		onSettled: () => resyncRunState(projectId),
+	});
+
+	const gateFeedbackMutation = useMutation({
+		mutationFn: (args: {
+			runId: number;
+			content: string;
+			entityType?: "character" | "shot";
+			entityIds?: number[];
+		}) =>
+			runsApi.gateFeedback(args.runId, {
+				content: args.content,
+				...(args.entityType && args.entityIds?.length
+					? { entity_type: args.entityType, entity_ids: args.entityIds }
+					: {}),
+			}),
+		onSuccess: (result, args) => {
+			const state = readRunState(projectId);
+			const previous = state.feedbackReceipt;
+			const gateStage = state.recoveryGate?.current_stage ?? state.recoveryGate?.stage ?? null;
+			if (previous?.id === result.feedback_id) return;
+			setFeedbackReceipt(projectId, {
+				id: result.feedback_id,
+				round: (state.recoveryGate?.feedback?.round ?? 0) + 1,
+				state: "received",
+				content: args.content,
+				reason: null,
+				gate: gateStage,
+				entityType: args.entityType ?? null,
+				entityIds: args.entityIds ?? null,
+			});
+		},
+		onError: (error: Error | ApiError) => gateDecisionError(error, "修改意见没有提交"),
+		onSettled: () => resyncRunState(projectId),
 	});
 
 	const cancelMutation = useMutation({
@@ -273,12 +333,13 @@ export function useRunController(args: {
 		},
 		onSettled: () => {
 			cancelPendingRef.current = false;
+			resyncRunState(projectId, { project: true });
 		},
 	});
 
 	const resumeMutation = useMutation({
 		mutationFn: () => {
-			if (!recoveryControl) throw new Error("没有可恢复的运行");
+			if (recoveryControl?.state !== "recoverable") throw new Error("没有可恢复的运行");
 			return runsApi.resume(recoveryControl.active_run.id);
 		},
 		onSuccess: (run) => {
@@ -306,6 +367,7 @@ export function useRunController(args: {
 				message: apiError?.message || error.message || "无法恢复当前运行，请重试",
 			});
 		},
+		onSettled: () => resyncRunState(projectId, { project: true }),
 	});
 
 	const handleGenerate = () => {
@@ -369,36 +431,61 @@ export function useRunController(args: {
 		);
 	};
 
-	const handleConfirm = (feedback?: string) => {
-		if (!currentRunId) return;
-		let annotated = feedback?.trim() || "";
-		if (annotated && selectedNodeIds.length > 0) {
+	/**
+	 * 闸门处的决定。没有意见 = 批准；有意见 = 要求修改：engine 按意见重做本阶段，
+	 * 产出新版本（或说明为什么没改）后回到同一闸门，绝不自动往下走。
+	 * 返回 false 表示没提交成功，PromptBar 会把草稿放回去。
+	 */
+	const handleConfirm = (feedback?: string): Promise<boolean> => {
+		const runId = currentRunId ?? readRunState(projectId).currentRunId;
+		if (!runId) return Promise.resolve(false);
+		const content = feedback?.trim() || "";
+		if (!content) {
+			return confirmMutation.mutateAsync({ runId }).then(
+				() => true,
+				() => false,
+			);
+		}
+		const shotIds = selectedNodeIds
+			.filter((id) => id.startsWith("shot:"))
+			.map((id) => Number(id.split(":")[1]))
+			.filter((id) => Number.isInteger(id) && id > 0);
+		const characterIds = selectedNodeIds
+			.filter((id) => id.startsWith("character:"))
+			.map((id) => Number(id.split(":")[1]))
+			.filter((id) => Number.isInteger(id) && id > 0);
+		let entityType: "character" | "shot" | undefined;
+		let entityIds: number[] | undefined;
+		let annotated = content;
+		if (shotIds.length > 0 && characterIds.length === 0) {
+			entityType = "shot";
+			entityIds = shotIds;
+		} else if (characterIds.length > 0 && shotIds.length === 0) {
+			entityType = "character";
+			entityIds = characterIds;
+		} else if (selectedNodeIds.length > 0) {
+			// 混选没法定位到一类对象：把焦点写进意见，整阶段重做
 			const focus = selectedNodeIds
 				.map((id) => {
 					if (id.startsWith("shot:")) {
 						const shotId = Number(id.split(":")[1]);
-						const shot = shots.find((item) => item.id === shotId);
-						return `格${shot?.order ?? shotId}`;
+						return `格${shots.find((item) => item.id === shotId)?.order ?? shotId}`;
 					}
 					if (id.startsWith("character:")) {
 						const characterId = Number(id.split(":")[1]);
-						const character = characters.find((item) => item.id === characterId);
-						return character?.name || `角色${characterId}`;
+						return characters.find((item) => item.id === characterId)?.name || `角色${characterId}`;
 					}
 					return id;
 				})
 				.join("、");
-			annotated = `${annotated}\n（绑定：${focus}）`;
+			annotated = `${content}\n（绑定：${focus}）`;
 		}
-		send({ type: "confirm", data: { run_id: currentRunId, feedback: annotated || feedback } });
-		if (annotated || feedback) {
-			appendMessage(projectId, {
-				agent: "user",
-				role: "user",
-				content: annotated || feedback || "",
-				timestamp: new Date().toISOString(),
-			});
-		}
+		return gateFeedbackMutation
+			.mutateAsync({ runId, content: annotated, entityType, entityIds })
+			.then(
+				() => true,
+				() => false,
+			);
 	};
 
 	const handleCancel = () => {
@@ -409,13 +496,14 @@ export function useRunController(args: {
 		cancelMutation.mutate({ runId: activeRunId });
 	};
 
+	// 只有真正中断（recoverable）的运行才能“继续”；active 的运行还在跑
 	const handleResume = () => {
-		if (recoveryControl) resumeMutation.mutate();
+		if (recoveryControl?.state === "recoverable") resumeMutation.mutate();
 	};
 
 	useEffect(() => {
 		return canvasEvents.on("request-regenerate", () => {
-			if (recoveryControl) handleResume();
+			if (recoveryControl?.state === "recoverable") handleResume();
 			else handleGenerate();
 		});
 	});
@@ -446,6 +534,7 @@ export function useRunController(args: {
 		handleCancel,
 		handleResume,
 		generatePending: generateMutation.isPending,
+		gateDecisionPending: confirmMutation.isPending || gateFeedbackMutation.isPending,
 		lastRunStatus,
 	};
 }

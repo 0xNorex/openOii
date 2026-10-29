@@ -215,6 +215,8 @@ test("an error mid-stream keeps the partial output and says why", async ({ page 
 	await expect(page.getByTestId("live-stream-text")).toHaveText(PART_1);
 
 	await dispatch(page, frame({ status: "error", text: PART_1, chars: 40, error: "llm error: 连接被重置" }));
+	// The server records the failure before it announces it.
+	state.running = false;
 	await dispatch(page, {
 		type: "run_failed",
 		data: { run_id: 901, project_id: 7, error: "llm error: 连接被重置", error_code: "provider", retryable: true },

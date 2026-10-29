@@ -227,6 +227,22 @@ export const runsApi = {
 		fetchApi<import("~/types").AgentRun>(`/api/v1/runs/${runId}/resume`, {
 			method: "POST",
 		}),
+
+	/** 批准当前闸门（WS confirm 的 REST 版：不在闸门或意见未处理完时 409）。 */
+	confirm: (runId: number) =>
+		fetchApi<{ run_id: number; status: "accepted" }>(`/api/v1/runs/${runId}/confirm`, {
+			method: "POST",
+		}),
+
+	/** 闸门处「要求修改」：按意见重做本阶段并回到同一闸门，不是批准。 */
+	gateFeedback: (
+		runId: number,
+		payload: { content: string; entity_type?: "character" | "shot"; entity_ids?: number[] },
+	) =>
+		fetchApi<{ run_id: number; feedback_id: string; status: "accepted" }>(
+			`/api/v1/runs/${runId}/gate-feedback`,
+			{ method: "POST", body: JSON.stringify(payload) },
+		),
 };
 
 export const projectsApi = {

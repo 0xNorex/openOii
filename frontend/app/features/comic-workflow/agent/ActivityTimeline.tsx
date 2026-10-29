@@ -8,6 +8,7 @@ import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MonoRuns } from "~/components/ui/MonoRuns";
 import type { LiveStream } from "./liveStream";
 import { LiveCharCount, LiveStreamBody, LiveStreamRow, liveStatusLabel } from "./LiveStreamRow";
+import { FeedbackReceiptCard } from "./FeedbackReceiptCard";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;
@@ -30,6 +31,14 @@ function StatusDot({ status }: { status: ActivityEntry["status"] }) {
 function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) {
 	const [open, setOpen] = useState(false);
 	const expanded = open || entry.status === "running";
+
+	if (entry.kind === "feedback" && entry.receipt) {
+		return (
+			<li className="py-1" data-activity="feedback">
+				<FeedbackReceiptCard receipt={entry.receipt} />
+			</li>
+		);
+	}
 
 	if (entry.kind === "run" || entry.kind === "handoff") {
 		return (

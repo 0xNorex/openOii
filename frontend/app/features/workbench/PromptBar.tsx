@@ -20,7 +20,8 @@ interface PromptBarProps {
 	isGenerating: boolean;
 	/** 返回 false 表示没发出去，草稿会放回输入框 */
 	onSendFeedback: (content: string) => Promise<boolean> | void;
-	onConfirm: (feedback?: string) => void;
+	/** 审批门：无参数 = 批准；带意见 = 要求修改。返回 false 表示没提交成功。 */
+	onConfirm: (feedback?: string) => Promise<boolean> | void;
 	/** 桌面：浮在画布底部居中；手机：留在页面底部。 */
 	floating?: boolean;
 }
@@ -59,8 +60,11 @@ export function PromptBar({
 	const handleSend = () => {
 		if (!input.trim()) return;
 		if (awaitingConfirm) {
-			onConfirm(input.trim());
+			const draft = input;
 			setInput("");
+			void Promise.resolve(onConfirm(draft.trim())).then((sent) => {
+				if (sent === false) setInput((current) => current || draft);
+			});
 			return;
 		}
 		if (isGenerating) {

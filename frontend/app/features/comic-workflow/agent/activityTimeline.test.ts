@@ -171,3 +171,20 @@ describe("attachLiveStream", () => {
 		expect(attachLiveStream([e("done", {})], live).host).toBeNull();
 	});
 });
+
+describe("deriveActivityTimeline: feedback receipts", () => {
+	it("shows a receipt card and drops the duplicate user row", () => {
+		const entries = deriveActivityTimeline([
+			{ id: "u1", agent: "user", role: "user", content: "更温暖" },
+			{
+				id: "receipt_fb1",
+				agent: "system",
+				role: "feedback",
+				content: "更温暖",
+				receipt: { id: "fb1", round: 1, state: "received", content: "更温暖", reason: null, gate: "outline_approval" },
+			},
+		]);
+		expect(entries.map((entry) => entry.kind)).toEqual(["feedback"]);
+		expect(entries[0].receipt?.state).toBe("received");
+	});
+});

@@ -1,6 +1,7 @@
 import {
 	AGENT_NAME_MAP,
 	type BlockingClip,
+	type FeedbackReceipt,
 	type RecoveryControlRead,
 	type RunAwaitingConfirmEventData,
 } from "~/types";
@@ -8,7 +9,17 @@ import type { ComicWorkflowSection } from "../graph/types";
 import { getWorkflowStageInfo, toSimplifiedStage } from "~/utils/workflowStage";
 
 export type InboxItem =
-	| { kind: "gate"; id: string; title: string; detail: string | null; gate: RunAwaitingConfirmEventData | null }
+	| {
+			kind: "gate";
+			id: string;
+			title: string;
+			detail: string | null;
+			gate: RunAwaitingConfirmEventData | null;
+			/** 本闸门上一轮修改意见的回执 */
+			receipt?: FeedbackReceipt | null;
+			/** 意见还没处理完：先别批准，等新版本 */
+			confirmBlocked?: boolean;
+		}
 	| { kind: "recoverable"; id: "recoverable"; title: string; detail: string; resumable: boolean }
 	| { kind: "blocked"; id: "blocked"; title: string; clips: BlockingClip[] }
 	| { kind: "failed"; id: "failed"; title: string; detail: string };
@@ -21,6 +32,7 @@ export interface DeriveInboxInput {
 	isGenerating: boolean;
 	projectStatus?: string | null;
 	blockingClips?: BlockingClip[] | null;
+	feedbackReceipt?: FeedbackReceipt | null;
 }
 
 /** 每个审批门审的是什么、在画布哪一块：标题写具体产物，画布平移过去。 */
@@ -59,13 +71,32 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 			(agent && AGENT_NAME_MAP[agent]) ||
 			stageTitle(input.recoveryGate?.current_stage) ||
 			"当前阶段";
+		const receipt = input.feedbackReceipt ?? null;
+		const question = input.recoveryGate?.question || input.recoveryGate?.message || null;
+		let title = `${name}已完成，等待确认`;
+		let detail = question;
+		if (receipt?.state === "received" || receipt?.state === "regenerating") {
+			title = `已收到修改意见，${name}重做中`;
+			detail = "新版本出来后会回到这里等你确认";
+		} else if (receipt?.state === "revised") {
+			title = `${name}第 ${receipt.round + 1} 版，等待确认`;
+			detail = "已按你的意见重做";
+		} else if (receipt?.state === "not_applied") {
+			title = `${name}没有改动，等待确认`;
+			detail = receipt.reason || "这条意见没能用在当前阶段";
+		} else if (receipt?.state === "failed") {
+			title = `${name}重做失败，保留上一版`;
+			detail = receipt.reason || "可以换个说法再提，或直接确认上一版";
+		}
 		items.push({
 			kind: "gate",
 			// 每个审批门一个 id，换阶段时重新提醒
 			id: `gate:${gateStage || agent || "unknown"}`,
-			title: `${name}已完成，等待确认`,
-			detail: input.recoveryGate?.question || input.recoveryGate?.message || null,
+			title,
+			detail,
 			gate: input.recoveryGate,
+			receipt,
+			confirmBlocked: receipt?.state === "received" || receipt?.state === "regenerating",
 		});
 	} else if (input.recoveryControl?.state === "recoverable") {
 		const summary = input.recoveryControl.recovery_summary;
@@ -73,15 +104,18 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		const kept = summary?.preserved_stages?.length ?? 0;
 		// 旧后端可能不带 available_actions：缺省时按可继续处理，不能让收件箱崩掉
 		const resumable = input.recoveryControl.available_actions?.includes("resume") !== false;
+		// 失败和中断是同一件事：一张卡，原因写在里面
+		const reason = input.recoveryControl.active_run?.error?.trim();
+		const next = !resumable
+			? "这次运行无法接着跑，取消后可以重新生成"
+			: kept > 0
+				? `已保留 ${kept} 个阶段的产物，可以继续`
+				: "可以继续或取消";
 		items.push({
 			kind: "recoverable",
 			id: "recoverable",
 			title: `运行中断于${stage}`,
-			detail: !resumable
-				? "这次运行无法接着跑，取消后可以重新生成"
-				: kept > 0
-					? `已保留 ${kept} 个阶段的产物，可以继续`
-					: "可以继续或取消",
+			detail: reason ? `${reason.length > 80 ? `${reason.slice(0, 80)}…` : reason}。${next}` : next,
 			resumable,
 		});
 	}
@@ -91,7 +125,13 @@ export function deriveInboxItems(input: DeriveInboxInput): InboxItem[] {
 		items.push({ kind: "blocked", id: "blocked", title: `${clips.length} 个分镜阻塞成片`, clips });
 	}
 
-	if (!input.isGenerating && !input.awaitingConfirm && (status === "failed" || status === "error")) {
+	const recoverable = input.recoveryControl?.state === "recoverable";
+	if (
+		!input.isGenerating &&
+		!input.awaitingConfirm &&
+		!recoverable &&
+		(status === "failed" || status === "error")
+	) {
 		items.push({ kind: "failed", id: "failed", title: "最近一次生成失败", detail: "可以从失败阶段重试" });
 	}
 

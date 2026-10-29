@@ -278,13 +278,24 @@ const replaceMessageFeed = vi.fn();
 import { patchRunState as realPatchRunState, readRunState } from '~/query/runState';
 import { appQueryClient } from '~/query/client';
 import { projectQueryKeys } from '~/query/queryKeys';
-const seedRunState = (patch: Record<string, unknown>) => realPatchRunState(9, patch as never);
+import { noteRunLifecycleEvent } from '~/hooks/useRunState';
+// 模拟一条 WS 生命周期事件落地：在途的 runs/current 快照比它旧，不能覆盖它
+const seedRunState = (patch: Record<string, unknown>) => {
+  noteRunLifecycleEvent(9);
+  realPatchRunState(9, patch as never);
+};
 const clearRunState = () => appQueryClient.setQueryData(projectQueryKeys.runState(9), null);
 vi.mock('~/query/messageFeed', async (importOriginal) => ({
   ...(await importOriginal<typeof import('~/query/messageFeed')>()),
   appendMessage: (...args: unknown[]) => appendMessage(...args),
   clearMessageFeed: (...args: unknown[]) => clearMessageFeed(...args),
   replaceMessageFeed: (...args: unknown[]) => replaceMessageFeed(...args),
+}));
+
+// 操作后的服务端校准由 useRunState/resyncRunState 自己的测试覆盖；这里只看操作本身
+const resyncRunState = vi.fn();
+vi.mock('~/query/resyncRunState', () => ({
+  resyncRunState: (...args: unknown[]) => resyncRunState(...args),
 }));
 
 vi.mock('~/services/api', () => ({
@@ -301,6 +312,8 @@ vi.mock('~/services/api', () => ({
   runsApi: {
     cancel: vi.fn(),
     resume: vi.fn(),
+    confirm: vi.fn(),
+    gateFeedback: vi.fn(),
   },
 }));
 
@@ -985,25 +998,24 @@ describe('ProjectPage live hydration', () => {
     });
   });
 
-  it('sends confirm through websocket when an active run exists', async () => {
+  it('sends gate feedback as a change request, never as an approval', async () => {
     const user = userEvent.setup();
+    vi.mocked(runsApi.gateFeedback).mockResolvedValue({ run_id: 42, feedback_id: 'fb1', status: 'accepted' });
     renderWithProviders(<ProjectPage />);
-    seedRunState({ currentRunId: 42 });
+    seedRunState({ currentRunId: 42, isGenerating: true, awaitingConfirm: true });
 
     await user.click(screen.getByRole('button', { name: '确认并继续' }));
 
-    expect(sendMock).toHaveBeenCalledWith({
-      type: 'confirm',
-      data: { run_id: 42, feedback: '请微调这一版' },
+    await waitFor(() => {
+      expect(runsApi.gateFeedback).toHaveBeenCalledWith(42, { content: '请微调这一版' });
     });
+    expect(runsApi.confirm).not.toHaveBeenCalled();
+    await waitFor(() => expect(resyncRunState).toHaveBeenCalledWith(9));
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'confirm' }));
     expect(projectsApi.feedback).not.toHaveBeenCalled();
-    expect(appendMessage).toHaveBeenCalledWith(
-      9,
-      expect.objectContaining({
-        agent: 'user',
-        content: '请微调这一版',
-      })
-    );
+    await waitFor(() => {
+      expect(readRunState(9).feedbackReceipt).toMatchObject({ id: 'fb1', state: 'received', content: '请微调这一版' });
+    });
   });
   it('resumes recoverable runs and clears recovery state after success', async () => {
     const user = userEvent.setup();

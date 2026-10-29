@@ -124,6 +124,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		handleCancel,
 		handleResume,
 		generatePending,
+		gateDecisionPending,
 		lastRunStatus,
 	} = useRunController({
 		projectId,
@@ -246,8 +247,10 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				isGenerating: hasActiveRun,
 				projectStatus: project?.status,
 				blockingClips: project?.blocking_clips,
+				feedbackReceipt: runState.feedbackReceipt,
 			}),
 		[
+			runState.feedbackReceipt,
 			runAwaitingConfirm,
 			runState.awaitingAgent,
 			runState.recoveryGate,
@@ -293,6 +296,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 		onRetry: handleGenerate,
 		onSelectShot: (shotId) => canvasEvents.emit("select-workflow-node", { nodeId: `shot:${shotId}` }),
 		retryDisabled: generatePending,
+		gatePending: gateDecisionPending,
 	};
 
 	const derivedStudioStatus = useMemo(

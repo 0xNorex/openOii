@@ -304,6 +304,50 @@ export interface RecoveryControlRead {
 	available_actions: Array<"resume" | "cancel">;
 	active_run: AgentRun;
 	recovery_summary: RecoverySummaryRead;
+	/** 运行停在审批闸门时的 run_awaiting_confirm 载荷（刷新后据此重建待确认）。 */
+	awaiting_gate?: RunAwaitingConfirmEventData | null;
+	/** 已提交、engine 还没接手的闸门修改意见。 */
+	pending_gate_feedback?: {
+		id: string;
+		content: string;
+		entity_type?: "character" | "shot" | null;
+		entity_ids?: number[] | null;
+		received_at?: string;
+	} | null;
+}
+
+export type FeedbackReceiptState = "received" | "regenerating" | "revised" | "not_applied" | "failed";
+
+/** 闸门处一次「要求修改」的回执：已收到 → 重做中 → 新版本待确认 / 未采纳（附原因）。 */
+export interface GateFeedbackOutcome {
+	id?: string | null;
+	round: number;
+	state: FeedbackReceiptState;
+	content?: string | null;
+	reason?: string | null;
+	entity_type?: string | null;
+	entity_ids?: number[] | null;
+}
+
+/** 前端展示用的回执（运行态与活动时间线共用）。 */
+export interface FeedbackReceipt {
+	id: string;
+	round: number;
+	state: FeedbackReceiptState;
+	content: string;
+	reason: string | null;
+	/** 审批闸门，如 outline_approval */
+	gate: string | null;
+	entityType?: string | null;
+	entityIds?: number[] | null;
+}
+
+export interface RunFeedbackEventData extends GateFeedbackOutcome {
+	run_id: number;
+	project_id?: number;
+	gate?: string | null;
+	stage?: string | null;
+	feedback_id?: string | null;
 }
 
 export interface RunProgressEventData {
@@ -334,6 +378,8 @@ export interface RunAwaitingConfirmEventData {
 	auto_mode?: boolean;
 	story_outline?: StoryOutline | null;
 	visual_bible?: string | null;
+	/** 本闸门上一轮修改意见的结果；首次到达为 null。 */
+	feedback?: GateFeedbackOutcome | null;
 }
 
 export interface RunStartedEventData {
@@ -416,6 +462,7 @@ export type WsEventType =
 	| "run_failed"
 	| "run_awaiting_confirm"
 	| "run_confirmed"
+	| "run_feedback"
 	| "run_cancelled"
 	| "character_created"
 	| "character_updated"
@@ -534,6 +581,7 @@ export interface AgentMessage {
 	isLoading?: boolean; // 是否正在加载
 	phase?: "reasoning" | "decision" | "planning" | "reviewing"; // 思考链阶段
 	details?: string | null; // 思考链补充详情
+	receipt?: FeedbackReceipt; // role === "feedback"：闸门修改意见回执
 }
 
 export interface BlockingClip {
