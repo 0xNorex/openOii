@@ -361,16 +361,28 @@ export class SharedDb {
      * snapshot, while writes still hit the live database.
      */
     private readonly frozenInput?: FrozenStageInput,
+    /**
+     * Revisions this stage attempt produced itself, keyed `entity:id`.
+     *
+     * Reads keep serving the frozen snapshot, but once the stage has written a
+     * row its next write must compare against the revision *it* left behind,
+     * not the snapshot's: otherwise a stage that writes the same row twice
+     * (every rendered shot marks a finished project superseded) trips over its
+     * own first write. A write by anyone else still moves the row past this
+     * revision and is rejected.
+     */
+    private readonly ownRevisions: Map<string, number> = new Map(),
   ) {}
 
   fenced(runId: number, token: string): SharedDb {
-    return new SharedDb(this.db, { runId, token }, this.frozenInput);
+    return new SharedDb(this.db, { runId, token }, this.frozenInput, this.ownRevisions);
   }
 
   /** Install the frozen stage input for the duration of one stage attempt. */
   withFrozenStageInput(input: FrozenStageInput): SharedDb {
     this.assertExecutionFence();
-    return new SharedDb(this.db, this.fence, input);
+    // a new attempt starts from its own snapshot, with no writes of its own yet
+    return new SharedDb(this.db, this.fence, input, new Map());
   }
 
   assertExecutionFence(): void {
@@ -442,6 +454,9 @@ export class SharedDb {
     if (info.changes === 0) {
       throw new ConcurrentModificationError(entity, entityId, expectedRevision);
     }
+    // only a stage attempt (frozen reads) needs this; the long-lived root
+    // instance reads live rows and must keep doing so
+    if (this.frozenInput) this.ownRevisions.set(`${entity}:${entityId}`, expectedRevision + 1);
   }
 
   /**
@@ -450,6 +465,8 @@ export class SharedDb {
    * a snapshot still compares against current state instead of blindly writing.
    */
   private expectedRevision(entity: "project" | "character" | "shot", entityId: number): number {
+    const own = this.ownRevisions.get(`${entity}:${entityId}`);
+    if (own !== undefined) return own;
     if (this.frozenInput) {
       if (entity === "project" && this.frozenInput.project?.id === entityId) {
         return this.frozenInput.project.revision;
@@ -774,7 +791,9 @@ export class SharedDb {
         "INSERT INTO character (project_id, name, description, visual_notes, reference_images, approval_version) VALUES (?, ?, ?, ?, '[]', 0)",
       )
       .run(projectId, name, description, visualNotes);
-    return Number(info.lastInsertRowid);
+    const id = Number(info.lastInsertRowid);
+    this.ownRevisions.delete(`character:${id}`); // a reused rowid starts fresh
+    return id;
   }
 
   updateCharacter(
@@ -850,6 +869,7 @@ export class SharedDb {
       )
       .run(projectId, order, fields.description ?? "", JSON.stringify(fields.character_ids ?? []));
     const id = Number(info.lastInsertRowid);
+    this.ownRevisions.delete(`shot:${id}`); // a reused rowid starts fresh
     const extra = Object.entries(fields).filter(
       ([k]) => !["id", "project_id", "description", "character_ids"].includes(k),
     );
@@ -896,6 +916,7 @@ export class SharedDb {
    * fail every redo with a false ConcurrentModificationError.
    */
   private forgetFrozen(entity: "character" | "shot", entityId: number): void {
+    this.ownRevisions.delete(`${entity}:${entityId}`);
     if (!this.frozenInput) return;
     const rows = entity === "shot" ? this.frozenInput.shots : this.frozenInput.characters;
     const index = rows.findIndex((row) => row.id === entityId);

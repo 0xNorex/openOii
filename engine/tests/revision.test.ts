@@ -82,6 +82,30 @@ describe("entity revision compare-and-set", () => {
     expect(shared.getProject(1)?.status).toBe("draft");
   });
 
+  it("a stage can write the same project twice: its own write is not a concurrent edit", () => {
+    // Regenerating a finished project: every rendered shot marks the old cut
+    // superseded. Reads come from the frozen snapshot (revision 1, status ready),
+    // so the second write used to compare against revision 1 after the first
+    // one had already moved the row to 2 and fail with "modified concurrently".
+    edb.db.prepare("INSERT INTO project (title, status, video_url) VALUES ('P', 'ready', '/cut.mp4')").run();
+    const stage = shared.withFrozenStageInput({ project: shared.getProject(1)!, characters: [], shots: [] });
+
+    stage.updateProject(1, { status: "superseded" });
+    expect(() => stage.updateProject(1, { status: "superseded" })).not.toThrow();
+    expect(shared.getProject(1)?.revision).toBe(3);
+    // the snapshot itself stays frozen for deterministic retries
+    expect(stage.getProject(1)?.status).toBe("ready");
+  });
+
+  it("still rejects a user edit that lands between two writes of the same stage", () => {
+    edb.db.prepare("INSERT INTO project (title, status) VALUES ('P', 'ready')").run();
+    const stage = shared.withFrozenStageInput({ project: shared.getProject(1)!, characters: [], shots: [] });
+    stage.updateProject(1, { status: "superseded" });
+    edb.db.prepare("UPDATE project SET title = 'user edit', revision = revision + 1 WHERE id = 1").run();
+    expect(() => stage.updateProject(1, { status: "superseded" })).toThrow(ConcurrentModificationError);
+    expect(shared.getProject(1)?.title).toBe("user edit");
+  });
+
   it("rejects a character write based on a superseded snapshot", () => {
     edb.db
       .prepare("INSERT INTO character (project_id, name, description) VALUES (1, 'Mika', 'draft')")
