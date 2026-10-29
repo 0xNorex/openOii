@@ -264,6 +264,48 @@ describe("pipeline runner (fake providers, auto-mode)", () => {
     edb.close();
   }, 60000);
 
+  it("stamps the run start once and each stage attempt's finish (run timing)", async () => {
+    const { runnerFor, shared, edb } = boot();
+    const projectId = seedProject(edb);
+    edb.db
+      .prepare(
+        `INSERT INTO agentrun (project_id, status, current_agent, progress, confirm_requested, created_at, updated_at)
+         VALUES (?, 'queued', 'outline', 0, 0, strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
+      )
+      .run(projectId);
+    const runId = Number(
+      (edb.db.prepare("SELECT MAX(id) AS id FROM agentrun").get() as { id: number | null }).id ?? 0,
+    );
+    const startedAt = () =>
+      (edb.db.prepare("SELECT started_at FROM agentrun WHERE id = ?").get(runId) as {
+        started_at: string | null;
+      }).started_at;
+    expect(startedAt()).toBeNull();
+
+    const confirmer = setInterval(() => shared.updateRun(runId, { confirm_requested: 1 }), 100);
+    const outcome = await runnerFor(runId).run({ projectId, runId, autoMode: true, userFeedback: "" });
+    clearInterval(confirmer);
+    expect(outcome.status, outcome.error ?? "pipeline failed").toBe("completed");
+
+    // Naive UTC like the backend's own timestamps (no 'T', no 'Z').
+    const first = startedAt();
+    expect(first).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/);
+    const attempts = edb.db
+      .prepare("SELECT stage, status, started_at, finished_at FROM engine_stage_attempts WHERE run_id = ?")
+      .all(runId) as Array<{ stage: string; status: string; started_at: string; finished_at: string | null }>;
+    expect(attempts.length).toBeGreaterThan(3);
+    for (const attempt of attempts) {
+      expect(attempt.status).toBe("succeeded");
+      expect(attempt.finished_at, attempt.stage).not.toBeNull();
+      expect(Date.parse(attempt.finished_at!)).toBeGreaterThanOrEqual(Date.parse(attempt.started_at));
+    }
+
+    // A second start (resume) keeps the first stamp: elapsed covers the whole run.
+    shared.markRunStarted(runId);
+    expect(startedAt()).toBe(first);
+    edb.close();
+  }, 60000);
+
   it("durable lease rejects a second owner and fences stale writers", () => {
     const { shared, edb } = boot();
     const projectId = seedProject(edb);

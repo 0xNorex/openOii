@@ -461,6 +461,7 @@ export class PipelineRunner {
     const startAgent = agentForStage(startStage);
     try {
       emitter.commit("run_started", () => {
+        this.shared.markRunStarted(request.runId);
         this.shared.updateRun(request.runId, {
           status: "running",
           current_agent: startAgent,
@@ -937,6 +938,7 @@ export class PipelineRunner {
     const startAgent = agentForStage(first);
     try {
       emitter.commit("run_started", () => {
+        this.shared.markRunStarted(request.runId);
         this.shared.updateRun(request.runId, {
           status: "running",
           current_agent: startAgent,

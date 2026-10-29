@@ -44,6 +44,7 @@ export function installEngineRuntimeSchema(db: SqliteDatabase.Database): void {
       error TEXT,
       started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      finished_at TEXT,
       UNIQUE(run_id, stage, attempt)
     );
     CREATE INDEX IF NOT EXISTS idx_engine_stage_attempts_run_stage
@@ -88,6 +89,8 @@ export function installExecutionLeaseColumns(db: SqliteDatabase.Database): void 
     ["cancel_requested_at", "DATETIME"],
     ["context_snapshot", "JSON"],
     ["gate_feedback", "JSON"],
+    // Migration 0030: run timing.
+    ["started_at", "DATETIME"],
   ];
   for (const [name, ddl] of additions) {
     if (!existing.has(name)) db.exec(`ALTER TABLE agentrun ADD COLUMN ${name} ${ddl}`);

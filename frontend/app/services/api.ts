@@ -348,6 +348,9 @@ export const projectsApi = {
 		}),
 
 	/** 页面加载时水合运行态：与创建 run 的 409 分支同构的 RecoveryControlRead */
+	runTiming: (runId: number) =>
+		fetchApi<import("~/types").RunTimingRead>(`/api/v1/runs/${runId}/timing`),
+
 	currentRun: (id: number) =>
 		fetchApi<import("~/types").RecoveryControlRead | null>(
 			`/api/v1/projects/${id}/runs/current`,

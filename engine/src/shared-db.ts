@@ -516,6 +516,19 @@ export class SharedDb {
       .run(...entries.map(([, v]) => (v === undefined ? null : v)), runId);
   }
 
+  /**
+   * Stamp when execution began, once: a resume keeps the first start so the
+   * elapsed time covers the whole run. Naive UTC, the format the backend writes.
+   */
+  markRunStarted(runId: number): void {
+    this.assertExecutionFence();
+    this.db
+      .prepare(
+        "UPDATE agentrun SET started_at = COALESCE(started_at, strftime('%Y-%m-%d %H:%M:%f','now')) WHERE id = ?",
+      )
+      .run(runId);
+  }
+
   acquireRunLease(runId: number, owner: string, token: string, ttlSeconds: number): boolean {
     const info = this.db
       .prepare(

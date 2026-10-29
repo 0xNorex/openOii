@@ -58,6 +58,8 @@ class AgentRun(SQLModel, table=True):
     gate_feedback: dict[str, object] | None = Field(
         default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )
+    # 引擎开始执行时写一次（naive UTC）；排队时为空。耗时从这里算，不用 created_at
+    started_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 

@@ -12,6 +12,7 @@ import { formatStep, stepForStage } from "~/utils/workflowSteps";
 import type { AgentMessage } from "~/types";
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import { SyncStatus } from "~/features/comic-workflow/agent/SyncStatus";
+import { RunTimingBar } from "~/features/comic-workflow/agent/RunTimingBar";
 import { resyncRunState } from "~/query/resyncRunState";
 import { projectsApi } from "~/services/api";
 
@@ -144,6 +145,9 @@ export function ChatPanel({
           ) : null}
         </div>
       )}
+
+      {/* 移动端摘要（limit）的计时在顶部状态卡里，不重复 */}
+      {isGenerating && !limit ? <RunTimingBar projectId={projectId} /> : null}
 
       {startingRun && !isGenerating ? (
         <div

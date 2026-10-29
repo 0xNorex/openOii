@@ -72,6 +72,8 @@ function control(status: "running" | "waiting_for_approval", extra: Record<strin
 
 type Server = {
 	current: Json;
+	/** GET /runs/{id}/timing；null = 404（界面不显示计时条） */
+	timing: Json;
 	confirmCalls: number;
 	feedback: Array<Record<string, unknown>>;
 	currentReads: number;
@@ -118,7 +120,7 @@ async function installMockWebSocket(page: Page) {
 }
 
 async function mockServer(page: Page, current: Json, characters: Json = []): Promise<Server> {
-	const server: Server = { current, confirmCalls: 0, feedback: [], currentReads: 0 };
+	const server: Server = { current, timing: null, confirmCalls: 0, feedback: [], currentReads: 0 };
 	await page.route("**/api/v1/**", async (route) => {
 		const { pathname: path } = new URL(route.request().url());
 		const method = route.request().method();
@@ -133,6 +135,7 @@ async function mockServer(page: Page, current: Json, characters: Json = []): Pro
 			server.currentReads += 1;
 			return json(server.current);
 		}
+		if (path === `/api/v1/runs/${RUN}/timing` && server.timing) return json(server.timing);
 		if (path === `/api/v1/runs/${RUN}/confirm` && method === "POST") {
 			server.confirmCalls += 1;
 			server.current = control("running", { awaiting_gate: null });
@@ -391,4 +394,137 @@ test("version compare opens on 当前 vs 上一版 and shows the current image",
 	await expect(dialog.getByRole("img", { name: "新 · 当前" })).toBeVisible();
 	await expect(dialog.getByText("这一版还没有图")).toBeVisible();
 	await expect(dialog.getByText(/内容相同/)).toHaveCount(0);
+});
+
+// --- P1-8: elapsed / remaining and 完成后通知我 -----------------------------------
+
+function timing(extra: Record<string, unknown> = {}) {
+	return {
+		run_id: RUN,
+		status: "running",
+		active: true,
+		started_at: "2026-10-29T00:00:00Z",
+		elapsed_seconds: 612,
+		current_stage: "render_characters",
+		at_gate: false,
+		stages: [
+			{ stage: "plan_outline", status: "succeeded", attempts: 1, elapsed_seconds: 70, estimate_seconds: 60 },
+			{ stage: "plan_characters", status: "succeeded", attempts: 1, elapsed_seconds: 65, estimate_seconds: 60 },
+			{ stage: "plan_shots", status: "succeeded", attempts: 1, elapsed_seconds: 60, estimate_seconds: 60 },
+			{ stage: "render_characters", status: "running", attempts: 1, elapsed_seconds: 40, estimate_seconds: 180 },
+		],
+		remaining_seconds: 530,
+		estimate_basis: "history",
+		...extra,
+	};
+}
+
+async function installFakeNotification(page: Page, permission: NotificationPermission = "default") {
+	await page.addInitScript((initial) => {
+		const sent: Array<{ title: string; body?: string }> = [];
+		let requests = 0;
+		class FakeNotification {
+			static permission: NotificationPermission = initial;
+			static async requestPermission() {
+				requests += 1;
+				FakeNotification.permission = "granted";
+				return "granted" as NotificationPermission;
+			}
+			onclick: null | (() => void) = null;
+			constructor(title: string, options?: NotificationOptions) {
+				sent.push({ title, body: options?.body });
+			}
+			close() {}
+		}
+		Object.defineProperty(window, "Notification", { configurable: true, writable: true, value: FakeNotification });
+		(window as unknown as { __notifications: () => unknown }).__notifications = () => ({ sent, requests });
+	}, permission);
+}
+
+const notifications = (page: Page) =>
+	page.evaluate(() => (window as unknown as { __notifications: () => { sent: Array<{ title: string; body?: string }>; requests: number } }).__notifications());
+
+test("running: the activity panel shows step and total elapsed, a 约 estimate, and 完成后通知我 asks only on click", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await installFakeNotification(page);
+	const runningSummary = { ...summary, current_stage: "render_characters", next_stage: "character_images_approval" };
+	const server = await mockServer(page, control("running", { recovery_summary: runningSummary }));
+	server.timing = timing();
+	await page.goto("/project/7");
+	await openPanel(page);
+
+	const bar = page.getByTestId("run-timing");
+	await expect(bar).toBeVisible();
+	await expect(bar.getByTestId("run-timing-step")).toHaveText(/本步 4\d 秒/);
+	await expect(bar.getByTestId("run-timing-total")).toHaveText(/共 10 分 1\d 秒/);
+	await expect(bar.getByTestId("run-timing-remaining")).toHaveText(/剩余约 9 分钟/);
+	// the clock runs locally between server reads
+	const first = await bar.getByTestId("run-timing-total").textContent();
+	await expect.poll(async () => bar.getByTestId("run-timing-total").textContent(), { timeout: 4000 }).not.toBe(first);
+
+	expect((await notifications(page)).requests).toBe(0);
+	const notify = bar.getByRole("button", { name: "完成后通知我" });
+	await expect(notify).toHaveAttribute("aria-pressed", "false");
+	await notify.click();
+	await expect(bar.getByRole("button", { name: "完成后会通知你" })).toHaveAttribute("aria-pressed", "true");
+	expect((await notifications(page)).requests).toBe(1);
+
+	// the tab goes to the background; the gate badges the workbench title until the user comes back
+	await page.evaluate(() => {
+		Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+	});
+	const gate = { ...gatePayload(), agent: "render", current_stage: "character_images_approval", stage: "character_images_approval" };
+	server.current = control("waiting_for_approval", { awaiting_gate: gate });
+	await push(page, { type: "run_awaiting_confirm", data: gate });
+	await expect.poll(async () => (await notifications(page)).sent).toEqual([
+		{ title: "openOii · 闸门测试", body: "角色形象 · 待确认" },
+	]);
+	await expect(page).toHaveTitle(/^【待确认】.*闸门测试 - openOii$/);
+	// confirmed elsewhere: the gate badge goes, the run carries on
+	server.current = control("running", { recovery_summary: runningSummary });
+	await push(page, { type: "run_confirmed", data: { run_id: RUN, project_id: 7, current_stage: "compose_videos" } });
+	await expect(page).toHaveTitle(/^(?!【).*闸门测试 - openOii$/);
+
+	server.current = null;
+	await push(page, { type: "run_completed", data: { run_id: RUN, project_id: 7, message: "完成" } });
+	await expect.poll(async () => (await notifications(page)).sent.length).toBe(2);
+	expect((await notifications(page)).sent[1]).toEqual({ title: "openOii · 闸门测试", body: "生成完成，成片可以查看了" });
+	await expect(page).toHaveTitle(/^【已完成】/);
+	await page.evaluate(() => {
+		Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+		document.dispatchEvent(new Event("visibilitychange"));
+	});
+	await expect(page).toHaveTitle(/^(?!【)/);
+});
+
+test("no history: elapsed only; at a gate the estimate is for after confirming", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	const server = await mockServer(page, control("running"));
+	server.timing = timing({ remaining_seconds: null, estimate_basis: "none" });
+	await page.goto("/project/7");
+	await openPanel(page);
+
+	const bar = page.getByTestId("run-timing");
+	await expect(bar.getByTestId("run-timing-total")).toBeVisible();
+	await expect(bar.getByTestId("run-timing-remaining")).toHaveCount(0);
+
+	server.timing = timing({ at_gate: true, current_stage: "outline_approval", stages: timing().stages.slice(0, 1), remaining_seconds: 1200 });
+	server.current = control("waiting_for_approval");
+	await push(page, { type: "run_awaiting_confirm", data: gatePayload() });
+	// a gate opens the 待处理 tab; the timing lives on the 活动 tab
+	await page.getByRole("tab", { name: "活动" }).click();
+	await expect(bar.getByTestId("run-timing-remaining")).toHaveText("· 确认后还要约 20 分钟");
+	await expect(bar.getByTestId("run-timing-step")).toHaveCount(0);
+});
+
+test("mobile: the status card carries the timing and the notify toggle", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	const server = await mockServer(page, control("running"));
+	server.timing = timing();
+	await page.goto("/project/7");
+
+	const card = page.locator("[data-shell='mobile-workbench-preview']");
+	await expect(card.getByTestId("run-timing-remaining")).toHaveText(/剩余约 9 分钟/);
+	await expect(card.getByRole("button", { name: "完成后通知我" })).toBeVisible();
+	await expect(page.getByTestId("run-timing")).toHaveCount(1);
 });

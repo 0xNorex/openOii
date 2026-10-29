@@ -34,6 +34,8 @@ interface MobileWorkbenchPreviewProps {
 	activity?: ReactNode;
 	/** 状态卡唯一的操作（生成中是「停止」）；闸门、恢复的按钮在待处理卡里 */
 	primaryAction?: ReactNode;
+	/** 运行中的计时条（本步 / 共 / 剩余约 · 完成后通知我） */
+	timing?: ReactNode;
 }
 
 export function MobileWorkbenchPreview({
@@ -45,6 +47,7 @@ export function MobileWorkbenchPreview({
 	inbox,
 	activity,
 	primaryAction,
+	timing,
 }: MobileWorkbenchPreviewProps) {
 	const videoSrc = getStaticUrl(videoUrl);
 	// 与桌面成片下载同源：后端 final-video 端点
@@ -76,6 +79,7 @@ export function MobileWorkbenchPreview({
 					{studioStatus.description}
 				</p>
 				{studioStatus.step ? <StepMeter current={studioStatus.step.index} /> : null}
+				{timing ?? null}
 			</div>
 
 			{inbox ? (

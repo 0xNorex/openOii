@@ -311,6 +311,29 @@ export interface PreviousVersionRead {
 }
 
 /** 重新生成会重做什么、大概多久、调用多少次模型。 */
+/** GET /runs/{id}/timing：每步与整体耗时、按历史估的剩余时间（P1-8） */
+export interface RunStageTimingRead {
+	stage: string;
+	status: string;
+	attempts: number;
+	elapsed_seconds: number;
+	estimate_seconds: number | null;
+}
+
+export interface RunTimingRead {
+	run_id: number;
+	status: string;
+	active: boolean;
+	started_at: string | null;
+	elapsed_seconds: number;
+	current_stage: string | null;
+	at_gate: boolean;
+	stages: RunStageTimingRead[];
+	/** 引擎还要干多久（不含等确认）；没有历史时为空 */
+	remaining_seconds: number | null;
+	estimate_basis: "history" | "none";
+}
+
 export interface RegeneratePlanRead {
 	project_id: number;
 	has_content: boolean;

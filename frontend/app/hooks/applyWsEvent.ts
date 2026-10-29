@@ -1,4 +1,4 @@
-import { isStageId } from "~/utils/workflowSteps";
+import { isStageId, stepForStage } from "~/utils/workflowSteps";
 import { appendMessage, readMessageFeed, updateMessageFeed } from "~/query/messageFeed";
 import { patchRunState, readRunState, receiptFromGate, resetRunState } from "~/query/runState";
 import type { RunMode } from "~/stores/editorStore";
@@ -11,6 +11,7 @@ import type {
 	VersionCreatedEventData,
 	VersionRollbackEventData,
 	CritiqueResultEventData,
+	Project,
 	RunAwaitingConfirmEventData,
 	RunCompletedEventData,
 	RunConfirmedEventData,
@@ -22,6 +23,13 @@ import type {
 import { toast } from "~/utils/toast";
 import { resolveEventStage } from "~/utils/workflowStage";
 import { rememberFailedStream } from "~/features/comic-workflow/agent/liveStream";
+import { clearGateTitleBadge, notifyRunEvent } from "~/utils/runNotifications";
+import { appQueryClient } from "~/query/client";
+import { projectQueryKeys } from "~/query/queryKeys";
+
+function cachedProjectTitle(projectId: number): string | null {
+	return appQueryClient.getQueryData<Project>(projectQueryKeys.project(projectId))?.title ?? null;
+}
 
 const TRANSIENT_MESSAGE_PATTERNS = [
 	/^正在生成视频\s+\d+\/\d+/,
@@ -305,6 +313,15 @@ export function applyWsEvent(
 			});
 			if (!gate.auto_mode && shouldAutoConfirm(gate.agent, runMode)) {
 				autoConfirm(gate.run_id);
+			} else if (!gate.auto_mode) {
+				// 自动确认的闸门不打扰人：马上就继续了
+				const step = stepForStage(gate.current_stage ?? gate.stage);
+				notifyRunEvent({
+					projectId,
+					kind: "gate",
+					body: step ? `${step.label} · 待确认` : "有一步等你确认",
+					projectTitle: cachedProjectTitle(projectId),
+				});
 			}
 			break;
 		}
@@ -330,6 +347,8 @@ export function applyWsEvent(
 		case "run_confirmed": {
 			const confirmed = event.data as unknown as RunConfirmedEventData;
 			setFeedbackReceipt(projectId, null);
+			// 闸门已经过了（别处确认或自动确认）：后台标题不该还挂着【待确认】
+			clearGateTitleBadge();
 			patchRunState(projectId, { awaitingConfirm: false, awaitingAgent: null });
 			patchRunState(projectId, { recoveryGate: null });
 			if (confirmed.recovery_summary) patchRunState(projectId, { recoverySummary: confirmed.recovery_summary });
@@ -364,6 +383,12 @@ export function applyWsEvent(
 					timestamp: new Date().toISOString(),
 				});
 			}
+			notifyRunEvent({
+				projectId,
+				kind: "completed",
+				body: "生成完成，成片可以查看了",
+				projectTitle: cachedProjectTitle(projectId),
+			});
 			break;
 		}
 
@@ -392,6 +417,12 @@ export function applyWsEvent(
 				message: d.error || "未知错误",
 				details: d.error_code ?? undefined,
 				duration: 5000,
+			});
+			notifyRunEvent({
+				projectId,
+				kind: "failed",
+				body: "生成失败，打开看看怎么继续",
+				projectTitle: cachedProjectTitle(projectId),
 			});
 			break;
 		}

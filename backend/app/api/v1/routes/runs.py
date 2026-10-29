@@ -37,7 +37,9 @@ from app.schemas.project import (
     RegenerateEstimateRead,
     RegeneratePlanRead,
     RestoreVersionResponse,
+    RunTimingRead,
 )
+from app.services.run_timing import build_run_timing
 from app.services.engine_client import (
     EngineConflictError,
     EngineUnavailableError,
@@ -1138,6 +1140,13 @@ def _previous_version_read(run: AgentRun) -> PreviousVersionRead | None:
         restorable=run.status in _TERMINAL_RUN_STATUSES and not restored_at,
         restored_at=str(restored_at) if restored_at else None,
     )
+
+
+@router.get("/runs/{run_id}/timing", response_model=RunTimingRead)
+async def get_run_timing(run_id: int, session: AsyncSession = SessionDep) -> RunTimingRead:
+    """Elapsed time per stage and overall, plus a rough remaining estimate."""
+    run = await get_or_404(session, AgentRun, run_id)
+    return await build_run_timing(session, run)
 
 
 @router.get("/projects/{project_id}/runs/regenerate-plan", response_model=RegeneratePlanRead)

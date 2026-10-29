@@ -378,8 +378,34 @@ class AgentRunRead(BaseModel):
     provider_snapshot: ProjectProviderSettingsRead | None = None
     workflow_version: int = 1
     execution_attempt: int = 0
+    started_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class RunStageTimingRead(BaseModel):
+    stage: str
+    status: str
+    attempts: int = 1
+    # 本步真正运行的秒数（多次尝试累加，不含中间停顿）
+    elapsed_seconds: float
+    # 同一阶段在历史运行里的中位耗时；没有历史时为空
+    estimate_seconds: float | None = None
+
+
+class RunTimingRead(BaseModel):
+    run_id: int
+    status: str
+    active: bool
+    started_at: datetime | None = None
+    # 从开始执行到现在（结束的运行到结束），含在闸门等待的时间
+    elapsed_seconds: float
+    current_stage: str | None = None
+    at_gate: bool = False
+    stages: list[RunStageTimingRead] = Field(default_factory=list)
+    # 引擎还要干多久（不含等你确认的时间）；没有历史时为空，界面只显示已用时
+    remaining_seconds: float | None = None
+    estimate_basis: Literal["history", "none"] = "none"
 
 
 class RecoveryStageRead(BaseModel):

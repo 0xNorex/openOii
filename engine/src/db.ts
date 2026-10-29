@@ -262,7 +262,8 @@ export class EngineDatabase {
       .prepare(
         `UPDATE engine_stage_attempts
          SET status = ?, provider_request_id = COALESCE(?, provider_request_id),
-             result_json = ?, error = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+             result_json = ?, error = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+             finished_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
          WHERE stage_attempt_id = ?`,
       )
       .run(

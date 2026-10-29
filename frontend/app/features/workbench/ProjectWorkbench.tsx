@@ -7,6 +7,7 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	useSyncExternalStore,
 } from "react";
 import { Link } from "react-router-dom";
 import { TopBar } from "~/components/layout/TopBar";
@@ -27,6 +28,8 @@ import {
 	deriveStudioStatus,
 	studioStatusText,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
+import { RunTimingBar } from "~/features/comic-workflow/agent/RunTimingBar";
+import { subscribeTitleBadge, titleBadge, withTitleBadge } from "~/utils/runNotifications";
 import { MobileWorkbenchPreview } from "~/features/comic-workflow/mobile/MobileWorkbenchPreview";
 import { useIsMobileWorkbench } from "~/features/comic-workflow/mobile/useIsMobileWorkbench";
 import { useRunController } from "~/features/run/useRunController";
@@ -369,15 +372,17 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	);
 
 	// 标签页标题前缀显示状态，切到别的标签也能看到进度
+	// 后台收到「待确认 / 完成 / 失败」时再加【角标】，回到页面即消失
 	const projectTitle = project?.title;
+	const badge = useSyncExternalStore(subscribeTitleBadge, titleBadge, titleBadge);
 	useEffect(() => {
 		if (projectTitle === undefined) return;
 		const previous = document.title;
-		document.title = `${studioStatusText(studioStatus)} · ${projectTitle || "漫剧工作台"} - openOii`;
+		document.title = withTitleBadge(`${studioStatusText(studioStatus)} · ${projectTitle || "漫剧工作台"} - openOii`, badge);
 		return () => {
 			document.title = previous;
 		};
-	}, [studioStatus, projectTitle]);
+	}, [studioStatus, projectTitle, badge]);
 
 
 	const handleOpenVersions = () => {
@@ -554,6 +559,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 							) : null
 						}
 						activity={<ChatPanel projectId={projectId} isGenerating={hasActiveRun} limit={5} />}
+						timing={hasActiveRun ? <RunTimingBar projectId={projectId} inline /> : null}
 						primaryAction={
 							hasActiveRun && !runAwaitingConfirm ? (
 								<Button
