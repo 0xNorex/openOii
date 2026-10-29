@@ -99,8 +99,8 @@ describe("WorkflowInspector", () => {
 		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
 
 		await user.click(screen.getByRole("button", { name: "历史" }));
-		expect(screen.getByText("v1")).toBeInTheDocument();
-		await user.click(screen.getByRole("button", { name: "对比版本" }));
+		expect(screen.getByText("1 次")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "对比生成版本" }));
 		expect(seen).toHaveBeenCalledWith({ entityType: "character", entityId: 1 });
 		off();
 	});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "~/types";
-import { deriveActivityTimeline, formatDuration } from "./activityTimeline";
+import { deriveActivityTimeline, formatDuration, formatEta } from "./activityTimeline";
 
 const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
 const msg = (role: string, content: string, s: number, extra: Partial<AgentMessage> = {}): AgentMessage => ({
@@ -13,6 +13,30 @@ const msg = (role: string, content: string, s: number, extra: Partial<AgentMessa
 });
 
 describe("deriveActivityTimeline", () => {
+	it("folds n/N progress lines into one row with a rough time left while running", () => {
+		const feed = [
+			msg("assistant", "正在生成视频 (1/4)", 0, { agent: "compose" }),
+			msg("assistant", "正在生成视频 (2/4)", 10, { agent: "compose" }),
+			msg("assistant", "正在生成视频 (3/4)", 20, { agent: "compose" }),
+		];
+		const running = deriveActivityTimeline(feed, { running: true });
+		expect(running).toHaveLength(1);
+		expect(running[0]).toMatchObject({ title: "正在生成视频 (3/4)", detail: "剩余约 20 秒" });
+
+		const done = deriveActivityTimeline(feed);
+		expect(done).toHaveLength(1);
+		expect(done[0].detail).toBeUndefined();
+	});
+
+	it("keeps progress of different stages as separate rows", () => {
+		const entries = deriveActivityTimeline([
+			msg("assistant", "正在绘制分镜 (1/2)", 0, { agent: "render" }),
+			msg("assistant", "正在绘制分镜 (2/2)", 5, { agent: "render" }),
+			msg("assistant", "正在生成视频 (1/2)", 9, { agent: "compose" }),
+		]);
+		expect(entries.map((e) => e.title)).toEqual(["正在绘制分镜 (2/2)", "正在生成视频 (1/2)"]);
+	});
+
 	it("groups tool rows under the current step and measures its duration", () => {
 		const entries = deriveActivityTimeline([
 			msg("separator", "━━", 0, { agent: "system" }),
@@ -92,5 +116,13 @@ describe("formatDuration", () => {
 		expect(formatDuration(3200)).toBe("3.2s");
 		expect(formatDuration(42_000)).toBe("42s");
 		expect(formatDuration(64_000)).toBe("1m 4s");
+	});
+});
+
+describe("formatEta", () => {
+	it("rounds to seconds under a minute and minutes above", () => {
+		expect(formatEta(400)).toBe("约 1 秒");
+		expect(formatEta(42_000)).toBe("约 42 秒");
+		expect(formatEta(150_000)).toBe("约 3 分钟");
 	});
 });

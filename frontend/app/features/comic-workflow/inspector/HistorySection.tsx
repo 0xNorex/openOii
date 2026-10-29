@@ -16,14 +16,15 @@ export function HistorySection({ node }: { node: ComicWorkflowNode }) {
 			<ActionStack>
 				<FieldList
 					items={[
-						["版本", `v${entity.approval_version}`],
+						// approval_version 只数批准次数；生成出来的 v1…vN 在「对比版本」里，两套编号不混用
+						["批准次数", `${entity.approval_version} 次`],
 						["审阅状态", reviewLabel(entity.approval_state)],
 						["批准时间", formatTime(entity.approved_at)],
 					]}
 				/>
 				<ActionButton
 					icon="clock-3"
-					label="对比版本"
+					label="对比生成版本"
 					onClick={() =>
 						canvasEvents.emit("version-history", { entityType: node.kind, entityId: node.entityId })
 					}

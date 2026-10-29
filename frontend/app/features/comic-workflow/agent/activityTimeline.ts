@@ -57,6 +57,22 @@ function childContent(msg: AgentMessage): string {
 	return msg.content?.trim() ?? "";
 }
 
+/** 「正在生成视频 (3/8)」这类进度行：同一前缀只保留一行，原地更新。 */
+const PROGRESS = /^(.*?)\s*[（(](\d+)\s*\/\s*(\d+)[）)]\s*$/;
+
+interface ProgressRun {
+	entry: ActivityEntry;
+	key: string;
+	firstStep: number;
+	firstAt?: number;
+}
+
+export function formatEta(ms: number): string {
+	const s = Math.max(1, Math.round(ms / 1000));
+	if (s < 60) return `约 ${s} 秒`;
+	return `约 ${Math.round(s / 60)} 分钟`;
+}
+
 /**
  * 把 message feed 推导成步骤时间线（纯函数）。
  * - separator 开一轮运行；handoff 是阶段交接。
@@ -74,6 +90,8 @@ export function deriveActivityTimeline(
 	const ends: (number | undefined)[] = [];
 	let openStep: ActivityEntry | null = null;
 	let openIndex = -1;
+	let progress: ProgressRun | null = null;
+	const progressEntries: ActivityEntry[] = [];
 
 	const push = (entry: ActivityEntry, msg: AgentMessage) => {
 		entries.push(entry);
@@ -115,9 +133,38 @@ export function deriveActivityTimeline(
 		} else if (msg.role === "user") {
 			push({ ...base, kind: "user", title: msg.content.trim() }, msg);
 		} else {
-			push({ ...base, kind: "message", title: msg.content.trim(), status: msg.isLoading ? "running" : "done" }, msg);
+			const title = msg.content.trim();
+			const match = PROGRESS.exec(title);
+			if (match) {
+				const [, prefix, stepText, totalText] = match;
+				const step = Number(stepText);
+				const total = Number(totalText);
+				const key = `${msg.agent}|${prefix}|${total}`;
+				const at = time(msg);
+				if (progress && progress.key === key && entries.at(-1) === progress.entry) {
+					progress.entry.title = title;
+					// 剩余时间：按已完成的平均间隔粗估（当前这一项还在做，算进剩余）
+					const done = step - progress.firstStep;
+					progress.entry.detail =
+						done > 0 && at !== undefined && progress.firstAt !== undefined && at > progress.firstAt
+							? `剩余${formatEta(((at - progress.firstAt) / done) * (total - step + 1))}`
+							: undefined;
+					return;
+				}
+				const entry: ActivityEntry = { ...base, kind: "message", title, status: msg.isLoading ? "running" : "done" };
+				push(entry, msg);
+				progress = { entry, key, firstStep: step, firstAt: at };
+				progressEntries.push(entry);
+				return;
+			}
+			push({ ...base, kind: "message", title, status: msg.isLoading ? "running" : "done" }, msg);
 		}
 	});
+
+	// 剩余时间只给仍在跑的最后一条进度
+	for (const entry of progressEntries) {
+		if (!running || entry !== entries.at(-1)) delete entry.detail;
+	}
 
 	entries.forEach((entry, i) => {
 		if (entry.kind !== "step") return;
