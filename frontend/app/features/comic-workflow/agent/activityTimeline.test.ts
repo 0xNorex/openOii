@@ -20,6 +20,41 @@ const msg = (role: string, content: string, s: number, extra: Partial<AgentMessa
 });
 
 describe("deriveActivityTimeline", () => {
+	it("drops a 正在… line once something came after it, keeps it while it is the latest", () => {
+		const feed = [
+			msg("step", "生成故事大纲", 0, { agent: "outline" }),
+			msg("assistant", "正在生成故事大纲…", 1, { agent: "outline" }),
+			msg("assistant", "大纲概要：雨天的纸船", 30, { agent: "outline" }),
+		];
+		const titles = deriveActivityTimeline(feed).map((e) => e.title);
+		expect(titles).toEqual(["生成故事大纲", "大纲概要：雨天的纸船"]);
+		expect(deriveActivityTimeline(feed.slice(0, 2), { running: true }).map((e) => e.title)).toContain("正在生成故事大纲…");
+	});
+
+	it("folds a thinking line that only repeats the one before it", () => {
+		const [step] = deriveActivityTimeline([
+			msg("step", "规划角色", 0),
+			msg("thinking", "角色设定完成，等待分镜脚本…", 1, { phase: "decision" }),
+			msg("thinking", "角色设定完成，等待分镜脚本…", 2),
+		]);
+		expect(step.children).toHaveLength(1);
+		expect(step.children[0].content).toBe("决策 · 角色设定完成，等待分镜脚本…");
+	});
+
+	it("turns the ⚠️ mark into a warning row and never shows a shot's database id", () => {
+		const entries = deriveActivityTimeline(
+			[
+				msg("assistant", "⚠️ 分镜 #76 未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。", 0, { agent: "critic" }),
+				msg("assistant", "⚠️ 分镜 #99 未能完成审查", 1, { agent: "critic" }),
+			],
+			{ shotOrderById: new Map([[76, 1]]) },
+		);
+		expect(entries.map((e) => e.kind)).toEqual(["warning", "warning"]);
+		expect(entries[0].title).toBe("S01 未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。");
+		expect(entries[1].title).toBe("分镜 未能完成审查");
+		expect(entries.map((e) => e.title).join("")).not.toMatch(/⚠|#\d/);
+	});
+
 	it("folds n/N progress lines into one row with a rough time left while running", () => {
 		const feed = [
 			msg("assistant", "正在生成视频 (1/4)", 0, { agent: "compose" }),

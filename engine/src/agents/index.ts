@@ -639,7 +639,7 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
   } finally {
     await worker.close();
   }
-  await ctx.emitter.sendMessage("render", `已为 ${total} 个角色生成形象图，接下来生成分镜图。`);
+  await ctx.emitter.sendMessage("render", `已为 ${total} 个角色生成形象图。`);
   ctx.completionInfo = {
     completed: "角色形象图已渲染完成",
     details: `已生成 ${total} 个角色形象图`,
@@ -810,7 +810,7 @@ export async function runCritique(
       : PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"];
   for (const entity of entities) {
     const label =
-      entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `分镜 #${entity.id}`;
+      entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `S${String((entity as ShotRow).order).padStart(2, "0")}`;
     // The model has to see the pixels: the render goes in as image content,
     // never as a URL in the prompt text (a text model cannot open it).
     const image = await critiqueImage(ctx, entity.image_url);

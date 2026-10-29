@@ -13,6 +13,7 @@ import type { AgentMessage } from "~/types";
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import { SyncStatus } from "~/features/comic-workflow/agent/SyncStatus";
 import { resyncRunState } from "~/query/resyncRunState";
+import { projectsApi } from "~/services/api";
 
 /** Stable empty array so the query's fallback does not churn identity. */
 const EMPTY_MESSAGES: AgentMessage[] = [];
@@ -59,6 +60,14 @@ export function ChatPanel({
     staleTime: Infinity,
   }).data ?? EMPTY_MESSAGES;
 
+  // 消息里只有分镜的数据库 id：用分镜列表把它换成对外的 S01/S02
+  const shots = useQuery({
+    queryKey: projectQueryKeys.shots(projectId),
+    queryFn: () => projectsApi.getShots(projectId),
+    enabled: projectId > 0,
+  }).data;
+  const shotOrderById = useMemo(() => new Map((shots ?? []).map((shot) => [shot.id, shot.order])), [shots]);
+
   const entries = useMemo(() => {
     // 回执出现时已经落进消息流（排在重做输出之前），这里就地换成最新状态；
     // 只有还没归档的（极少数，例如运行态先于消息流恢复）才补在末尾
@@ -79,9 +88,9 @@ export function ChatPanel({
             },
           ];
     }
-    const all = deriveActivityTimeline(feed, { running: isGenerating && !awaitingConfirm });
+    const all = deriveActivityTimeline(feed, { running: isGenerating && !awaitingConfirm, shotOrderById });
     return limit ? all.slice(-limit) : all;
-  }, [messages, feedbackReceipt, isGenerating, awaitingConfirm, limit]);
+  }, [messages, feedbackReceipt, isGenerating, awaitingConfirm, limit, shotOrderById]);
 
   // 标题跟状态胶囊同一套步骤名；没有运行（含已完成）时不再挂着「规划阶段」
   const step = isGenerating ? stepForStage(currentStep) : null;

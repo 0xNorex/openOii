@@ -1,6 +1,6 @@
 import { AGENT_NAME_MAP, type AgentMessage, type FeedbackReceipt } from "~/types";
 
-export type ActivityKind = "run" | "handoff" | "step" | "message" | "user" | "error" | "feedback";
+export type ActivityKind = "run" | "handoff" | "step" | "message" | "warning" | "user" | "error" | "feedback";
 export type ActivityStatus = "running" | "done" | "error";
 
 export interface ActivityChild {
@@ -59,6 +59,32 @@ function childContent(msg: AgentMessage): string {
 	return msg.content?.trim() ?? "";
 }
 
+/** 引擎用 ⚠️ 标记提醒；界面用图标和警示色，正文不带 emoji。 */
+const WARNING_MARK = /^\s*⚠\uFE0F?\s*/;
+
+/** 旧消息里的「分镜 #<数据库 id>」：对外只说 S01/S02。 */
+const SHOT_ID = /分镜\s*#(\d+)/g;
+
+export function tidyShotIds(text: string, shotOrderById?: ReadonlyMap<number, number>): string {
+	return text.replace(SHOT_ID, (_whole, id: string) => {
+		const order = shotOrderById?.get(Number(id));
+		return order === undefined ? "分镜" : `S${String(order).padStart(2, "0")}`;
+	});
+}
+
+/** 同一步里的细节：「决策 · X」和紧跟的「X」是一回事，只留信息多的那条。 */
+function pushChild(children: ActivityChild[], child: ActivityChild) {
+	const last = children.at(-1);
+	if (last && last.label === child.label && child.content && last.content) {
+		if (last.content.endsWith(child.content)) return;
+		if (child.content.endsWith(last.content)) {
+			children[children.length - 1] = child;
+			return;
+		}
+	}
+	children.push(child);
+}
+
 /** 三个半角句点（可夹空格）或「。。。」→「…」 */
 export function tidyEllipsis(text: string): string {
 	return text.replace(/ ?\.(?: ?\.){2}|。{3}/g, "…");
@@ -90,7 +116,7 @@ export function formatEta(ms: number): string {
  */
 export function deriveActivityTimeline(
 	messages: readonly AgentMessage[],
-	{ running = false }: { running?: boolean } = {},
+	{ running = false, shotOrderById }: { running?: boolean; shotOrderById?: ReadonlyMap<number, number> } = {},
 ): ActivityEntry[] {
 	const entries: ActivityEntry[] = [];
 	const starts: (number | undefined)[] = [];
@@ -119,7 +145,7 @@ export function deriveActivityTimeline(
 				push(openStep, msg);
 				openIndex = entries.length - 1;
 			}
-			openStep.children.push({ id, label: childLabel, content: childContent(msg) });
+			pushChild(openStep.children, { id, label: childLabel, content: childContent(msg) });
 			if (msg.isLoading) openStep.status = "running";
 			ends[openIndex] = time(msg) ?? ends[openIndex];
 			return;
@@ -180,14 +206,28 @@ export function deriveActivityTimeline(
 				progressEntries.push(entry);
 				return;
 			}
+			if (WARNING_MARK.test(title)) {
+				push({ ...base, kind: "warning", title: title.replace(WARNING_MARK, "") }, msg);
+				return;
+			}
 			push({ ...base, kind: "message", title, status: msg.isLoading ? "running" : "done" }, msg);
 		}
 	});
 
+	// 「正在…」只描述当下：后面已经有新记录，就说明它做完了，不再挂着
+	for (let i = entries.length - 2; i >= 0; i--) {
+		if (entries[i].kind === "message" && TRANSIENT.test(tidyEllipsis(entries[i].title.trim()))) {
+			entries.splice(i, 1);
+			starts.splice(i, 1);
+			ends.splice(i, 1);
+		}
+	}
+
 	// 历史消息里的三个句点统一成省略号
 	for (const entry of entries) {
-		entry.title = tidyEllipsis(entry.title);
-		for (const child of entry.children) child.content = tidyEllipsis(child.content);
+		entry.title = tidyShotIds(tidyEllipsis(entry.title), shotOrderById);
+		if (entry.detail) entry.detail = tidyShotIds(entry.detail, shotOrderById);
+		for (const child of entry.children) child.content = tidyShotIds(tidyEllipsis(child.content), shotOrderById);
 	}
 
 	// 剩余时间只给仍在跑的最后一条进度

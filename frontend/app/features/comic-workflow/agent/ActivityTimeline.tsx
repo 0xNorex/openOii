@@ -57,12 +57,16 @@ function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) 
 			data-status={entry.status}
 			{...(live ? { "data-testid": "live-stream", "aria-busy": true } : {})}
 		>
-			<StatusDot status={entry.status} />
+			{entry.kind === "warning" ? (
+				<SvgIcon name="triangle-alert" size={14} className="mt-0.5 shrink-0 text-warning-fg" />
+			) : (
+				<StatusDot status={entry.status} />
+			)}
 			<div className="min-w-0 flex-1">
 				<div className="flex items-baseline justify-between gap-2">
 					<span className="text-xs font-semibold text-ink-muted">
 						{entry.kind === "user" ? "你" : entry.agentLabel}
-						{live ? ` · ${liveStatusLabel(live)}` : entry.status === "running" ? " · 进行中" : null}
+						{live ? ` · ${liveStatusLabel(live)}` : entry.status === "running" ? " · 进行中" : entry.kind === "warning" ? " · 提醒" : null}
 					</span>
 					{live ? (
 						<LiveCharCount stream={live} />
@@ -75,7 +79,7 @@ function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) 
 				<p
 					className={clsx(
 						"m-0 select-text whitespace-pre-wrap break-words text-sm",
-						entry.kind === "error" ? "text-error-fg" : entry.kind === "step" ? "font-medium" : "text-ink-muted",
+						entry.kind === "error" ? "text-error-fg" : entry.kind === "step" || entry.kind === "warning" ? "font-medium" : "text-ink-muted",
 					)}
 				>
 					{entry.title}
