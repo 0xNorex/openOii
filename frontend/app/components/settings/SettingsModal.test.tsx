@@ -111,6 +111,13 @@ describe("SettingsModal", () => {
 		await userEvent.click(await screen.findByRole("tab", { name: /数据库/ }));
 	};
 
+	// 服务商页签：原来的协议单选和分组在「高级设置」里
+	const advanced = () => within(screen.getByTestId("advanced-settings"));
+	const openAdvanced = async () => {
+		const toggle = await screen.findByRole("button", { name: /高级设置/ });
+		if (toggle.getAttribute("aria-expanded") !== "true") await userEvent.click(toggle);
+	};
+
 	const renderComponent = () => {
 		return render(
 			<QueryClientProvider client={queryClient}>
@@ -223,27 +230,29 @@ describe("SettingsModal", () => {
 
 		const videoTab = await screen.findByRole("tab", { name: /视频服务/ });
 		await user.click(videoTab);
+		await openAdvanced();
 
 		await waitFor(() => {
-			expect(screen.getByText("豆包视频配置")).toBeInTheDocument();
+			expect(screen.getByRole("radio", { name: /火山方舟 Seedance/ })).toHaveAttribute("aria-checked", "true");
 			expect(screen.getByDisplayValue("doubao-api-key")).toBeInTheDocument();
 		});
 
-		const openaiRadio = screen.getByRole("radio", { name: /OpenAI 兼容/ });
+		const openaiRadio = advanced().getByRole("radio", { name: /OpenAI 兼容/ });
 		await user.click(openaiRadio);
 
 		await waitFor(() => {
 			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
+			expect(screen.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
 			expect(
 				screen.getByDisplayValue("https://video-openai.example.com"),
 			).toBeInTheDocument();
 		});
 
-		const doubaoRadio = screen.getByRole("radio", { name: /豆包视频/ });
+		const doubaoRadio = advanced().getByRole("radio", { name: /豆包视频/ });
 		await user.click(doubaoRadio);
 
 		await waitFor(() => {
-			expect(screen.getByText("豆包视频配置")).toBeInTheDocument();
+			expect(screen.getByRole("radio", { name: /火山方舟 Seedance/ })).toHaveAttribute("aria-checked", "true");
 			expect(screen.getByDisplayValue("doubao-api-key")).toBeInTheDocument();
 		});
 	});
@@ -278,10 +287,11 @@ describe("SettingsModal", () => {
 
 		const textTab = await screen.findByRole("tab", { name: /文本生成/ });
 		await userEvent.setup().click(textTab);
+		await openAdvanced();
 
 		await waitFor(() => {
 			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
-			expect(screen.getByRole("radio", { name: /OpenAI 兼容/ })).toBeChecked();
+			expect(advanced().getByRole("radio", { name: /OpenAI 兼容/ })).toBeChecked();
 			expect(
 				screen.getByDisplayValue("text-openai-fallback-key"),
 			).toBeInTheDocument();
@@ -333,9 +343,10 @@ describe("SettingsModal", () => {
 
 		const imageTab = await screen.findByRole("tab", { name: /图像服务/ });
 		await user.click(imageTab);
+		await openAdvanced();
 
 		await waitFor(() => {
-			expect(screen.getByRole("radio", { name: /ModelScope/ })).toBeChecked();
+			expect(advanced().getByRole("radio", { name: /ModelScope/ })).toBeChecked();
 			expect(screen.getByText("ModelScope 图像接口配置")).toBeInTheDocument();
 			expect(
 				screen.getByDisplayValue("Tongyi-MAI/Z-Image-Turbo"),
@@ -384,9 +395,10 @@ describe("SettingsModal", () => {
 
 		const imageTab = await screen.findByRole("tab", { name: /图像服务/ });
 		await user.click(imageTab);
+		await openAdvanced();
 
 		await waitFor(() => {
-			expect(screen.getByRole("radio", { name: /OpenAI 兼容/ })).toBeChecked();
+			expect(advanced().getByRole("radio", { name: /OpenAI 兼容/ })).toBeChecked();
 			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
 			expect(screen.getByDisplayValue("gpt-image-2")).toBeInTheDocument();
 			expect(
@@ -538,12 +550,13 @@ describe("SettingsModal", () => {
 
 		const textTab = await screen.findByRole("tab", { name: /文本生成/i });
 		await user.click(textTab);
+		await openAdvanced();
 
 		await waitFor(() => {
 			expect(screen.getByText("Anthropic Claude 配置")).toBeInTheDocument();
 		});
 
-		const openaiRadio = screen.getByRole("radio", { name: /OpenAI 兼容/ });
+		const openaiRadio = advanced().getByRole("radio", { name: /OpenAI 兼容/ });
 		await user.click(openaiRadio);
 
 		await waitFor(() => {
@@ -559,7 +572,7 @@ describe("SettingsModal", () => {
 			}
 		});
 
-		const anthropicRadio = screen.getByRole("radio", {
+		const anthropicRadio = advanced().getByRole("radio", {
 			name: /Anthropic Claude/,
 		});
 		await user.click(anthropicRadio);

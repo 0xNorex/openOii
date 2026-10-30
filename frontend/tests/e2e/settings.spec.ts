@@ -104,3 +104,92 @@ test("测试连接 sends the saved local gateway URL and shows the Chinese failu
 	// 脱敏占位值原样回传，由后端忽略，不会被当成新密钥
 	expect(overrides.TEXT_API_KEY).toContain("***");
 });
+
+const savedValues = (req: Request) => {
+	const body = req.postDataJSON() as { configs?: Record<string, unknown> } & Record<string, unknown>;
+	return (body.configs ?? body) as Record<string, string>;
+};
+
+test("当前本机网关配置识别为「自定义」，高级设置默认展开并保留原值", async ({ page }) => {
+	await mockConfig(page);
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	await expect(dialog.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+	await expect(dialog.getByRole("button", { name: /高级设置/ })).toHaveAttribute("aria-expanded", "true");
+	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("http://127.0.0.1:18790/v1");
+	// 中文标签为主，环境变量名作次要信息
+	const baseField = dialog.locator('[data-config-key="TEXT_BASE_URL"]');
+	await expect(baseField.getByText("接口地址（Base URL）")).toBeVisible();
+	await expect(baseField.getByText("TEXT_BASE_URL", { exact: true })).toBeVisible();
+});
+
+test("选 DeepSeek 预设自动填好地址、路径和模型，保存时不改密钥", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+
+	await dialog.getByRole("radio", { name: /DeepSeek/ }).click();
+	await expect(dialog.getByRole("radio", { name: /DeepSeek/ })).toHaveAttribute("aria-checked", "true");
+	const detail = dialog.getByTestId("preset-detail");
+	await expect(detail.getByTestId("preset-base-url")).toContainText("https://api.deepseek.com");
+	await expect(detail.getByRole("link", { name: "获取 API Key" })).toHaveAttribute("href", /platform\.deepseek\.com/);
+	await detail.getByRole("button", { name: "deepseek-v4-pro" }).click();
+	await expect(detail.getByLabel("模型", { exact: true })).toHaveValue("deepseek-v4-pro");
+	// 高级设置里的原始字段同步变化
+	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("https://api.deepseek.com");
+	await expect(dialog.locator("#TEXT_ENDPOINT")).toHaveValue("/chat/completions");
+
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await expect.poll(() => saves.length).toBe(1);
+	expect(saves[0]).toMatchObject({ TEXT_BASE_URL: "https://api.deepseek.com", TEXT_MODEL: "deepseek-v4-pro" });
+	expect(Object.keys(saves[0]!)).not.toContain("TEXT_API_KEY");
+});
+
+test("百炼：切地域换地址，专属域名需要填业务空间 ID", async ({ page }) => {
+	await mockConfig(page);
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	await dialog.getByRole("radio", { name: /阿里云百炼/ }).click();
+	const detail = dialog.getByTestId("preset-detail");
+	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("https://dashscope.aliyuncs.com/compatible-mode/v1");
+
+	await detail.getByRole("radio", { name: "新加坡" }).click();
+	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("https://dashscope-intl.aliyuncs.com/compatible-mode/v1");
+
+	await detail.getByRole("radio", { name: "北京 · 专属域名" }).click();
+	await expect(detail.getByTestId("preset-base-url")).toContainText("填写上面的字段后自动生成");
+	await detail.getByLabel("业务空间 ID").fill("llm-demo01");
+	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("https://llm-demo01.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
+	await expect(dialog.getByRole("radio", { name: /阿里云百炼/ })).toHaveAttribute("aria-checked", "true");
+});
+
+test("高级模式：手动改地址后回到「自定义」，并原样保存", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	await dialog.getByRole("radio", { name: /DeepSeek/ }).click();
+	await dialog.locator("#TEXT_BASE_URL").fill("https://gateway.example.com/v1");
+	await expect(dialog.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await expect.poll(() => saves.length).toBe(1);
+	expect(saves[0]!.TEXT_BASE_URL).toBe("https://gateway.example.com/v1");
+});
+
+test("视频：选火山方舟 Seedance 切到豆包原生配置", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	await dialog.getByRole("tab", { name: /视频服务/ }).click();
+	await dialog.getByRole("radio", { name: /火山方舟 Seedance/ }).click();
+	await expect(dialog.getByTestId("preset-detail").getByLabel("模型", { exact: true })).toHaveValue("doubao-seedance-2-5-260628");
+	// 原配置是自定义，高级设置本来就展开着
+	await expect(dialog.getByRole("button", { name: /高级设置/ })).toHaveAttribute("aria-expanded", "true");
+	await expect(dialog.getByText("豆包视频配置")).toBeVisible();
+	await expect(dialog.locator("#DOUBAO_VIDEO_RATIO")).toBeVisible();
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await expect.poll(() => saves.length).toBe(1);
+	expect(saves[0]).toMatchObject({ VIDEO_PROVIDER: "doubao", DOUBAO_VIDEO_MODEL: "doubao-seedance-2-5-260628" });
+});

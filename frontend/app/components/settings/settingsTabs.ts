@@ -8,17 +8,17 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 	text: {
 		icon: "sparks",
 		title: "文本生成",
-		desc: "文本生成服务配置，支持 Anthropic、OpenAI 兼容接口和 Fake 本地测试",
+		desc: "选一个服务商，地址、接口路径和推荐模型会自动填好，只需填 API Key；网关或中转站选「自定义」",
 	},
 	image: {
 		icon: "image",
 		title: "图像服务",
-		desc: "图像生成服务配置，默认使用 ModelScope Z-Image-Turbo，也支持 OpenAI 兼容接口和 Fake 本地测试",
+		desc: "选一个图像服务商自动填好地址和模型；默认 ModelScope 魔搭，其它 OpenAI 兼容服务选「自定义」",
 	},
 	video: {
 		icon: "video-camera",
 		title: "视频服务",
-		desc: "视频生成服务配置，支持 OpenAI 兼容接口、豆包和 Fake 本地测试",
+		desc: "选一个视频服务商自动填好配置；豆包 Seedance 走方舟原生接口，其它兼容服务选「自定义」",
 	},
 };
 
@@ -49,7 +49,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 		icon: "sparks",
 		layout: "row",
 		options: [
-			{ value: "anthropic", title: "Anthropic Claude", desc: "Anthropic 兼容接口，推荐使用" },
+			{ value: "anthropic", title: "Anthropic Claude", desc: "Anthropic Messages 接口，官方或中转" },
 			{ value: "openai", title: "OpenAI 兼容", desc: "支持任何 OpenAI 兼容接口" },
 			{ value: "fake", title: "Fake 本地测试", desc: "不调用外部文本 API，避免测试扣费" },
 		],
@@ -74,7 +74,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 		icon: "image",
 		layout: "grid",
 		options: [
-			{ value: "openai", title: "OpenAI 兼容", desc: "可用于 gpt-image-2 等兼容接口" },
+			{ value: "openai", title: "OpenAI 兼容", desc: "/images/generations 兼容接口，如 OpenAI gpt-image" },
 			{ value: "modelscope", title: "ModelScope", desc: "异步图片任务，支持 Z-Image-Turbo" },
 			{ value: "fake", title: "Fake 本地测试", desc: "返回本地占位图，不调用外部图像 API" },
 		],

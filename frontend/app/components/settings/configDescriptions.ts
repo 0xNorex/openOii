@@ -16,7 +16,7 @@ export function getConfigDescription(key: string): string {
 		ANTHROPIC_API_KEY: "Anthropic 官方 API 密钥",
 		ANTHROPIC_AUTH_TOKEN: "中转站 Token（国内推荐使用）",
 		ANTHROPIC_BASE_URL: "API 基础地址（官方或中转站地址）",
-		ANTHROPIC_MODEL: "Claude 模型名称，如 claude-sonnet-4-5-20250929",
+		ANTHROPIC_MODEL: "Claude 模型名称；原生接口目前只支持 4.x，如 claude-sonnet-4-5-20250929",
 
 		// 文本生成服务
 		TEXT_PROVIDER:
@@ -24,7 +24,7 @@ export function getConfigDescription(key: string): string {
 		FAKE_TEXT_RESPONSE: "Fake 文本 Provider 固定返回内容（可选）",
 		TEXT_BASE_URL: "文本生成服务地址（OpenAI 兼容接口）",
 		TEXT_API_KEY: "文本生成 API 密钥（OpenAI 兼容）",
-		TEXT_MODEL: "文本生成模型名称（OpenAI 兼容），如 deepseek-v4-flash",
+		TEXT_MODEL: "文本生成模型名称（OpenAI 兼容），如 deepseek-flash、qwen3.8-max",
 		TEXT_ENDPOINT: "文本生成 API 端点路径（OpenAI 兼容）",
 		TEXT_ENABLE_THINKING:
 			"是否向支持推理开关的文本模型显式传递 thinking 配置；留空表示由模型/服务默认决定。",
@@ -35,11 +35,11 @@ export function getConfigDescription(key: string): string {
 		IMAGE_PROVIDER:
 			"图像生成服务提供商：modelscope（ModelScope 异步图片任务）/ openai（OpenAI 兼容）/ fake（本地测试，不调用外部 API）",
 		IMAGE_BASE_URL:
-			"图像生成服务地址；ModelScope 使用 https://api-inference.modelscope.cn，gpt-image-2 使用 https://image.6668.dpdns.org/v1",
+			"图像生成服务地址；ModelScope 使用 https://api-inference.modelscope.cn，OpenAI 使用 https://api.openai.com/v1。选上面的服务商会自动填好",
 		IMAGE_API_KEY: "图像生成 API 密钥",
-		IMAGE_MODEL: "图像生成模型名称，如 gpt-image-2 或 Tongyi-MAI/Z-Image-Turbo",
+		IMAGE_MODEL: "图像生成模型名称，如 gpt-image-2.5-flare、doubao-seedream-4-0-250828 或 Tongyi-MAI/Z-Image-Turbo",
 		IMAGE_ENDPOINT:
-			"图像生成 API 端点路径；gpt-image-2 使用 /chat/completions，ModelScope 使用 /v1/images/generations",
+			"图像生成接口路径，一般是 /images/generations（拼在 Base URL 后面）；ModelScope 使用 /v1/images/generations",
 		ENABLE_IMAGE_TO_IMAGE: "是否启用图生图（I2I）功能",
 		FAKE_IMAGE_FIXTURE_URL:
 			"Fake 图像 Provider 固定返回的图片 URL（可选）；留空时使用后端内置本地 SVG 占位图，不调用外部图像 API。",
@@ -68,9 +68,9 @@ export function getConfigDescription(key: string): string {
 
 		// 豆包视频
 		DOUBAO_API_KEY: "豆包 API 密钥（火山引擎 ARK_API_KEY）",
-		DOUBAO_VIDEO_MODEL: "豆包视频模型 ID",
-		DOUBAO_VIDEO_DURATION: "豆包视频时长：5 或 10（秒）",
-		DOUBAO_VIDEO_RATIO: "豆包视频比例：16:9 / 9:16 / 1:1 / adaptive",
+		DOUBAO_VIDEO_MODEL: "Seedance 模型 ID，如 doubao-seedance-2-5-260628",
+		DOUBAO_VIDEO_DURATION: "豆包视频时长（秒）：openOii 目前按 5 或 10 秒提交",
+		DOUBAO_VIDEO_RATIO: "画幅比例：16:9 / 4:3 / 1:1 / 3:4 / 9:16 / 21:9 / adaptive（自适应）",
 		DOUBAO_GENERATE_AUDIO: "豆包视频是否生成音频",
 		VIDEO_IMAGE_MODE:
 			"图生视频模式：first_frame（仅首帧）/ reference（拼接参考图）",

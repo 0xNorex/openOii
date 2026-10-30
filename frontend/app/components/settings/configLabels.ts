@@ -1,0 +1,78 @@
+/**
+ * 配置项的中文名。设置页主标签显示中文，环境变量名只作为次要信息
+ * （高级设置里小号等宽显示，方便对照 .env）。
+ */
+const LABELS: Record<string, string> = {
+	APP_NAME: "应用名称",
+	ENVIRONMENT: "运行环境",
+	LOG_LEVEL: "日志级别",
+	API_V1_PREFIX: "API 路由前缀",
+	CORS_ORIGINS: "允许跨域的来源",
+	DATABASE_URL: "数据库连接",
+	DB_ECHO: "打印 SQL",
+	REDIS_URL: "Redis 连接",
+	REQUEST_TIMEOUT_S: "请求超时（秒）",
+	PUBLIC_BASE_URL: "对外访问地址",
+	ADMIN_TOKEN: "管理员令牌",
+	ENGINE_URL: "引擎地址",
+
+	TEXT_PROVIDER: "文本服务类型",
+	TEXT_BASE_URL: "接口地址（Base URL）",
+	TEXT_ENDPOINT: "接口路径",
+	TEXT_MODEL: "模型",
+	TEXT_API_KEY: "API Key",
+	TEXT_ENABLE_THINKING: "显式思考开关",
+	TEXT_REASONING_EFFORT: "推理强度",
+	ANTHROPIC_BASE_URL: "接口地址（Base URL）",
+	ANTHROPIC_MODEL: "Claude 模型",
+	ANTHROPIC_API_KEY: "官方 API Key",
+	ANTHROPIC_AUTH_TOKEN: "中转站 Token",
+	FAKE_TEXT_RESPONSE: "固定返回内容",
+
+	IMAGE_PROVIDER: "图像服务类型",
+	IMAGE_BASE_URL: "接口地址（Base URL）",
+	IMAGE_ENDPOINT: "接口路径",
+	IMAGE_MODEL: "模型",
+	IMAGE_API_KEY: "API Key",
+	ENABLE_IMAGE_TO_IMAGE: "图生图",
+	FAKE_IMAGE_FIXTURE_URL: "固定图片地址",
+
+	VIDEO_PROVIDER: "视频服务类型",
+	VIDEO_BASE_URL: "接口地址（Base URL）",
+	VIDEO_ENDPOINT: "接口路径",
+	VIDEO_MODEL: "模型",
+	VIDEO_API_KEY: "API Key",
+	VIDEO_MODE: "生成模式",
+	VIDEO_IMAGE_MODE: "图生视频方式",
+	VIDEO_INLINE_LOCAL_IMAGES: "内联本地图片",
+	ENABLE_IMAGE_TO_VIDEO: "图生视频",
+	FAKE_VIDEO_FIXTURE_URL: "固定视频地址",
+	FAKE_VIDEO_FIXTURE_PATH: "本地视频素材路径",
+	DOUBAO_API_KEY: "方舟 API Key",
+	DOUBAO_VIDEO_MODEL: "视频模型",
+	DOUBAO_VIDEO_DURATION: "视频时长（秒）",
+	DOUBAO_VIDEO_RATIO: "画幅比例",
+	DOUBAO_GENERATE_AUDIO: "同时生成音频",
+
+	CRITIQUE_ENABLED: "质量审查",
+	CRITIQUE_SCORE_THRESHOLD: "审查及格分",
+	CRITIQUE_MAX_ROUNDS: "审查最多轮数",
+	OUTLINE_ENABLED: "大纲审批",
+	TTS_ENABLED: "配音",
+	TTS_DEFAULT_VOICE: "默认配音音色",
+	TTS_VOLUME: "配音音量",
+	BGM_ENABLED: "背景音乐",
+	BGM_VOLUME: "背景音乐音量",
+	BGM_DIRECTORY: "背景音乐目录",
+	THINKING_CHAIN_ENABLED: "推送思考链",
+	THINKING_CHAIN_DETAIL_LEVEL: "思考链详细程度",
+};
+
+/** 中文名；没有登记的键退回原键名（大写），不会显示空白。 */
+export function getConfigLabel(key: string): string {
+	return LABELS[key.toUpperCase()] ?? key.toUpperCase();
+}
+
+export function hasConfigLabel(key: string): boolean {
+	return key.toUpperCase() in LABELS;
+}
