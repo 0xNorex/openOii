@@ -307,6 +307,29 @@ export class TextLlmService {
   }
 
   /**
+   * OpenAI-compatible endpoint for calls that carry images
+   * (CRITIQUE_VISION_*), or null when none is configured.
+   */
+  resolveVisionProvider(): {
+    key: TextProviderKey;
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    reasoning?: ThinkingLevel;
+    endpoint?: string;
+  } | null {
+    const baseUrl = this.db.configValue("CRITIQUE_VISION_BASE_URL", "CRITIQUE_VISION_BASE_URL");
+    if (!baseUrl) return null;
+    return {
+      key: "openai",
+      baseUrl,
+      // pi-ai refuses an empty key; a local server ignores the placeholder.
+      apiKey: this.db.configValue("CRITIQUE_VISION_API_KEY", "CRITIQUE_VISION_API_KEY") || "local",
+      model: this.db.configValue("CRITIQUE_VISION_MODEL", "CRITIQUE_VISION_MODEL") || "vision",
+    };
+  }
+
+  /**
    * Build the pi-ai model descriptor for a provider/model pair.
    *
    * The previous version fabricated one (`contextWindow: 1000000`,
@@ -379,10 +402,16 @@ export class TextLlmService {
     req: LlmRequest,
     opts: { withRunContext?: boolean } = {},
   ): Promise<LlmResponse> {
-    const resolved = this.resolveProvider();
-    const prompt =
-      opts.withRunContext === false ? req.prompt : this.promptWithRunContext(req.prompt);
     const images = req.images ?? [];
+    // A text model behind a chat-only gateway accepts image blocks and then
+    // answers as if none were sent, so image calls go to the configured
+    // vision endpoint when there is one.
+    const vision = images.length > 0 ? this.resolveVisionProvider() : null;
+    const resolved = vision ?? this.resolveProvider();
+    // The vision call only reviews pixels against the prompt; the run context
+    // would crowd the small context window a local vision model has.
+    const prompt =
+      opts.withRunContext === false || vision ? req.prompt : this.promptWithRunContext(req.prompt);
     // Fail fast on a cancelled or expired operation before spending a request.
     if (req.operation) assertOperationInFlight(req.operation);
     let model: Model<Api>;

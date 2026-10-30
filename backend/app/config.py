@@ -129,6 +129,15 @@ class Settings(BaseSettings):
         default=2,
         description="最大审查重试轮数（超过后强制继续）",
     )
+    critique_vision_base_url: str | None = Field(
+        default=None,
+        description="审查用视觉模型的 OpenAI 兼容地址；带图片的审查请求改走这里（文本模型看不到图片时必填）",
+    )
+    critique_vision_api_key: str | None = None
+    critique_vision_model: str | None = Field(
+        default=None,
+        description="审查用视觉模型名称（需支持图片输入）",
+    )
     outline_enabled: bool = Field(
         default=True,
         description="是否启用分层故事大纲审批流程",

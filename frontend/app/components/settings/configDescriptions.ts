@@ -49,6 +49,10 @@ export function getConfigDescription(key: string): string {
 			"Critic 质量分阈值（0-10）；低于该分数视为不达标并进入重生成逻辑。",
 		CRITIQUE_MAX_ROUNDS:
 			"Critic 最多重试轮数；达到上限后为避免卡死会继续后续流程。",
+		CRITIQUE_VISION_BASE_URL:
+			"能看图片的 OpenAI 兼容视觉模型地址；审查时带图片的请求走这里。文本模型看不到图片时必须填写，否则审查给不出分数。",
+		CRITIQUE_VISION_API_KEY: "审查视觉模型的 API 密钥（本地模型可留空）",
+		CRITIQUE_VISION_MODEL: "审查视觉模型名称，需支持图片输入，如 qwen3-vl",
 		OUTLINE_ENABLED:
 			"是否启用故事大纲审批流程；开启后先生成大纲并等待确认，再继续角色和分镜规划。",
 

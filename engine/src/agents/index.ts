@@ -868,7 +868,13 @@ export async function runCritique(
     if (score === null) {
       // No verdict is not a failing grade: regenerating on a missing score
       // only burns provider time (the old `?? 0` redrew every image twice).
-      const reason = !image ? "没有可审查的图片" : failure ? "审查模型调用失败" : "审查模型没有给出有效评分";
+      const reason = !image
+        ? "没有可审查的图片"
+        : failure
+          ? "审查模型调用失败"
+          : ctx.llm.resolveVisionProvider?.()
+            ? "审查模型没有给出有效评分"
+            : "当前文本模型看不到图片，请在设置里配置审查视觉模型";
       console.warn(`critic: no verdict for ${entityType} ${entity.id}: ${failure || reason}`);
       await ctx.emitter.sendMessage(
         "critic",
