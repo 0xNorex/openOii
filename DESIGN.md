@@ -128,6 +128,9 @@ components:
    底部提示用桌面端编辑完整画布。重试只在待处理和 TopBar。
 2. **检查器承载一切属性面**，包括 Brief。未选中任何卡片时显示“项目”视图（Brief + 宇宙时间线）；
    换选中目标时自动展开，手动收起后同一选中不再弹开。
+   **每件事只说一次：** 面板标题始终是「检查器」；内容头部是 类型眉题（项目概要 / 角色 / 分镜 / 成片）· 名称 · 一行副标题；
+   第一个标签页对所有类型都叫「概览」，只列头部没说的字段（不再重复项目标题、风格、角色名、镜头序号；风格未设置时才列出）。
+   守卫：`SelectionSection.test.tsx`、`InspectorPanel.test.tsx`。
 3. **PromptBar 浮在画布底部居中**（最宽 720px），是唯一的文本输入入口，「选中 → 提示 → 定点重跑」默认可见。
    - 左侧是 `逐步确认 / 自动确认` 开关；后面是上下文 chip：每个选中对象一个（可移除，画布选区同步），
      无选区时 `整个项目`，处于审批门时 `规划 · 待确认`。
@@ -249,6 +252,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
   - `approve-gate`: posts, a beam and a check;
   - `registration`, `crop` and `screentone` (fit view uses Iconoir `expand`, not `crop`);
   - `stop`, `layers` and `arrow-down-to-line`.
+- **Size floor for affordances:** a 1.5 stroke on the 24 grid draws 0.75px at 12px, which vanishes on a 1× screen. Disclosure chevrons that are the only sign a control opens a menu (the project switcher) use 16px and `text-ink-muted`; 12px chevrons are fine only beside a text label that already says what happens ("N 项细节"). On phones the switcher drops its decorative `storyboard` icon so the title keeps the room.
 - **Canvas card headers:** brief `lightbulb`, character `user`, shot `shot`, output `render`. The project switcher uses `storyboard`.
 - Icon sheet: `.devdata/screens/craft2-icon-sheet.png`.
 
@@ -297,6 +301,7 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - No chat bubbles. The agent panel shows a step timeline: a status dot (running pulses in primary, error in error), agent label, title, duration on the right, and a "N 项细节" disclosure for tool rows.
 - Follows the newest entry; scrolling up stops following and shows "跳到最新".
 - The detail disclosure uses `.collapse-rows`, a `grid-template-rows` 0fr→1fr transition (from transitions.dev). It is `inert` while closed and instant under reduced motion.
+- **Repeated warnings fold.** Two or more consecutive warnings from the same agent become one row: the warning icon, `{agent} · 提醒` with a mono `×N` on the right (screen readers hear "共 N 条"), one summary line, and a "逐条查看 N 条" disclosure (`aria-expanded` + `aria-controls`, same `.collapse-rows`) that lists each warning in its original order. When only the subject differs ("阿岚 …" / "橘猫 …"), the summary merges the subjects ("阿岚、橘猫 …"); otherwise it reads "S01、S02：2 条提醒". A single warning, or warnings split by a step, stays as it is. `groupRepeatedWarnings` in `activityTimeline.ts`.
 
 ### Overflow menus
 - 只有一个实现：`components/ui/Menu.tsx`（`MenuButton` + `MenuItem` / `MenuLink`），顶栏「工作台工具」和画布「更多画布操作」共用。
