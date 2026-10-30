@@ -299,13 +299,16 @@ export function buildShotPrompt(args: {
 }
 
 export function buildVideoPrompt(args: {
-  shot: { prompt: string | null; description: string };
+  shot: { prompt: string | null; description: string; motion_note?: string | null };
   characters: CharacterRow[];
   style: ResolvedStylePrompt;
   userFeedback?: string | null;
 }): string {
   const { shot, characters, style, userFeedback } = args;
   const parts = [(shot.prompt || shot.description).trim()];
+  // The user's motion note is the most direct direction for the clip.
+  const motion = shot.motion_note?.trim();
+  if (motion) parts.push(`Motion: ${motion}`);
   for (const character of characters) {
     parts.push(`Character ${character.name}: ${buildCharacterBible(character)}`);
   }

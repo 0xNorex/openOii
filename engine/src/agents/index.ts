@@ -329,6 +329,10 @@ interface PlanShot {
   motion_note?: string;
   duration?: number;
   character_names?: string[];
+  /** Characters actually visible in the frame; `[]` means nobody is. */
+  characters_in_frame?: string[];
+  /** Visible end state (prop counts, levels, positions) the next shot starts from. */
+  continuity?: string;
 }
 
 function planBasePayload(ctx: StageContext, task: "characters" | "shots"): Record<string, unknown> {
@@ -461,19 +465,23 @@ function nextVersion(ctx: StageContext, entityType: "character" | "shot", entity
  * 包含匹配，再退回到在画面描述 / 动作 / 台词里找角色名。
  */
 export function bindShotCharacters(
-  shot: Pick<PlanShot, "character_names" | "description" | "action" | "dialogue">,
+  shot: Pick<PlanShot, "character_names" | "characters_in_frame" | "description" | "action" | "dialogue">,
   characters: ReadonlyArray<{ id: number; name: string }>,
 ): number[] {
   const named = characters.filter((c) => c.name.trim().length > 0);
   const ids = new Set<number>();
-  for (const raw of shot.character_names ?? []) {
+  // characters_in_frame is the planner's explicit answer to "who is visible";
+  // an empty list means nobody, so a name mentioned in the text (someone
+  // missed or searched for) must not pull that character's reference in.
+  const inFrame = Array.isArray(shot.characters_in_frame) ? shot.characters_in_frame : null;
+  for (const raw of inFrame ?? shot.character_names ?? []) {
     const n = typeof raw === "string" ? raw.trim() : "";
     if (!n) continue;
     const exact = named.find((c) => c.name.trim() === n);
     const loose = exact ?? named.find((c) => n.includes(c.name.trim()) || c.name.trim().includes(n));
     if (loose) ids.add(loose.id);
   }
-  if (ids.size === 0) {
+  if (ids.size === 0 && inFrame === null) {
     const text = [shot.description, shot.action, shot.dialogue].filter(Boolean).join("\n");
     for (const c of named) if (text.includes(c.name.trim())) ids.add(c.id);
   }
@@ -496,7 +504,11 @@ async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): 
     if (typeof item !== "object" || item === null) return;
     const s = item as PlanShot;
     const characterIds = bindShotCharacters(s, characters);
-    const description = s.description ?? s.action ?? `分镜 ${index + 1}`;
+    const base = s.description ?? s.action ?? `分镜 ${index + 1}`;
+    // The end state rides in the description so it reaches image and video
+    // prompts and stays editable with the rest of the shot text.
+    const continuity = typeof s.continuity === "string" ? s.continuity.trim() : "";
+    const description = continuity ? `${base}\n画面状态：${continuity}` : base;
     const id = ctx.shared.insertShot(ctx.projectId, index + 1, {
       description,
       character_ids: characterIds,
