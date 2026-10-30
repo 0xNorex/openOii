@@ -18,10 +18,21 @@ const COMIC_NEGATIVE_LOCK =
   "documentary look, realistic skin pores, uncanny realistic face, 3D realistic render, " +
   "style drift, inconsistent outfit, changed character identity, extra characters";
 
-/** Python: `CHARACTER_IDENTITY_LOCK` — reused verbatim for prompt parity. */
+/**
+ * One sheet layout for every character, so references look alike and carry
+ * identity only: a clean turnaround on a plain background, with no text,
+ * labels or scenery for the shot model to copy into panels.
+ */
 export const CHARACTER_IDENTITY_LOCK =
-  "canonical character design sheet, stable face geometry, stable hairstyle, stable outfit, " +
-  "stable color palette, clear full character identity, reusable reference for later panels";
+  "character turnaround reference sheet of this one character only, full body front view, " +
+  "three-quarter view, side view and back view plus one face close-up, evenly spaced in a row, " +
+  "neutral standing pose, plain flat light grey background, one outfit, same proportions and " +
+  "color palette in every view, stable face geometry, no text, no labels, no captions, no scenery";
+
+/** Kept out of every character sheet so the layout stays the same across characters. */
+const CHARACTER_SHEET_NEGATIVE =
+  "text, letters, labels, captions, watermark, logo, scenery, landscape background, props, " +
+  "other characters, panel borders, color swatches";
 
 /** Python: `SHOT_CONTINUITY_LOCK`. */
 export const SHOT_CONTINUITY_LOCK =
@@ -254,7 +265,8 @@ export function buildCharacterPrompt(args: {
   if (universeStyle) prompt += `, ${universeStyle}`;
   const feedback = stripFocusPrefix(userFeedback);
   if (feedback) prompt += `, 用户反馈：${feedback}`;
-  if (style.negativePrompt) prompt += ` || negative: ${style.negativePrompt}`;
+  const negative = [style.negativePrompt, CHARACTER_SHEET_NEGATIVE].filter(Boolean).join(", ");
+  prompt += ` || negative: ${negative}`;
   return prompt;
 }
 
