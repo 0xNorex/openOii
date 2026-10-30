@@ -111,6 +111,12 @@ _ALLOWED_OVERRIDE_FIELDS = {
     "critique_vision_base_url",
     "critique_vision_api_key",
     "critique_vision_model",
+    # 配音
+    "tts_provider",
+    "tts_base_url",
+    "tts_api_key",
+    "tts_model",
+    "tts_default_voice",
 }
 
 
@@ -208,6 +214,8 @@ async def test_connection(
         return await _test_video_connection(settings)
     elif payload.service == "vision":
         return await _test_vision_connection(settings)
+    elif payload.service == "tts":
+        return await _test_tts_connection(settings)
 
     return TestConnectionResponse(success=False, message="未知服务类型")  # type: ignore[unreachable]
 
@@ -282,6 +290,18 @@ async def _test_vision_connection(settings) -> TestConnectionResponse:
         model=settings.critique_vision_model,
     )
     return _probe_response(outcome, "openai", settings.critique_vision_model)
+
+
+async def _test_tts_connection(settings) -> TestConnectionResponse:
+    """配音：只读探测（列音色 / 列模型），不合成音频。"""
+    from app.services.tts_providers import TTSConfig, default_voice, probe
+
+    config = TTSConfig.build(
+        settings.tts_provider, settings.tts_base_url, settings.tts_api_key, settings.tts_model
+    )
+    voice = settings.tts_default_voice or default_voice(config.provider)
+    outcome = await probe(config, voice)
+    return _probe_response(outcome, config.provider, config.model or voice)
 
 
 async def _test_image_connection(settings) -> TestConnectionResponse:

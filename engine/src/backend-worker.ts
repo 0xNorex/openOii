@@ -11,6 +11,8 @@ export interface AudioResult {
   video_url: string;
   tts_url: string | null;
   bgm_type: string | null;
+  /** 配音服务商失败的原因（不含密钥）；成功或未配音时为 null */
+  tts_error: string | null;
 }
 
 /** Reuse the backend's existing image, face, and audio helpers from Engine. */
@@ -55,6 +57,8 @@ export class BackendWorker {
     video_url: string;
     dialogue: string | null;
     speaker: { name: string; description: string | null } | null;
+    /** 角色指定的音色；为空时由 backend 按服务商默认或角色描述挑选 */
+    voice: string | null;
     scene: string | null;
     expression: string | null;
     genre: string | null;
@@ -63,6 +67,10 @@ export class BackendWorker {
       image_provider: string;
       video_provider: string;
       tts_enabled: boolean;
+      tts_provider: string;
+      tts_base_url: string | null;
+      tts_api_key: string | null;
+      tts_model: string | null;
       tts_default_voice: string;
       tts_volume: number;
       bgm_enabled: boolean;
@@ -78,6 +86,7 @@ export class BackendWorker {
       video_url: result.video_url,
       tts_url: typeof result.tts_url === "string" ? result.tts_url : null,
       bgm_type: typeof result.bgm_type === "string" ? result.bgm_type : null,
+      tts_error: typeof result.tts_error === "string" ? result.tts_error : null,
     };
   }
 

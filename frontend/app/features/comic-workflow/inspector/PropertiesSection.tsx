@@ -3,10 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { charactersApi, projectsApi, shotsApi } from "~/services/api";
 import { upsertCharacterInCache, upsertShotInCache } from "~/query/applyServerEvent";
 import { projectQueryKeys } from "~/query/queryKeys";
-import type { Character, CharacterUpdatePayload, Project, Shot, ShotUpdatePayload } from "~/types";
+import type { Character, CharacterUpdatePayload, MediaOptions, Project, Shot, ShotUpdatePayload } from "~/types";
 import { toast } from "~/utils/toast";
 import type { ComicWorkflowNode } from "../graph/types";
-import { errorMessage, FormShell, NumberInput, SaveButton, TextArea, TextInput, textOrNull } from "./fields";
+import { errorMessage, FormShell, NumberInput, SaveButton, SelectInput, TextArea, TextInput, textOrNull } from "./fields";
 
 /** 属性：可编辑字段。 */
 export function PropertiesSection({
@@ -24,11 +24,14 @@ export function PropertiesSection({
 	const entityLocked = structureLocked && !atGate;
 	if (node.kind === "brief") {
 		return (
-			<ProjectDraftForm
-				projectId={projectId}
-				project={node.project as Project}
-				disabled={structureLocked}
-			/>
+			<div className="space-y-4">
+				<ProjectDraftForm
+					projectId={projectId}
+					project={node.project as Project}
+					disabled={structureLocked}
+				/>
+				<MediaOptionsForm projectId={projectId} project={node.project as Project} />
+			</div>
 		);
 	}
 	if (node.kind === "character") {
@@ -111,6 +114,77 @@ function ProjectDraftForm({
 	);
 }
 
+type Toggle = "default" | "on" | "off";
+const TOGGLE_OPTIONS = [
+	["default", "跟随设置"],
+	["on", "开"],
+	["off", "关"],
+] as const;
+
+const toToggle = (value: boolean | null | undefined): Toggle => (value == null ? "default" : value ? "on" : "off");
+const fromToggle = (value: Toggle): boolean | null => (value === "default" ? null : value === "on");
+
+/** 成片选项：配音 / 背景音乐。只影响之后的合成，运行中也可以改（下次运行生效）。 */
+function MediaOptionsForm({ projectId, project }: { projectId: number; project: Project }) {
+	const queryClient = useQueryClient();
+	const [saving, setSaving] = useState(false);
+	const current: MediaOptions = project.media_options ?? {};
+
+	const save = async (patch: MediaOptions) => {
+		if (saving) return;
+		setSaving(true);
+		try {
+			const next = { ...current, ...patch };
+			const updated = await projectsApi.update(projectId, {
+				expected_revision: project.revision,
+				media_options: next,
+			});
+			queryClient.setQueryData(
+				projectQueryKeys.project(projectId),
+				(cached: Project | undefined) =>
+					cached ? { ...cached, media_options: updated.media_options, revision: updated.revision } : cached,
+			);
+			queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+			toast.success({ title: "成片选项", message: "已保存，下次合成时生效" });
+		} catch (error) {
+			toast.error({ title: "保存失败", message: errorMessage(error, "保存失败") });
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	return (
+		<section className="space-y-2 border-t border-line pt-3" aria-label="成片选项">
+			<h4 className="m-0 text-sm font-semibold">成片选项</h4>
+			<SelectInput
+				label="配音"
+				value={toToggle(current.tts)}
+				options={TOGGLE_OPTIONS}
+				disabled={saving}
+				onChange={(value) => save({ tts: fromToggle(value) })}
+			/>
+			<SelectInput
+				label="背景音乐"
+				value={toToggle(current.bgm)}
+				options={TOGGLE_OPTIONS}
+				disabled={saving}
+				onChange={(value) => save({ bgm: fromToggle(value) })}
+			/>
+			<p className="m-0 text-xs text-ink-muted">「跟随设置」用设置里的默认值；配音服务商在设置 → 配音里选。</p>
+		</section>
+	);
+}
+
+/** Edge 免费配音的中文音色；云端服务商的音色名直接填 */
+const EDGE_VOICES = [
+	"zh-CN-XiaoxiaoNeural",
+	"zh-CN-XiaoyiNeural",
+	"zh-CN-YunxiNeural",
+	"zh-CN-YunjianNeural",
+	"zh-CN-YunxiaNeural",
+	"zh-CN-YunyangNeural",
+];
+
 function CharacterDraftForm({
 	character,
 	disabled,
@@ -123,6 +197,7 @@ function CharacterDraftForm({
 		name: character.name,
 		description: character.description ?? "",
 		visual_notes: character.visual_notes ?? "",
+		voice: character.voice ?? "",
 	};
 	const [draft, setDraft] = useState<CharacterUpdatePayload>(original);
 	const [saving, setSaving] = useState(false);
@@ -132,8 +207,9 @@ function CharacterDraftForm({
 			name: character.name,
 			description: character.description ?? "",
 			visual_notes: character.visual_notes ?? "",
+			voice: character.voice ?? "",
 		});
-	}, [character.id, character.name, character.description, character.visual_notes]);
+	}, [character.id, character.name, character.description, character.visual_notes, character.voice]);
 
 	const handleSave = async (auto = false) => {
 		if (saving) return;
@@ -144,6 +220,7 @@ function CharacterDraftForm({
 				name: textOrNull(draft.name),
 				description: textOrNull(draft.description),
 				visual_notes: textOrNull(draft.visual_notes),
+				voice: textOrNull(draft.voice),
 			});
 			upsertCharacterInCache(queryClient, character.project_id, updated);
 			queryClient.invalidateQueries({ queryKey: ["characters", character.project_id] });
@@ -182,6 +259,19 @@ function CharacterDraftForm({
 				}
 				rows={4}
 			/>
+			<TextInput
+				label="配音音色"
+				value={draft.voice ?? ""}
+				list="character-voice-options"
+				placeholder="留空自动挑选"
+				help="留空按角色描述自动挑男女老少；用云端配音时填该服务商的音色名。"
+				onChange={(value) => setDraft((state) => ({ ...state, voice: value }))}
+			/>
+			<datalist id="character-voice-options">
+				{EDGE_VOICES.map((v) => (
+					<option key={v} value={v} />
+				))}
+			</datalist>
 			<SaveButton disabled={disabled} loading={saving} onClick={() => handleSave()} />
 		</FormShell>
 	);

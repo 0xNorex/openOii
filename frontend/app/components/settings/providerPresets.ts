@@ -10,9 +10,10 @@
 
 export const PRESETS_VERIFIED_AT = "2026-10-30";
 
-export type PresetService = "text" | "image" | "video" | "vision";
+export type PresetService = "text" | "image" | "video" | "vision" | "tts";
 export type VideoVendor = "kling" | "vidu" | "zhipu" | "minimax" | "dashscope" | "veo";
-export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor;
+export type TtsVendor = "edge" | "elevenlabs" | "azure" | "cosyvoice";
+export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor | TtsVendor;
 export type PresetGroup = "domestic" | "global" | "local";
 
 export const PRESET_GROUP_LABEL: Record<PresetGroup, string> = {
@@ -65,6 +66,9 @@ export interface ProviderPreset {
 	experimental?: boolean;
 	/** 通用自定义（每个服务一个）：只切接口协议，地址、密钥和模型就地填写 */
 	custom?: boolean;
+	/** 配音：推荐音色（写入 TTS_DEFAULT_VOICE，角色可以单独指定） */
+	defaultVoice?: string;
+	voices?: string[];
 }
 
 const CHAT = "/chat/completions";
@@ -1057,11 +1061,212 @@ const VISION_PRESETS: ProviderPreset[] = [
 	},
 ];
 
+
+/** 配音（TTS）：每家都是原生接口，请求形状见 backend/app/services/tts_providers.py */
+const TTS_PRESETS: ProviderPreset[] = [
+	{
+		id: "doubao-tts",
+		service: "tts",
+		provider: "doubao",
+		group: "domestic",
+		name: "豆包语音",
+		mark: "豆",
+		logo: "volcengine",
+		tagline: "火山引擎 · 豆包语音合成 2.0",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://openspeech.bytedance.com/api/v3" }],
+		defaultModel: "seed-tts-2.0",
+		models: ["seed-tts-2.0", "seed-tts-1.0"],
+		modelLabel: "资源 ID（X-Api-Resource-Id）",
+		defaultVoice: "zh_female_vv_uranus_bigtts",
+		voices: ["zh_female_vv_uranus_bigtts"],
+		keyHint: "豆包语音控制台的 API Key（新版控制台）",
+		keyUrl: "https://console.volcengine.com/speech/new",
+		docsUrl: "https://docs.volcengine.com/docs/doubao-voice/unidirectional-streaming-text-to-speech-http?lang=zh",
+		sources: ["https://docs.volcengine.com/docs/doubao-voice/unidirectional-streaming-text-to-speech-http?lang=zh"],
+		notes: ["没有只读的查询接口，「测试连接」只能检查是否填了密钥；音色要和资源 ID 匹配。"],
+	},
+	{
+		id: "cosyvoice",
+		service: "tts",
+		provider: "cosyvoice",
+		group: "domestic",
+		name: "阿里 CosyVoice",
+		mark: "百",
+		logo: "bailian",
+		tagline: "阿里云百炼 · 非实时语音合成",
+		regions: [
+			{ id: "cn-beijing", label: "北京", baseUrl: "https://dashscope.aliyuncs.com/api/v1" },
+			{
+				id: "ws-cn-beijing",
+				label: "北京 · 专属域名",
+				baseUrl: "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1",
+			},
+		],
+		defaultModel: "cosyvoice-v3-flash",
+		models: ["cosyvoice-v3-flash", "cosyvoice-v3-plus", "cosyvoice-v3.5-flash", "cosyvoice-v3.5-plus"],
+		defaultVoice: "longanyang",
+		voices: ["longanyang"],
+		keyHint: "sk- 开头；密钥绑定地域",
+		keyUrl: "https://help.aliyun.com/zh/model-studio/get-api-key",
+		docsUrl: "https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api",
+		sources: [
+			"https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api",
+			"https://help.aliyun.com/zh/model-studio/non-realtime-tts-user-guide",
+		],
+		fields: [
+			{
+				id: "workspaceId",
+				label: "业务空间 ID",
+				placeholder: "llm-xxxxxxxx",
+				help: "百炼控制台 → 业务空间详情；只有专属域名需要。",
+				pattern: "[A-Za-z0-9-]+",
+			},
+		],
+		notes: ["音色要和模型版本对应，完整列表见官方「CosyVoice 音色列表」。"],
+	},
+	{
+		id: "minimax-tts",
+		service: "tts",
+		provider: "minimax",
+		group: "domestic",
+		name: "MiniMax 语音",
+		mark: "M",
+		logo: "minimax",
+		tagline: "speech-2.8 同步语音合成",
+		regions: [
+			{ id: "cn", label: "国内", baseUrl: "https://api.minimaxi.com/v1" },
+			{ id: "global", label: "海外", baseUrl: "https://api.minimax.io/v1" },
+		],
+		defaultModel: "speech-2.8-hd",
+		models: ["speech-2.8-hd", "speech-2.8-turbo", "speech-2.6-hd"],
+		defaultVoice: "Chinese (Mandarin)_Lyrical_Voice",
+		voices: ["Chinese (Mandarin)_Lyrical_Voice", "Chinese (Mandarin)_News_Anchor", "Chinese (Mandarin)_Gentle_Youth", "Chinese (Mandarin)_Cute_Spirit"],
+		keyHint: "MiniMax 开放平台 API Key；国内和海外的密钥不通用",
+		keyUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+		docsUrl: "https://platform.minimaxi.com/docs/api-reference/speech-t2a-http",
+		sources: [
+			"https://platform.minimaxi.com/docs/api-reference/speech-t2a-http",
+			"https://platform.minimaxi.com/docs/faq/system-voice-id",
+		],
+	},
+	{
+		id: "edge-tts",
+		service: "tts",
+		provider: "edge",
+		group: "global",
+		name: "Edge 免费配音",
+		mark: "E",
+		logo: "microsoft",
+		tagline: "默认 · 无需密钥",
+		regions: [],
+		defaultModel: "",
+		models: [],
+		defaultVoice: "zh-CN-XiaoxiaoNeural",
+		voices: [
+			"zh-CN-XiaoxiaoNeural",
+			"zh-CN-XiaoyiNeural",
+			"zh-CN-YunxiNeural",
+			"zh-CN-YunjianNeural",
+			"zh-CN-YunxiaNeural",
+			"zh-CN-YunyangNeural",
+		],
+		keyHint: "",
+		keyOptional: true,
+		docsUrl: "https://github.com/rany2/edge-tts",
+		sources: ["https://github.com/rany2/edge-tts"],
+		notes: ["用的是浏览器朗读的公开接口，没有服务保障；角色没指定音色时按描述自动挑男女老少。"],
+	},
+	{
+		id: "openai-tts",
+		service: "tts",
+		provider: "openai",
+		group: "global",
+		name: "OpenAI",
+		mark: "AI",
+		logo: "openai",
+		tagline: "Speech API · /audio/speech",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://api.openai.com/v1" }],
+		defaultModel: "gpt-4o-mini-tts",
+		models: ["gpt-4o-mini-tts", "tts-1-hd", "tts-1"],
+		defaultVoice: "marin",
+		voices: ["marin", "cedar", "coral", "nova", "onyx"],
+		keyHint: "sk- 开头",
+		keyUrl: "https://platform.openai.com/api-keys",
+		docsUrl: "https://developers.openai.com/api/docs/guides/text-to-speech",
+		sources: ["https://developers.openai.com/api/docs/guides/text-to-speech"],
+		notes: ["官方说明这几个 TTS 模型将于 2027-01-06 停用；音色主要为英文优化。"],
+	},
+	{
+		id: "elevenlabs",
+		service: "tts",
+		provider: "elevenlabs",
+		group: "global",
+		name: "ElevenLabs",
+		mark: "11",
+		logo: "elevenlabs",
+		tagline: "多语言语音，音色库丰富",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://api.elevenlabs.io/v1" }],
+		defaultModel: "eleven_multilingual_v2",
+		models: ["eleven_multilingual_v2", "eleven_v3", "eleven_flash_v2_5"],
+		defaultVoice: "JBFqnCBsd6RMkjVDRZzb",
+		voices: ["JBFqnCBsd6RMkjVDRZzb"],
+		keyHint: "xi-api-key",
+		keyUrl: "https://elevenlabs.io/app/settings/api-keys",
+		docsUrl: "https://elevenlabs.io/docs/api-reference/text-to-speech/convert",
+		sources: ["https://elevenlabs.io/docs/api-reference/text-to-speech/convert"],
+		notes: ["音色填 voice_id（在音色库里复制），不是音色名字。"],
+	},
+	{
+		id: "azure-tts",
+		service: "tts",
+		provider: "azure",
+		group: "global",
+		name: "Azure 语音",
+		mark: "Az",
+		logo: "azure",
+		tagline: "神经网络语音 · REST",
+		regions: [{ id: "region", label: "按资源地域", baseUrl: "https://{region}.tts.speech.microsoft.com" }],
+		defaultModel: "",
+		models: [],
+		defaultVoice: "zh-CN-XiaoxiaoNeural",
+		voices: ["zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural", "zh-CN-YunjianNeural", "zh-CN-XiaoyiNeural"],
+		keyHint: "语音资源的密钥（Ocp-Apim-Subscription-Key）",
+		keyUrl: "https://portal.azure.com/",
+		docsUrl: "https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech",
+		sources: ["https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech"],
+		fields: [
+			{
+				id: "region",
+				label: "资源地域",
+				placeholder: "eastasia",
+				help: "语音资源所在地域，如 eastasia、eastus。",
+				pattern: "[a-z0-9]+",
+			},
+		],
+	},
+	{
+		id: "custom-tts",
+		service: "tts",
+		provider: "openai",
+		group: "local",
+		name: "自定义 · OpenAI 兼容",
+		mark: "…",
+		tagline: "任意兼容 /audio/speech 的服务",
+		regions: [],
+		defaultModel: "",
+		models: [],
+		keyHint: "按服务要求填写",
+		sources: [],
+		custom: true,
+	},
+];
+
 export const PROVIDER_PRESETS: Record<PresetService, ProviderPreset[]> = {
 	text: TEXT_PRESETS,
 	image: IMAGE_PRESETS,
 	video: VIDEO_PRESETS,
 	vision: VISION_PRESETS,
+	tts: TTS_PRESETS,
 };
 
 /** 每个服务的接口协议键和后端默认值 */
@@ -1070,6 +1275,7 @@ const SERVICE_PROVIDER: Record<PresetService, { key: string; fallback: string }>
 	image: { key: "IMAGE_PROVIDER", fallback: "modelscope" },
 	video: { key: "VIDEO_PROVIDER", fallback: "openai" },
 	vision: { key: "CRITIQUE_VISION_PROVIDER", fallback: "openai" },
+	tts: { key: "TTS_PROVIDER", fallback: "edge" },
 };
 
 export function isPresetService(tab: string): tab is PresetService {
@@ -1114,9 +1320,17 @@ export interface PresetKeys {
 	endpoint?: string;
 	model?: string;
 	apiKey?: string;
+	/** 配音的默认音色 */
+	voice?: string;
 }
 
 export function presetKeys(preset: ProviderPreset): PresetKeys {
+	if (preset.service === "tts") {
+		const voice = "TTS_DEFAULT_VOICE";
+		if (preset.provider === "edge") return { provider: "TTS_PROVIDER", voice };
+		if (preset.provider === "azure") return { provider: "TTS_PROVIDER", baseUrl: "TTS_BASE_URL", apiKey: "TTS_API_KEY", voice };
+		return { provider: "TTS_PROVIDER", baseUrl: "TTS_BASE_URL", model: "TTS_MODEL", apiKey: "TTS_API_KEY", voice };
+	}
 	if (preset.service === "vision") {
 		return {
 			provider: "CRITIQUE_VISION_PROVIDER",
@@ -1181,6 +1395,7 @@ export function presetConfigValues(preset: ProviderPreset, selection: PresetSele
 	if (keys.endpoint && preset.endpoint) values[keys.endpoint] = preset.endpoint;
 	const model = selection.model ?? preset.defaultModel;
 	if (keys.model && model) values[keys.model] = model;
+	if (keys.voice && preset.defaultVoice) values[keys.voice] = preset.defaultVoice;
 	return values;
 }
 

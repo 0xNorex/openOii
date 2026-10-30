@@ -226,11 +226,24 @@ class Settings(BaseSettings):
     )
 
     # ============================================
-    # TTS / BGM 配置（Edge TTS + 内置 BGM，完全免费）
+    # TTS / BGM 配置（默认 Edge TTS + 内置 BGM，完全免费）
     # ============================================
     tts_enabled: bool = Field(
         default=True,
-        description="是否启用 TTS 配音（Edge TTS，免费无需 API Key）",
+        description="是否启用 TTS 配音（项目里可单独开关）",
+    )
+    tts_provider: str = Field(
+        default="edge",
+        description=(
+            "配音服务商：edge（免费）、openai（OpenAI 及兼容接口）、elevenlabs、azure、"
+            "minimax、cosyvoice（阿里百炼）、doubao（火山引擎豆包语音）"
+        ),
+    )
+    tts_base_url: str | None = Field(default=None, description="配音服务地址（留空用服务商默认）")
+    tts_api_key: str | None = Field(default=None, description="配音服务 API Key（Edge 不需要）")
+    tts_model: str | None = Field(
+        default=None,
+        description="配音模型；豆包语音填资源 ID（如 seed-tts-2.0）",
     )
     tts_default_voice: str = Field(
         default="zh-CN-XiaoxiaoNeural",

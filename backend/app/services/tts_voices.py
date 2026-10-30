@@ -14,7 +14,7 @@ DEFAULT_VOICE_MAP: dict[str, str] = {
     "male_mature": "zh-CN-YunjianNeural",     # 男成熟/大叔
     "female_young": "zh-CN-XiaoxiaoNeural",   # 女青年
     "female_mature": "zh-CN-XiaoyiNeural",    # 女成熟
-    "child": "zh-CN-XiaohanNeural",           # 儿童
+    "child": "zh-CN-YunxiaNeural",            # 儿童（Edge 免费音色里没有 Xiaohan）
     "narrator": "zh-CN-YunyangNeural",        # 旁白/新闻播报
 }
 

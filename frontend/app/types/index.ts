@@ -42,6 +42,7 @@ export interface CreateProjectPayload extends ProjectProviderOverridesPayload {
 	universe_id?: number | null;
 	chapter_number?: number | null;
 	chapter_title?: string | null;
+	media_options?: MediaOptions | null;
 }
 
 export type UpdateProjectPayload = { expected_revision?: number } & Partial<
@@ -59,6 +60,7 @@ export type UpdateProjectPayload = { expected_revision?: number } & Partial<
 			| "universe_id"
 			| "chapter_number"
 			| "chapter_title"
+			| "media_options"
 			| "skill_id"
 	> &
 		ProjectProviderOverridesPayload
@@ -122,6 +124,16 @@ export interface Project {
 	chapter_number?: number | null;
 	chapter_title?: string | null;
 	skill_id?: string | null;
+	/** 成片选项：null 表示跟随设置 */
+	media_options?: MediaOptions | null;
+}
+
+export type SubtitleMode = "off" | "soft" | "burn";
+
+export interface MediaOptions {
+	tts?: boolean | null;
+	subtitles?: SubtitleMode | null;
+	bgm?: boolean | null;
 }
 
 export interface Character {
@@ -141,6 +153,8 @@ export interface Character {
 	approved_name: string | null;
 	approved_description: string | null;
 	approved_image_url: string | null;
+	/** 配音音色；空表示按描述自动挑选 */
+	voice?: string | null;
 }
 
 export interface Shot {
@@ -197,6 +211,7 @@ export interface CharacterUpdatePayload {
 	image_url?: string | null;
 	visual_notes?: string | null;
 	reference_images?: string[] | null;
+	voice?: string | null;
 }
 
 export interface ShotUpdatePayload {

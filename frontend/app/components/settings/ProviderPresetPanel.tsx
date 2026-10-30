@@ -59,7 +59,7 @@ function pendingStillApplies(
 }
 
 /** 只有单色标的品牌：logo 文件自带整块品牌底色（见 scripts/build-provider-logos.py） */
-const BAKED_TILE = new Set(["openai", "xai", "groq", "ollama", "lmstudio"]);
+const BAKED_TILE = new Set(["openai", "xai", "groq", "ollama", "lmstudio", "elevenlabs"]);
 
 /** 服务商标记：品牌彩色 logo 放在固定的浅色方块里（深浅色主题都清楚）；没有 logo 用文字标记 */
 export function ProviderMark({ preset, selected }: { preset: ProviderPreset; selected: boolean }) {
@@ -105,6 +105,8 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 	const protocol = formProvider(service, formState);
 	const keyItem = keys.apiKey ? items.find((i) => i.key.toUpperCase() === keys.apiKey) : undefined;
 	const model = keys.model ? readForm(formState, keys.model) : "";
+	const voice = keys.voice ? readForm(formState, keys.voice) : "";
+	const voices = preset.voices ?? [];
 	const needs = regionNeeds(region);
 	const missing = needs.filter((id) => !(fields[id] ?? "").trim());
 
@@ -146,7 +148,12 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 	const shownKeys = items
 		.filter((i) => {
 			const k = i.key.toUpperCase();
-			return (showsKey && k === keys.apiKey) || (showsModel && k === keys.model) || (Boolean(baseUrlItem) && k === keys.baseUrl);
+			return (
+				(showsKey && k === keys.apiKey) ||
+				(showsModel && k === keys.model) ||
+				(Boolean(keys.voice) && k === keys.voice) ||
+				(Boolean(baseUrlItem) && k === keys.baseUrl)
+			);
 		})
 		.map((i) => i.key);
 
@@ -234,7 +241,9 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 					<p className="m-0 text-xs text-ink-muted" data-testid="custom-protocol">
 						{PROTOCOL_LABEL[protocol]
 							? `当前接口协议：${PROTOCOL_LABEL[protocol]}，沿用原有配置；要换协议或改接口路径请到「高级设置」。`
-							: "任意 OpenAI 兼容的网关、中转或自建服务：填好地址、密钥和模型即可；接口路径在「高级设置」里。"}
+							: service === "tts"
+								? "任意兼容 OpenAI /audio/speech 的服务：填好地址、密钥、模型和音色即可。"
+								: "任意 OpenAI 兼容的网关、中转或自建服务：填好地址、密钥和模型即可；接口路径在「高级设置」里。"}
 					</p>
 				) : null}
 				{baseUrlItem ? (
@@ -337,6 +346,47 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 											}`}
 										>
 											{m}
+										</PlainButton>
+									))}
+								</div>
+							</>
+						) : null}
+					</div>
+				) : null}
+
+				{keys.voice ? (
+					<div className="space-y-1">
+						<label htmlFor={`preset-voice-${service}`} className="block text-xs font-semibold">
+							默认音色
+						</label>
+						<input
+							id={`preset-voice-${service}`}
+							name={keys.voice}
+							value={voice}
+							onChange={onChange}
+							list={voices.length ? `preset-voices-${service}` : undefined}
+							autoComplete="off"
+							className="input-doodle h-9 touch-target-dense w-full border border-line-strong bg-paper-100 px-2.5 font-mono text-xs"
+						/>
+						<p className="m-0 text-xs text-ink-muted">角色没有单独指定音色时用这个；角色音色在画布的属性面板里改。</p>
+						{voices.length ? (
+							<>
+								<datalist id={`preset-voices-${service}`}>
+									{voices.map((v) => (
+										<option key={v} value={v} />
+									))}
+								</datalist>
+								<div className="flex flex-wrap gap-1" aria-label="推荐音色">
+									{voices.map((v) => (
+										<PlainButton
+											key={v}
+											aria-pressed={v === voice}
+											onClick={() => onApply({ [keys.voice!]: v })}
+											className={`touch-target-dense rounded-sm border px-2 py-0.5 font-mono text-xs transition-colors duration-fast ${
+												v === voice ? "border-primary bg-primary/10 text-ink" : "border-line bg-paper-100 text-ink-muted hover:bg-paper-300"
+											}`}
+										>
+											{v}
 										</PlainButton>
 									))}
 								</div>

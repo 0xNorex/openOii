@@ -51,6 +51,9 @@ async def _effective_provider_config(session: AsyncSession, settings: Settings) 
         "IMAGE_ENDPOINT": pick("IMAGE_ENDPOINT"),
         "ENABLE_IMAGE_TO_IMAGE": pick("ENABLE_IMAGE_TO_IMAGE"),
         "TTS_DEFAULT_VOICE": pick("TTS_DEFAULT_VOICE"),
+        "TTS_PROVIDER": pick("TTS_PROVIDER"),
+        "TTS_BASE_URL": pick("TTS_BASE_URL"),
+        "TTS_MODEL": pick("TTS_MODEL"),
         "TTS_VOLUME": pick("TTS_VOLUME"),
         "BGM_VOLUME": pick("BGM_VOLUME"),
         "BGM_DIRECTORY": pick("BGM_DIRECTORY"),
@@ -74,6 +77,14 @@ async def _effective_provider_config(session: AsyncSession, settings: Settings) 
         "THINKING_CHAIN_ENABLED": pick("THINKING_CHAIN_ENABLED"),
         "THINKING_CHAIN_DETAIL_LEVEL": pick("THINKING_CHAIN_DETAIL_LEVEL"),
     }
+
+
+def _project_choice(project: Project, key: str, default: object) -> object:
+    """The project's own media switch wins; a missing or null one follows settings."""
+    options = getattr(project, "media_options", None)
+    if isinstance(options, dict) and options.get(key) is not None:
+        return options[key]
+    return default
 
 
 async def _universe_snapshot(session: AsyncSession, project: Project) -> dict[str, object] | None:
@@ -248,10 +259,14 @@ async def build_run_context_snapshot(
             "critique_max_rounds": provider_config["CRITIQUE_MAX_ROUNDS"],
             "thinking_chain_enabled": provider_config["THINKING_CHAIN_ENABLED"],
             "thinking_chain_detail_level": provider_config["THINKING_CHAIN_DETAIL_LEVEL"],
-            "tts_enabled": provider_config["TTS_ENABLED"],
+            "tts_enabled": _project_choice(project, "tts", provider_config["TTS_ENABLED"]),
+            "tts_provider": provider_config["TTS_PROVIDER"],
+            "tts_base_url": provider_config["TTS_BASE_URL"],
+            "tts_model": provider_config["TTS_MODEL"],
+            "tts_credential_keys": ["TTS_API_KEY"],
             "tts_default_voice": provider_config["TTS_DEFAULT_VOICE"],
             "tts_volume": provider_config["TTS_VOLUME"],
-            "bgm_enabled": provider_config["BGM_ENABLED"],
+            "bgm_enabled": _project_choice(project, "bgm", provider_config["BGM_ENABLED"]),
             "bgm_volume": provider_config["BGM_VOLUME"],
             "bgm_directory": provider_config["BGM_DIRECTORY"],
         },

@@ -36,6 +36,8 @@ class Project(SQLModel, table=True):
     exports: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=True))
     skill_id: Optional[str] = Field(default=None, index=True)
     reimagine_meta: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    # {tts, subtitles, bgm}; missing or null follows the default in settings
+    media_options: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
     # Optimistic concurrency: the engine and the HTTP API both write this row.
     # The mapper-level version_id_col turns every SQLAlchemy write into a
     # compare-and-set on revision (UPDATE ... WHERE revision = read-value,
@@ -79,6 +81,7 @@ class Character(SQLModel, table=True):
     reference_images: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=True))
     face_embedding: Optional[str] = Field(default=None)  # JSON string of 512-dim float list
     visual_notes: Optional[str] = None  # Character visual bible text
+    voice: Optional[str] = None  # TTS voice id; empty = pick from the description
     approved_name: Optional[str] = None
     approved_description: Optional[str] = None
     approved_image_url: Optional[str] = None

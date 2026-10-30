@@ -24,6 +24,7 @@
 | 视频（MiniMax） | `GET {base}/query/video_generation?task_id=<不存在>`，按 `base_resp.status_code`（1004 / 2049 为密钥无效） |
 | 视频（Veo，实验性） | `POST {base}/publishers/google/models/{model}:fetchPredictOperation`（不存在的 operation），只看鉴权 |
 | 视觉审查 | `GET {Base URL}/models`（Bearer，本地服务不带密钥时用占位值）；没填地址时直接提示「还没有配置视觉审查模型」 |
+| 配音 | 见下面「配音」一节：每家各用一个只读接口，不合成语音、不扣费 |
 | Fake | 直接成功 |
 
 错误统一翻译成中文：
@@ -128,6 +129,27 @@
 
 视觉审查没有测试模式卡片：不配置就是「未检查」。只有 Qwen3-VL 本地（llama.cpp）用真实服务测过，云端预设都按官方文档整理，**没有用真实密钥调用过**（未验）。
 
+## 配音（写入 `TTS_*`）
+
+成片里的台词配音。`TTS_PROVIDER` 选服务商，`TTS_BASE_URL` / `TTS_API_KEY` / `TTS_MODEL` 是云端服务的地址、密钥和模型，`TTS_DEFAULT_VOICE` 是默认音色。角色可以在画布属性面板里单独填「配音音色」，留空时 Edge 按角色描述自动挑男女老少，云端用默认音色。每个项目可以在简报的「成片选项」里单独开关配音（跟随设置 / 开 / 关）。
+
+台词按「角色名：台词」认说话人，「旁白：…」或没有前缀的台词归给旁白 / 镜头里的第一个角色，配音只念冒号后面的内容。云端配音失败时这句台词不配音（对话里会说明），不会再塞一段提示音；Edge 失败时沿用原来的行为。
+
+| 分组 | 预设 | `TTS_PROVIDER` | 地址 | 请求 | 推荐模型 | 默认音色 | 测试连接（只读） |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 国内 | [豆包语音](https://docs.volcengine.com/docs/doubao-voice/unidirectional-streaming-text-to-speech-http?lang=zh) | `doubao` | `https://openspeech.bytedance.com/api/v3` | `POST /tts/unidirectional`（`X-Api-Key`，`X-Api-Resource-Id` = 模型），按行解码 base64 音频，结束码 `20000000` | `seed-tts-2.0`、`seed-tts-1.0` | `zh_female_vv_uranus_bigtts` | 没有只读接口：只检查是否填了密钥，提示「豆包语音无法免费验证密钥」 |
+| 国内 | [阿里 CosyVoice](https://help.aliyun.com/zh/model-studio/cosyvoice-tts-http-api) | `cosyvoice` | 北京 `https://dashscope.aliyuncs.com/api/v1`；专属域名 `https://{workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1` | `POST /services/audio/tts/SpeechSynthesizer`，再下载返回的 `output.audio.url` | `cosyvoice-v3-flash`、`cosyvoice-v3-plus`、`cosyvoice-v3.5-*` | `longanyang` | `GET {根}/compatible-mode/v1/models` |
+| 国内 | [MiniMax 语音](https://platform.minimaxi.com/docs/api-reference/speech-t2a-http) | `minimax` | 国内 `https://api.minimaxi.com/v1`；海外 `https://api.minimax.io/v1` | `POST /t2a_v2`（`output_format: hex`），按 `base_resp.status_code` 判断（1004 为密钥无效） | `speech-2.8-hd`、`speech-2.8-turbo`、`speech-2.6-hd` | `Chinese (Mandarin)_Lyrical_Voice`（[系统音色](https://platform.minimaxi.com/docs/faq/system-voice-id)） | `POST /get_voice`（`voice_type: system`） |
+| 海外 | [Edge 免费配音](https://github.com/rany2/edge-tts) | `edge` | — | `edge-tts` 7.3.1 | — | `zh-CN-XiaoxiaoNeural` | 列出可用音色 |
+| 海外 | [OpenAI](https://developers.openai.com/api/docs/guides/text-to-speech) | `openai` | `https://api.openai.com/v1` | `POST /audio/speech`（mp3） | `gpt-4o-mini-tts`、`tts-1-hd`、`tts-1` | `marin` | `GET /models` |
+| 海外 | [ElevenLabs](https://elevenlabs.io/docs/api-reference/text-to-speech/convert) | `elevenlabs` | `https://api.elevenlabs.io/v1` | `POST /text-to-speech/{voice_id}?output_format=mp3_44100_128`（`xi-api-key`） | `eleven_multilingual_v2`、`eleven_v3`、`eleven_flash_v2_5` | `JBFqnCBsd6RMkjVDRZzb`（填 voice_id） | `GET /voices` |
+| 海外 | [Azure 语音](https://learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech) | `azure` | `https://{region}.tts.speech.microsoft.com` | `POST /cognitiveservices/v1`（SSML，`Ocp-Apim-Subscription-Key`） | —（按音色） | `zh-CN-XiaoxiaoNeural` | `GET /cognitiveservices/voices/list` |
+| 本地与自定义 | 自定义 · OpenAI 兼容 | `openai` | 自填 | `POST /audio/speech` | 自填 | 自填 | `GET /models` |
+
+- OpenAI 官方说明 `tts-1`、`tts-1-hd`、`gpt-4o-mini-tts` 将于 2027-01-06 停用，音色主要为英文优化。
+- Edge 免费配音用的是浏览器朗读的公开接口，没有服务保障；后端依赖是 `edge-tts>=7.3.1`。免费音色里没有 `zh-CN-XiaohanNeural`，儿童角色改用 `zh-CN-YunxiaNeural`。
+- 只有 Edge 用真实服务合成过。云端 6 家都用假密钥打过测试连接，确认地址可达、返回 401 / 1004 等「密钥无效」；**没有用真实密钥合成过**（未验）。
+
 ## 处理过的特殊配置
 
 - **地域绑定密钥**：阿里云百炼（北京、新加坡，以及北京 / 弗吉尼亚 / 东京专属域名）、Kimi（国内 / 海外）、MiniMax（国内 / 海外）、腾讯混元 TokenHub（国内 / 国际）、Bedrock（us-east-1 / us-west-2）都用地域切换。401 的中文提示会提醒检查地域。
@@ -163,11 +185,11 @@
 
 ## 服务商 logo
 
-卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 28 个，约 37 KB，浏览器按需加载，不进 JS 包）。
+卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 30 个，约 37 KB，浏览器按需加载，不进 JS 包）。
 
 - 有彩色变体（`*-color.svg`）的品牌直接用彩色版，只去掉 `<title>`、宽高和内联样式。
-- 只有单色标的 5 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标。
-- 界面统一放在 28px 的浅色方块里（4px 内边距、1px 细边），方块颜色不随主题变，深色模式下深色和浅色的标都看得清；烘焙底色的 5 个铺满方块。
+- 只有单色标的 6 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio、ElevenLabs）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标、ElevenLabs 白底黑标。
+- 界面统一放在 28px 的浅色方块里（4px 内边距、1px 细边），方块颜色不随主题变，深色模式下深色和浅色的标都看得清；烘焙底色的 6 个铺满方块。
 
 许可全文见 `frontend/public/provider-logos/LICENSE.txt`，汇总在仓库根目录 `NOTICE`。
 

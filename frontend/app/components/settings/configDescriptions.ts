@@ -83,9 +83,13 @@ export function getConfigDescription(key: string): string {
 		VIDEO_INLINE_LOCAL_IMAGES: "未配置 PUBLIC_BASE_URL 时是否内联本地图片",
 
 		// TTS / BGM
-		TTS_ENABLED: "是否启用 TTS 配音（Edge TTS）；关闭后只生成画面/视频，不合成语音。",
+		TTS_ENABLED: "默认是否给台词配音；每个项目可以在属性面板里单独开关。",
 		TTS_DEFAULT_VOICE:
-			"默认 TTS 语音名称，例如 zh-CN-XiaoxiaoNeural；用于分镜对白配音。",
+			"角色没单独指定音色时用的音色，例如 zh-CN-XiaoxiaoNeural；云端服务商填它自己的音色名。",
+		TTS_PROVIDER: "edge（免费）/ openai / doubao / cosyvoice / minimax / elevenlabs / azure，由上方预设选择。",
+		TTS_BASE_URL: "云端配音的基础地址，选预设会自动填好。",
+		TTS_API_KEY: "云端配音的密钥；Edge 免费配音不需要。",
+		TTS_MODEL: "云端配音的模型（豆包填资源 ID）。",
 		BGM_ENABLED: "是否启用背景音乐合成；关闭后最终视频不叠加 BGM。",
 		BGM_VOLUME: "背景音乐音量，范围 0-1；数值越大 BGM 越响。",
 		TTS_VOLUME: "TTS 人声音量，范围 0-1；数值越大对白越响。",

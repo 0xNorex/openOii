@@ -93,6 +93,14 @@ class StoryOutlineUpdate(BaseModel):
     outline_approved: bool | None = None
 
 
+class MediaOptions(BaseModel):
+    """Per-project dubbing / subtitle / music switches; None follows settings."""
+
+    tts: bool | None = None
+    subtitles: Literal["off", "soft", "burn"] | None = None
+    bgm: bool | None = None
+
+
 class ProjectCreate(BaseModel):
     title: str = Field(min_length=1)
     story: str | None = None
@@ -110,6 +118,7 @@ class ProjectCreate(BaseModel):
     chapter_number: int | None = None
     chapter_title: str | None = None
     skill_id: str | None = None
+    media_options: MediaOptions | None = None
 
 
 class ProjectUpdate(BaseModel):
@@ -129,6 +138,7 @@ class ProjectUpdate(BaseModel):
     chapter_number: int | None = None
     chapter_title: str | None = None
     skill_id: str | None = None
+    media_options: MediaOptions | None = None
     expected_revision: int | None = Field(default=None, ge=1)
 
 
@@ -162,6 +172,7 @@ class ProjectRead(BaseModel):
     chapter_number: int | None = None
     chapter_title: str | None = None
     skill_id: str | None = None
+    media_options: MediaOptions | None = None
 
 
 class ProjectListRead(BaseModel):
@@ -182,6 +193,7 @@ class CharacterRead(BaseModel):
     reference_images: list[str] = Field(default_factory=list)
     has_embedding: bool = False
     visual_notes: str | None = None
+    voice: str | None = None
     approval_state: Literal["draft", "approved", "superseded"]
     approval_version: int
     approved_at: datetime | None
@@ -290,6 +302,7 @@ class CharacterUpdate(BaseModel):
     description: str | None = None
     image_url: str | None = None
     visual_notes: str | None = None
+    voice: str | None = None
     reference_images: list[str] | None = None
     expected_revision: int | None = Field(default=None, ge=1)
 

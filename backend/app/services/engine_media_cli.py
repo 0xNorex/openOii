@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.services.audio_service import AudioService
 from app.services.character_bible import compute_face_embedding_from_bytes
 from app.services.image_composer import ImageComposer
+from app.services.tts_providers import default_voice
 from app.services.tts_voices import get_voice_for_character
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,10 @@ async def handle(request: object) -> object:
             "image_provider",
             "video_provider",
             "tts_enabled",
+            "tts_provider",
+            "tts_base_url",
+            "tts_api_key",
+            "tts_model",
             "tts_default_voice",
             "tts_volume",
             "bgm_enabled",
@@ -74,17 +79,22 @@ async def handle(request: object) -> object:
 
         dialogue = request.get("dialogue")
         tts_url = None
+        tts_error = None
         if settings.tts_enabled and isinstance(dialogue, str) and dialogue.strip():
             speaker = request.get("speaker")
-            voice = settings.tts_default_voice
-            if isinstance(speaker, dict):
-                voice = get_voice_for_character(
-                    SimpleNamespace(
-                        name=str(speaker.get("name") or ""),
-                        description=speaker.get("description"),
+            voice = request.get("voice")
+            if not isinstance(voice, str) or not voice.strip():
+                voice = settings.tts_default_voice or default_voice(settings.tts_provider)
+                # The description-based pick only knows Edge voices.
+                if isinstance(speaker, dict) and settings.tts_provider == "edge":
+                    voice = get_voice_for_character(
+                        SimpleNamespace(
+                            name=str(speaker.get("name") or ""),
+                            description=speaker.get("description"),
+                        )
                     )
-                )
-            tts_url = await audio.generate_tts(dialogue, voice=voice)
+            tts_url = await audio.generate_tts(dialogue, voice=voice.strip())
+            tts_error = audio.last_error
 
         scene = request.get("scene")
         expression = request.get("expression")
@@ -108,6 +118,7 @@ async def handle(request: object) -> object:
             "video_url": video_url,
             "tts_url": tts_url,
             "bgm_type": Path(urlsplit(bgm_url).path).stem if bgm_url else None,
+            "tts_error": tts_error,
         }
 
     raise ValueError(f"unknown action: {action}")

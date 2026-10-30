@@ -108,6 +108,8 @@ export interface CharacterRow {
   reference_images: string | null; // JSON
   face_embedding: string | null; // JSON
   visual_notes: string | null;
+  /** 配音音色 ID；为空时按角色描述自动挑选 */
+  voice?: string | null;
   approved_name: string | null;
   approved_description: string | null;
   approved_image_url: string | null;
@@ -190,6 +192,7 @@ export function characterReadPayload(c: CharacterRow): Record<string, unknown> {
     reference_images: parseJsonColumn(c.reference_images, [] as string[]),
     has_embedding: Boolean(c.face_embedding),
     visual_notes: c.visual_notes,
+    voice: c.voice ?? null,
     approval_state: characterApprovalState(c),
     approval_version: c.approval_version,
     approved_at: c.approved_at,

@@ -8,7 +8,7 @@ CREATE TABLE project (
 	video_url VARCHAR, 
 	status VARCHAR NOT NULL, 
 	created_at DATETIME NOT NULL, 
-	updated_at DATETIME NOT NULL, text_provider_override VARCHAR, image_provider_override VARCHAR, video_provider_override VARCHAR, target_shot_count INTEGER, character_hints JSON, creation_mode VARCHAR, reference_images JSON, exports JSON, story_outline JSON, visual_bible VARCHAR, outline_approved BOOLEAN DEFAULT 0 NOT NULL, universe_id INTEGER, chapter_number INTEGER, chapter_title VARCHAR, skill_id VARCHAR, reimagine_meta JSON, 
+	updated_at DATETIME NOT NULL, text_provider_override VARCHAR, image_provider_override VARCHAR, video_provider_override VARCHAR, target_shot_count INTEGER, character_hints JSON, creation_mode VARCHAR, reference_images JSON, exports JSON, story_outline JSON, visual_bible VARCHAR, outline_approved BOOLEAN DEFAULT 0 NOT NULL, universe_id INTEGER, chapter_number INTEGER, chapter_title VARCHAR, skill_id VARCHAR, reimagine_meta JSON, media_options JSON, 
 	PRIMARY KEY (id)
 );
 CREATE TABLE agentrun (
@@ -73,7 +73,7 @@ CREATE TABLE character (
 	project_id INTEGER NOT NULL, 
 	name VARCHAR NOT NULL, 
 	description VARCHAR, 
-	image_url VARCHAR, approved_name VARCHAR, approved_description VARCHAR, approved_image_url VARCHAR, approved_at DATETIME, approval_version INTEGER DEFAULT 0 NOT NULL, reference_images JSON, face_embedding TEXT, visual_notes TEXT, 
+	image_url VARCHAR, approved_name VARCHAR, approved_description VARCHAR, approved_image_url VARCHAR, approved_at DATETIME, approval_version INTEGER DEFAULT 0 NOT NULL, reference_images JSON, face_embedding TEXT, visual_notes TEXT, voice VARCHAR, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(project_id) REFERENCES project (id)
 );

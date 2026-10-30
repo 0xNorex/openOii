@@ -26,6 +26,11 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 		title: "视觉审查",
 		desc: "质量审查要看图：选一个支持图片输入的模型。没配置或服务挂掉时，分镜会标为「未检查」，不会当作通过",
 	},
+	tts: {
+		icon: "microphone",
+		title: "配音",
+		desc: "成片里的台词配音：默认 Edge 免费配音，也可以换成云端服务商；每个项目可以在属性面板里单独关掉",
+	},
 };
 
 export interface ProviderGroup {
@@ -161,6 +166,39 @@ PROVIDER_TABS.vision = {
 			match: (k) => k.startsWith("critique_vision_") && k !== "critique_vision_provider",
 		},
 		{ title: "审查规则", match: (k) => k.startsWith("critique_") && !k.startsWith("critique_vision_") },
+	],
+};
+
+const TTS_CLOUD = ["openai", "doubao", "cosyvoice", "minimax", "elevenlabs", "azure"];
+const TTS_LINK = ["tts_base_url", "tts_api_key", "tts_model"];
+
+PROVIDER_TABS.tts = {
+	providerKey: "tts_provider",
+	defaultProvider: "edge",
+	icon: "microphone",
+	layout: "row",
+	options: [
+		{ value: "edge", title: "Edge 免费配音", desc: "无需密钥，按角色描述自动挑音色" },
+		{ value: "openai", title: "OpenAI 兼容", desc: "/audio/speech 兼容接口" },
+		...Object.entries({
+			doubao: "豆包语音",
+			cosyvoice: "阿里 CosyVoice",
+			minimax: "MiniMax 语音",
+			elevenlabs: "ElevenLabs",
+			azure: "Azure 语音",
+		}).map(([value, title]) => ({
+			value,
+			title,
+			desc: "服务商原生接口，由上方预设选择",
+			native: true,
+		})),
+	],
+	groups: [
+		{ title: "配音接口", providers: TTS_CLOUD, match: (k) => TTS_LINK.includes(k) },
+		{
+			title: "配音选项",
+			match: (k) => k.startsWith("tts_") && k !== "tts_provider" && !TTS_LINK.includes(k),
+		},
 	],
 };
 

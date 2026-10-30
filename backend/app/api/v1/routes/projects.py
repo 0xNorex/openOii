@@ -87,6 +87,7 @@ async def _project_read_model(project: Project, settings: Settings) -> ProjectRe
         chapter_number=project.chapter_number,
         chapter_title=project.chapter_title,
         skill_id=getattr(project, "skill_id", None),
+        media_options=getattr(project, "media_options", None),
     )
 
 
@@ -129,6 +130,7 @@ async def create_project(
         chapter_number=payload.chapter_number,
         chapter_title=payload.chapter_title,
         skill_id=skill_defaults["skill_id"],
+        media_options=payload.media_options.model_dump() if payload.media_options else None,
     )
     session.add(project)
     await commit_versioned(session, project, entity="project")

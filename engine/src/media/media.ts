@@ -80,6 +80,11 @@ export interface MediaSettings {
 
   ttsEnabled: boolean;
   bgmEnabled: boolean;
+  /** 配音服务商（TTS_PROVIDER），默认 edge */
+  ttsProvider?: string;
+  ttsBaseUrl?: string | null;
+  ttsModel?: string | null;
+  ttsApiKey?: string | null;
   ttsDefaultVoice: string;
   ttsVolume: number;
   bgmVolume: number;
@@ -276,6 +281,20 @@ export function resolveMediaSettings(
     bgmEnabled: policy
       ? asBoolean(policy.bgm_enabled, true)
       : pick("BGM_ENABLED", "BGM_ENABLED", "true") === "true",
+    ttsProvider: policy && "tts_provider" in policy
+      ? String(policy.tts_provider ?? "edge") || "edge"
+      : pick("TTS_PROVIDER", "TTS_PROVIDER", "edge"),
+    ttsBaseUrl: policy && "tts_base_url" in policy
+      ? (policy.tts_base_url ? String(policy.tts_base_url) : null)
+      : optional("TTS_BASE_URL", "TTS_BASE_URL"),
+    ttsModel: policy && "tts_model" in policy
+      ? (policy.tts_model ? String(policy.tts_model) : null)
+      : optional("TTS_MODEL", "TTS_MODEL"),
+    ttsApiKey: secret(
+      Array.isArray(policy?.tts_credential_keys)
+        ? (policy.tts_credential_keys as unknown[]).map(String)
+        : ["TTS_API_KEY"],
+    ),
     ttsDefaultVoice: policy && "tts_default_voice" in policy
       ? String(policy.tts_default_voice ?? "zh-CN-XiaoxiaoNeural")
       : pick("TTS_DEFAULT_VOICE", "TTS_DEFAULT_VOICE", "zh-CN-XiaoxiaoNeural"),

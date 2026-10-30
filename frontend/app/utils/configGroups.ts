@@ -14,6 +14,7 @@ export function groupConfigs(configs: ConfigItem[]): ConfigSection[] {
 		image: [],
 		video: [],
 		vision: [],
+		tts: [],
 	};
 
 	configs.forEach((config) => {
@@ -56,6 +57,10 @@ export function groupConfigs(configs: ConfigItem[]): ConfigSection[] {
 		else if (key.startsWith("critique_")) {
 			groups.vision.push(config);
 		}
+		// 配音
+		else if (key.startsWith("tts_")) {
+			groups.tts.push(config);
+		}
 		// 基础设置
 		else {
 			groups.basic.push(config);
@@ -67,6 +72,7 @@ export function groupConfigs(configs: ConfigItem[]): ConfigSection[] {
 		{ key: "image", title: "图像生成服务", items: groups.image },
 		{ key: "video", title: "视频服务", items: groups.video },
 		{ key: "vision", title: "视觉审查", items: groups.vision },
+		{ key: "tts", title: "配音", items: groups.tts },
 		{ key: "basic", title: "基础设置", items: groups.basic },
 		{ key: "database", title: "数据库配置", items: groups.database },
 	].filter((section) => section.items.length > 0); // 过滤空分组

@@ -250,6 +250,7 @@ class ProjectUpdatedPayload(BaseModel):
     story_outline: StoryOutlineRead | None = None
     visual_bible: str | None = None
     outline_approved: bool | None = None
+    media_options: dict[str, object] | None = None
     blocking_clips: list[BlockingClipPayload] | None = None
 
 

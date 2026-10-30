@@ -1,14 +1,15 @@
 import type { ConfigValue } from "~/types";
 
-type Service = "llm" | "image" | "video" | "vision";
+type Service = "llm" | "image" | "video" | "vision" | "tts";
 
-const SERVICE_BY_TAB: Record<string, Service> = { text: "llm", image: "image", video: "video", vision: "vision" };
+const SERVICE_BY_TAB: Record<string, Service> = { text: "llm", image: "image", video: "video", vision: "vision", tts: "tts" };
 
 // The backend rejects non-whitelisted override keys with 400.
 const SERVICE_PREFIXES: Record<Service, string[]> = {
 	llm: ["text_", "anthropic_", "fake_text_"],
 	image: ["image_", "fake_image_", "enable_image_to_image"],
 	vision: ["critique_vision_"],
+	tts: ["tts_provider", "tts_base_url", "tts_api_key", "tts_model", "tts_default_voice"],
 	video: [
 		"video_",
 		"doubao_",

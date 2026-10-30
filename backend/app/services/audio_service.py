@@ -125,6 +125,7 @@ class AudioService:
         self.settings = settings
         _ensure_output_dir()
         self._bgm_dir: Path | None = None
+        self.last_error: str | None = None
 
     def _get_bgm_dir(self) -> Path:
         """获取 BGM 目录（延迟初始化）"""
@@ -181,10 +182,13 @@ class AudioService:
     ) -> str | None:
         """Generate speech URL.
 
-        Prefer Edge TTS when online providers are configured. When any of
-        text/image/video providers is fake, or Edge TTS is unavailable, fall
-        back to a local ffmpeg placeholder so the full pipeline stays offline.
+        TTS_PROVIDER picks the service (Edge TTS by default). When any of
+        text/image/video providers is fake the pipeline stays offline with a
+        local ffmpeg placeholder. A cloud provider that fails returns None and
+        leaves the reason in ``last_error`` so the run can say the line was
+        skipped instead of mixing a beep into the film.
         """
+        self.last_error = None
         if not text or not text.strip():
             return None
 
@@ -194,6 +198,31 @@ class AudioService:
             str(getattr(self.settings, key, "") or "").lower() == "fake"
             for key in ("text_provider", "image_provider", "video_provider")
         )
+        provider = str(getattr(self.settings, "tts_provider", "") or "edge").lower()
+
+        if not offline and provider != "edge":
+            from app.services.tts_providers import TTSConfig, TTSProviderError, synthesize
+
+            config = TTSConfig.build(
+                provider,
+                getattr(self.settings, "tts_base_url", None),
+                getattr(self.settings, "tts_api_key", None),
+                getattr(self.settings, "tts_model", None),
+            )
+            try:
+                audio = await synthesize(config, text, voice)
+            except TTSProviderError as error:
+                self.last_error = str(error)
+            except Exception as error:  # network errors carry no secrets
+                self.last_error = f"{type(error).__name__}: {error}"[:200]
+            else:
+                if len(audio) > 100:
+                    output_path.write_bytes(audio)
+                    logger.info("TTS generated: %s (provider=%s, voice=%s)", output_path, provider, voice)
+                    return f"/static/audio/{filename}"
+                self.last_error = "配音服务返回了空音频"
+            logger.warning("TTS %s failed: %s", provider, self.last_error)
+            return None
 
         if not offline:
             try:

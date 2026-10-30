@@ -139,10 +139,17 @@ export function TextInput({
 	label,
 	value,
 	onChange,
+	list,
+	placeholder,
+	help,
 }: {
 	label: string;
 	value: string;
 	onChange: (value: string) => void;
+	/** datalist id：给出推荐值，仍可自由输入 */
+	list?: string;
+	placeholder?: string;
+	help?: string;
 }) {
 	return (
 		<label className="block">
@@ -152,8 +159,44 @@ export function TextInput({
 			<input
 				className="input-doodle w-full px-2 py-1 text-sm"
 				value={value}
+				list={list}
+				placeholder={placeholder}
+				autoComplete={list ? "off" : undefined}
 				onChange={(event) => onChange(event.target.value)}
 			/>
+			{help ? <span className="mt-1 block text-xs text-ink-muted">{help}</span> : null}
+		</label>
+	);
+}
+
+export function SelectInput<T extends string>({
+	label,
+	value,
+	options,
+	onChange,
+	disabled,
+}: {
+	label: string;
+	value: T;
+	options: ReadonlyArray<readonly [T, string]>;
+	onChange: (value: T) => void;
+	disabled?: boolean;
+}) {
+	return (
+		<label className="flex items-center justify-between gap-3 text-sm">
+			<span className="label shrink-0 text-ink-muted">{label}</span>
+			<select
+				className="input-doodle min-w-0 px-2 py-1 text-sm"
+				value={value}
+				disabled={disabled}
+				onChange={(event) => onChange(event.target.value as T)}
+			>
+				{options.map(([v, text]) => (
+					<option key={v} value={v}>
+						{text}
+					</option>
+				))}
+			</select>
 		</label>
 	);
 }

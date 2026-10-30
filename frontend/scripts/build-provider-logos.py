@@ -4,7 +4,7 @@
 用法：python3 scripts/build-provider-logos.py <解包后的 package/icons 目录>
 
 - 有 *-color 变体的品牌：直接用彩色变体（去掉 <title>、宽高和 style）。
-- 只有单色标的品牌（OpenAI、xAI、Groq、Ollama、LM Studio）：
+- 只有单色标的品牌（OpenAI、xAI、Groq、Ollama、LM Studio、ElevenLabs）：
   按 Lobe Icons 源码 src/<Brand>/style.ts 里的 Avatar 配色，烘焙成带底色的方块。
 """
 import re
@@ -13,7 +13,7 @@ from pathlib import Path
 
 COLOR = [
     "azure", "baiducloud", "bailian", "bedrock", "claude", "deepmind", "deepseek", "doubao",
-    "gemini", "hailuo", "hunyuan", "kimi", "kling", "minimax", "mistral", "modelscope",
+    "gemini", "hailuo", "hunyuan", "kimi", "kling", "microsoft", "minimax", "mistral", "modelscope",
     "openrouter", "qwen", "siliconcloud", "together", "vidu", "volcengine", "zhipu",
 ]
 # 品牌: (底色, 标志色, 标志占比) —— 取自 lobe-icons src/<Brand>/style.ts 的 AVATAR_* 常量
@@ -23,6 +23,7 @@ AVATAR = {
     "groq": ("#F55036", "#fff", 0.75),
     "ollama": ("#fff", "#000", 0.75),
     "lmstudio": ("url(#g)", "#fff", 0.7),
+    "elevenlabs": ("#fff", "#000", 0.5),
 }
 GRADIENT = '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6C78EF"/><stop offset="1" stop-color="#4F14BE"/></linearGradient></defs>'
 

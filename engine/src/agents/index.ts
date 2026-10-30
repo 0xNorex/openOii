@@ -1354,6 +1354,47 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
   }
 }
 
+const NARRATOR_LABELS = new Set(["旁白", "画外音", "叙述", "解说", "narrator"]);
+
+/**
+ * 「角色名：台词」由该角色配音，「旁白：…」用默认音色；没有前缀时沿用镜头里的
+ * 第一个角色。前缀与引号不会被读出来。
+ */
+export function splitDialogueSpeaker(
+  dialogue: string | null,
+  shotCast: CharacterRow[],
+  allCharacters: CharacterRow[],
+): { text: string | null; speaker: CharacterRow | null } {
+  if (!dialogue?.trim()) return { text: dialogue, speaker: shotCast[0] ?? null };
+  let speaker: CharacterRow | null | undefined;
+  const lines = dialogue
+    .split(/\n+/)
+    .map((raw) => {
+      const match = /^\s*([^：:\n]{1,12}?)\s*[：:]\s*(.+)$/s.exec(raw);
+      let text = raw.trim();
+      if (match) {
+        const label = (match[1] ?? "").trim();
+        const narrator = NARRATOR_LABELS.has(label.toLowerCase());
+        const named = narrator
+          ? null
+          : allCharacters.find((character) => character.name === label) ??
+            allCharacters.find(
+              (character) => character.name.includes(label) || label.includes(character.name),
+            );
+        if (narrator || named) {
+          text = (match[2] ?? "").trim();
+          if (speaker === undefined) speaker = named ?? null;
+        }
+      }
+      return text.replace(/^[「“"『]+|[」”"』]+$/g, "").trim();
+    })
+    .filter(Boolean);
+  return {
+    text: lines.join("\n") || null,
+    speaker: speaker === undefined ? shotCast[0] ?? null : speaker,
+  };
+}
+
 export async function runComposeMerge(ctx: StageContext): Promise<void> {
   const allShots = ctx.shared.shotsForProject(ctx.projectId);
   const shots = allShots.filter((shot) => ctx.shared.getLiveShot(shot.id)?.video_url);
@@ -1379,15 +1420,18 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
       if (!live?.video_url) continue;
       let videoUrl = live.video_url;
       if (ctx.media.audioEnabled && !live.tts_url && !live.bgm_type) {
-        const speaker = parseJsonColumn(live.character_ids, [] as number[])
+        const shotCast = parseJsonColumn(live.character_ids, [] as number[])
           .map((id) => byId.get(id))
-          .find((character): character is CharacterRow => character !== undefined);
+          .filter((character): character is CharacterRow => character !== undefined);
+        const line = splitDialogueSpeaker(live.dialogue, shotCast, characters);
+        const speaker = line.speaker;
         let audio: Awaited<ReturnType<BackendWorker["processAudio"]>> | null = null;
         try {
           audio = await worker.processAudio({
             video_url: videoUrl,
-            dialogue: live.dialogue,
+            dialogue: line.text,
             speaker: speaker ? { name: speaker.name, description: speaker.description } : null,
+            voice: speaker?.voice?.trim() || null,
             scene: live.scene,
             expression: live.expression,
             genre: project?.style ?? null,
@@ -1396,6 +1440,10 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
               image_provider: ctx.mediaSettings.imageProvider,
               video_provider: ctx.mediaSettings.videoProvider,
               tts_enabled: ctx.mediaSettings.ttsEnabled,
+              tts_provider: ctx.mediaSettings.ttsProvider ?? "edge",
+              tts_base_url: ctx.mediaSettings.ttsBaseUrl ?? null,
+              tts_api_key: ctx.mediaSettings.ttsApiKey ?? null,
+              tts_model: ctx.mediaSettings.ttsModel ?? null,
               tts_default_voice: ctx.mediaSettings.ttsDefaultVoice,
               tts_volume: ctx.mediaSettings.ttsVolume,
               bgm_enabled: ctx.mediaSettings.bgmEnabled,
@@ -1409,6 +1457,12 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         }
         if (ctx.signal.aborted) throw new Error("run cancelled");
         const processedAudio = audio;
+        if (processedAudio?.tts_error) {
+          await ctx.emitter.sendMessage(
+            "compose",
+            `⚠️ ${shotLabel(live)} 配音失败（${processedAudio.tts_error}），这句台词先不配音。`,
+          );
+        }
         if (processedAudio) {
           videoUrl = processedAudio.video_url;
           if (videoUrl !== live.video_url || processedAudio.tts_url || processedAudio.bgm_type) {
