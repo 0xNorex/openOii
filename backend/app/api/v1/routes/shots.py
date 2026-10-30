@@ -91,6 +91,14 @@ async def _validate_shot_character_ids(
         )
 
 
+# Fields the image_prompt / prompt are derived from.
+_PROMPT_SOURCE_FIELDS = ("description", "scene", "action", "expression", "lighting")
+
+
+def _changed(shot: Shot, data: dict, field: str) -> bool:
+    return field in data and (data[field] or "") != (getattr(shot, field) or "")
+
+
 @router.put("/{shot_id}", response_model=ShotRead)
 @router.patch("/{shot_id}", response_model=ShotRead)
 async def update_shot(
@@ -114,6 +122,15 @@ async def update_shot(
         await _validate_shot_character_ids(session, project_id, character_ids)
         shot.character_ids = character_ids
         character_ids_updated = True
+    # The saved image/video prompts were written from the old description; once
+    # the content changes they would silently keep rendering the old shot. Drop
+    # them so the next render rebuilds them from the edited description. A
+    # prompt the same edit changes is the user's own and is kept; the inspector
+    # form resends unchanged prompts, which count as not edited.
+    if any(_changed(shot, data, field) for field in _PROMPT_SOURCE_FIELDS):
+        for field in ("image_prompt", "prompt"):
+            if not _changed(shot, data, field):
+                data[field] = None
     for k, v in data.items():
         setattr(shot, k, v)
 
