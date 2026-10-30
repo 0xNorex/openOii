@@ -461,6 +461,8 @@ function FlowInner({
 				colorMode={theme === "dark" ? "dark" : "light"}
 				minZoom={MIN_ZOOM}
 				maxZoom={2}
+				// 只渲染视口内的节点：大项目（上百个镜头）平移/缩放时不再整板重绘
+				onlyRenderVisibleElements
 				panOnScroll
 				panOnDrag={tool === "hand" ? true : [1, 2]}
 				selectionOnDrag={tool === "select"}
