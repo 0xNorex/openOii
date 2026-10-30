@@ -51,11 +51,19 @@ async def lifespan(_: FastAPI):
             await sweep_managed_media(session)
     except Exception:
         log.exception("lifespan: media sweep failed; continuing")
+    from app.db.session import engine as db_engine
+    from app.services.db_change_notifier import db_change_notifier, sqlite_db_path
+
+    # Watch the file the backend actually reads (settings may be overridden from the DB).
+    db_path = sqlite_db_path(db_engine.url)
+    if db_path is not None:
+        db_change_notifier.start(db_path)
     try:
         yield
     finally:
         from app.services.engine_client import shutdown_engine
 
+        await db_change_notifier.stop()
         await shutdown_engine()
 
 
@@ -80,6 +88,14 @@ _RETRYABLE_HTTP_STATUSES = {408, 429, 500, 502, 503, 504}
 _TAIL_ACTIVE_POLL_S = 0.25
 _TAIL_IDLE_POLL_S = 1.0
 _TAIL_IDLE_AFTER_POLLS = 8
+
+
+# With the db change notifier running, tailers query only after the SQLite file
+# changes; this slow poll is the safety net if a notification is ever missed.
+_TAIL_PUSH_FALLBACK_S = 5.0
+# Floor between push-driven queries: a write burst (stream frame + heartbeat +
+# compaction) costs at most 5 queries/s per connection, close to the old 4/s poll.
+_TAIL_PUSH_MIN_GAP_S = 0.2
 
 
 def _tail_poll_interval(idle_polls: int) -> float:
@@ -289,12 +305,16 @@ def create_app() -> FastAPI:
     ) -> None:
         """Replay/tail durable events to exactly one connection."""
         from app.db.session import async_session_maker
+        from app.services.db_change_notifier import db_change_notifier
         from sqlalchemy import text
 
         last_seq = after_seq
         idle_polls = 0
         try:
+            loop = asyncio.get_running_loop()
             while True:
+                seen_generation = db_change_notifier.generation
+                queried_at = loop.time()
                 async with async_session_maker() as session:
                     result = await session.execute(
                         text(
@@ -335,6 +355,17 @@ def create_app() -> FastAPI:
                 # while events flow; an idle tab (no run, or parked at a gate) backs off to 1s
                 # after ~2s of empty polls instead of querying 4x/s forever.
                 idle_polls = 0 if rows else idle_polls + 1
+                if db_change_notifier.active:
+                    # Push: sleep until the engine (or anyone) writes the DB; a write that
+                    # landed while we were querying, or a full batch, re-queries at once.
+                    if len(rows) >= 500:
+                        continue
+                    if db_change_notifier.generation == seen_generation:
+                        await db_change_notifier.wait_for_change(
+                            seen_generation, _TAIL_PUSH_FALLBACK_S
+                        )
+                    await asyncio.sleep(max(0.0, queried_at + _TAIL_PUSH_MIN_GAP_S - loop.time()))
+                    continue
                 await asyncio.sleep(_tail_poll_interval(idle_polls))
         except asyncio.CancelledError:
             return
