@@ -735,7 +735,9 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
       // Keyframes chain: shot N is drawn from shot N-1's keyframe (read live,
       // so a keyframe redrawn earlier in this loop is the one carried on).
       const order = allShots.findIndex((item) => item.id === shot.id);
-      const previous = order > 0 ? ctx.shared.getShot(allShots[order - 1]!.id) : null;
+      // getShot returns the stage's frozen input, where a keyframe drawn
+      // earlier in this loop is still empty; only the live row has it.
+      const previous = order > 0 ? ctx.shared.getLiveShot(allShots[order - 1]!.id) : null;
       const previousImage = previous?.image_url ?? null;
       const ids = parseJsonColumn(shot.character_ids, [] as number[]);
       const boundCharacters = ids

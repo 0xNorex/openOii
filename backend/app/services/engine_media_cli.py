@@ -6,6 +6,7 @@ import asyncio
 import base64
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -139,15 +140,33 @@ async def handle(request: object) -> object:
     raise ValueError(f"unknown action: {action}")
 
 
+def _protocol_stdout():
+    """Keep stdout for protocol lines only.
+
+    Libraries print to stdout while loading (InsightFace prints a line per
+    ONNX model on the first face-aware request). The engine reads the first
+    stdout line as the reply, so that chatter used to fail the first request
+    of every worker and the shot silently lost its character reference.
+    Anything else written to stdout, from Python or native code, now goes to
+    stderr.
+    """
+    sys.stdout.flush()
+    protocol = os.fdopen(os.dup(1), "w", buffering=1, encoding="utf-8")
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
+    return protocol
+
+
 def main() -> None:
+    out = _protocol_stdout()
     for line in sys.stdin:
         try:
             result = asyncio.run(handle(json.loads(line)))
         except Exception as error:
             logger.exception("Engine media operation failed")
             result = {"error": str(error)}
-        sys.stdout.write(json.dumps(result) + "\n")
-        sys.stdout.flush()
+        out.write(json.dumps(result) + "\n")
+        out.flush()
 
 
 if __name__ == "__main__":
