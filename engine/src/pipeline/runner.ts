@@ -17,8 +17,10 @@ import type { EngineDatabase, StageAttemptRow } from "../db.js";
 import {
   MediaService,
   resolveMediaSettings,
+  withProjectMediaOptions,
   type MediaProviderSnapshot,
   type MediaRunSnapshot,
+  type MediaSettings,
 } from "../media/media.js";
 import { TextLlmService, type RunCreativeContext } from "../llm.js";
 import {
@@ -190,6 +192,12 @@ export class PipelineRunner {
 
   private policy(): Record<string, unknown> | null {
     return asRecord(this.runContext?.policy);
+  }
+
+  private mediaSettingsFor(projectId: number): MediaSettings {
+    const settings = resolveMediaSettings(this.db, this.mediaSnapshot());
+    if (this.policy()) return settings;
+    return withProjectMediaOptions(settings, this.shared.getProject(projectId)?.media_options);
   }
 
   private mediaSnapshot(): MediaRunSnapshot | null {
@@ -448,7 +456,7 @@ export class PipelineRunner {
     const project = this.shared.getProject(request.projectId);
     if (!project) return { status: "failed", error: `project ${request.projectId} not found` };
 
-    const mediaSettings = resolveMediaSettings(this.db, this.mediaSnapshot());
+    const mediaSettings = this.mediaSettingsFor(request.projectId);
     const media = new MediaService(mediaSettings);
     media.setAbortSignal(this.abortController.signal);
     media.setMediaRegistrar((relativePath) => this.shared.registerMediaObject(relativePath));
@@ -899,7 +907,7 @@ export class PipelineRunner {
     stages: StageId[],
     scoped: PipelineRequest,
   ): Promise<PipelineOutcome> {
-    const mediaSettings = resolveMediaSettings(this.db, this.mediaSnapshot());
+    const mediaSettings = this.mediaSettingsFor(request.projectId);
     const media = new MediaService(mediaSettings);
     media.setAbortSignal(this.abortController.signal);
     media.setMediaRegistrar((relativePath) => this.shared.registerMediaObject(relativePath));

@@ -151,6 +151,32 @@ function asNumber(value: unknown, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/**
+ * A run without a frozen policy (targeted runs such as 重新合成 or a single-shot
+ * regen) still honours the project's own 配音 / 字幕 / 背景音乐 switches; a
+ * missing or null switch follows settings, as in the backend's run context.
+ */
+export function withProjectMediaOptions(settings: MediaSettings, raw: unknown): MediaSettings {
+  let options: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      options = JSON.parse(raw);
+    } catch {
+      return settings;
+    }
+  }
+  if (!options || typeof options !== "object") return settings;
+  const { tts, bgm, subtitles } = options as Record<string, unknown>;
+  return {
+    ...settings,
+    ...(typeof tts === "boolean" ? { ttsEnabled: tts } : {}),
+    ...(typeof bgm === "boolean" ? { bgmEnabled: bgm } : {}),
+    ...(subtitles === "off" || subtitles === "soft" || subtitles === "burn"
+      ? { subtitleMode: subtitleMode(subtitles) }
+      : {}),
+  };
+}
+
 export function resolveMediaSettings(
   db: EngineDatabase,
   snapshot?: MediaRunSnapshot | null,

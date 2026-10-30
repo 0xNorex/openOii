@@ -28,6 +28,8 @@ export interface ProjectRow {
   visual_bible: string | null;
   outline_approved: boolean | number | null;
   revision: number;
+  /** JSON: per-project tts / subtitles / bgm switches; null follows settings */
+  media_options?: string | null;
 }
 
 export interface AgentRunRow {
