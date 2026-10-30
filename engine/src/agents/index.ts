@@ -884,8 +884,7 @@ const CHECK_LABELS: Record<string, string> = {
 
 const SHOT_CHECK_OUTPUT = `逐项检查后只输出一个 JSON 对象（不要 markdown）：
 {"score": 0-10, "checks": {"characters": true/false, "state": true/false, "props": true/false, "look": true/false, "no_future_beat": true/false}, "issues": ["简短中文问题"], "suggestions": ["简短中文修改建议"]}
-characters=画面里只有「画面内角色」；state=画面符合上面的状态要求；props=关键道具的材质、大小、透明度符合设定且前后一致；look=角色外观和画风与角色设定图一致；no_future_beat=没有出现「后续镜头情节」。
-看不到图片时不要猜，返回 "score": null。`;
+characters=画面里只有「画面内角色」；state=画面符合上面的状态要求；props=关键道具的材质、大小、透明度符合设定且前后一致；look=角色外观和画风与角色设定图一致；no_future_beat=没有出现「后续镜头情节」。`;
 
 /** The story facts one shot has to show, for the critic to check pixels against. */
 export function shotChecklist(
@@ -1028,7 +1027,9 @@ export async function runCritique(
       ? `No image is available to review for ${label}. Do not guess a score: return JSON with "score": null and one issue explaining that the image could not be reviewed.`
       : entityType === "shot"
         ? `审查分镜 ${label} 的首帧图。\n${shotChecklist(ctx, entity as ShotRow, allShots, "keyframe")}`
-        : `Review the attached character image for ${label}.\nDescription: ${entity.description ?? ""}\nReturn JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.\nIf you cannot actually see an attached image, do not guess: return "score": null with one issue saying the image was not visible.`;
+        : // No "return null if you cannot see it" escape hatch: a small local
+          // vision model takes it even when it sees the image fine.
+          `附图是角色 ${label} 的角色设定图（多角度造型图），请看图评审。\n角色描述：${entity.description ?? ""}\n只评角色造型：与描述是否一致、各角度是否同一个角色、画面质量；这是设定图，不需要表现剧情。\n输出 JSON：score、dimensions (consistency, quality, composition)、issues、suggestions。`;
     const images = image
       ? [image, ...(entityType === "shot" ? await castSheets(ctx, entity as ShotRow) : [])]
       : [];
