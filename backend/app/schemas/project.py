@@ -167,6 +167,7 @@ class ProjectRead(BaseModel):
 class ProjectListRead(BaseModel):
     items: list[ProjectRead]
     total: int
+    ready_total: int = 0
 
 
 class CharacterRead(BaseModel):

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ButtonLink } from "~/components/ui/ButtonLink";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +8,7 @@ import { EmptyState as SharedEmptyState } from "~/components/ui/EmptyState";
 import { PageBody, PageShell } from "~/components/layout/PageShell";
 import { PageContent, PageHeader } from "~/components/layout/PageHeader";
 import { ConfirmModal } from "~/components/ui/ConfirmModal";
-import { projectsApi } from "~/services/api";
+import { projectsApi, type ProjectListPage } from "~/services/api";
 import { cleanupDeletedProjectCaches } from "~/features/projects/deleteProject";
 import { toast } from "~/utils/toast";
 import { ApiError } from "~/types/errors";
@@ -44,21 +44,51 @@ export function ProjectsPage() {
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
 	const [selecting, setSelecting] = useState(false);
 
+	const [pageLimit, setPageLimit] = useState(PAGE_SIZE);
+
 	const {
 		data: projects,
 		isLoading,
+		isFetching,
 		error,
-	} = useQuery({
-		queryKey: ["projects"],
-		queryFn: projectsApi.list,
+	} = useQuery<ProjectListPage>({
+		// 前缀仍是 ["projects"]：所有 invalidate(["projects"]) 都会刷新当前页
+		queryKey: ["projects", { limit: pageLimit }],
+		queryFn: () => projectsApi.listPage(pageLimit),
+		// 加载更多时保留已显示的行，避免整表闪回骨架
+		placeholderData: (previous) => previous,
 		retry: 1,
 	});
 
 	const visibleProjects = projects ?? [];
-	const completedCount = useMemo(
+	const totalCount = projects?.total ?? visibleProjects.length;
+	const loadedReadyCount = useMemo(
 		() => visibleProjects.filter((project) => project.status === "ready").length,
 		[visibleProjects],
 	);
+	const completedCount = projects?.readyTotal ?? loadedReadyCount;
+	const hasMore = totalCount > visibleProjects.length;
+	const loadingMore = Boolean(isFetching) && hasMore;
+	const loadMore = () => {
+		if (loadingMore) return;
+		setPageLimit((limit) => limit + PAGE_SIZE);
+	};
+	const loadMoreRef = useRef(loadMore);
+	loadMoreRef.current = loadMore;
+	const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		const node = sentinelRef.current;
+		if (!node || !hasMore || typeof IntersectionObserver === "undefined") return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) loadMoreRef.current();
+			},
+			{ rootMargin: "320px 0px" },
+		);
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [hasMore, visibleProjects.length]);
 	const selectedCount = selectedIds.length;
 	const allSelected =
 		visibleProjects.length > 0 && selectedCount === visibleProjects.length;
@@ -146,7 +176,7 @@ export function ProjectsPage() {
 					title="项目库"
 					description="继续制作中的故事，或从新想法开始一部漫剧。"
 					// 数据归标题（和宇宙页的「N 个」同一处、同一样式），右侧只放动作
-					meta={visibleProjects.length > 0 ? `${visibleProjects.length} 个 · ${completedCount} 部成片` : undefined}
+					meta={visibleProjects.length > 0 ? `${totalCount} 个 · ${completedCount} 部成片` : undefined}
 					actions={
 						<>
 							<Button
@@ -235,6 +265,24 @@ export function ProjectsPage() {
 									/>
 								))}
 							</div>
+							{hasMore ? (
+								<div
+									ref={sentinelRef}
+									className="flex items-center justify-center border-t border-line px-3 py-2"
+								>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={loadMore}
+										disabled={loadingMore}
+										aria-busy={loadingMore}
+									>
+										{loadingMore
+											? "加载中…"
+											: `加载更多（还有 ${totalCount - visibleProjects.length} 个）`}
+									</Button>
+								</div>
+							) : null}
 						</div>
 					)}
 				</section>
@@ -259,6 +307,7 @@ export function ProjectsPage() {
 const ROW_COLS = "sm:grid-cols-[minmax(0,1fr)_7rem_7rem_2.75rem]";
 const ROW_COLS_SELECTING = "sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem]";
 // 真实行与骨架行共用：骨架用同一套网格、内边距和行内元素（文字透明），两者高度天然一致
+const PAGE_SIZE = 20;
 const ROW_CLASS = "grid min-h-20 items-start gap-x-2 gap-y-1 px-2 py-3 sm:items-center sm:gap-3 sm:px-3 sm:py-4 ";
 const HEADER_CLASS = "hidden border-b border-line bg-paper-200/70 py-1.5 label text-ink-muted sm:grid sm:gap-3 sm:px-3 ";
 

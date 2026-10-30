@@ -4,9 +4,9 @@ import re
 from datetime import datetime
 from typing import cast
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
@@ -149,13 +149,30 @@ async def create_project(
 
 
 @router.get("", response_model=ProjectListRead)
-async def list_projects(session: AsyncSession = SessionDep, settings: Settings = SettingsDep):
+async def list_projects(
+    session: AsyncSession = SessionDep,
+    settings: Settings = SettingsDep,
+    limit: int | None = Query(None, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     project_created_at_col = cast(InstrumentedAttribute[datetime], cast(object, Project.created_at))
-    res = await session.execute(select(Project).order_by(project_created_at_col.desc()))
-    items = res.scalars().all()
+    project_id_col = cast(InstrumentedAttribute[int], cast(object, Project.id))
+    stmt = select(Project).order_by(project_created_at_col.desc(), project_id_col.desc())
+    if limit is not None:
+        stmt = stmt.limit(limit).offset(offset)
+    elif offset:
+        stmt = stmt.offset(offset)
+    items = (await session.execute(stmt)).scalars().all()
+    project_status_col = cast(InstrumentedAttribute[str], cast(object, Project.status))
+    total, ready_total = (
+        await session.execute(
+            select(func.count(), func.count().filter(project_status_col == "ready")).select_from(Project)
+        )
+    ).one()
     return {
         "items": [await _project_read_model(p, settings) for p in items],
-        "total": len(items),
+        "total": int(total),
+        "ready_total": int(ready_total),
     }
 
 

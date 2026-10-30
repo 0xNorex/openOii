@@ -251,12 +251,26 @@ export const runsApi = {
 		),
 };
 
+/** 项目数组 + 全库计数（数组形态，便于与 list() 互换消费） */
+export type ProjectListPage = Project[] & { total?: number; readyTotal?: number };
+
 export const projectsApi = {
 	list: async () => {
 		const data = await fetchApi<{ items: Project[]; total: number }>(
 			"/api/v1/projects",
 		);
 		return data.items;
+	},
+
+	/** 分页：返回前 limit 个项目（按创建时间倒序），total/readyTotal 为全库计数 */
+	listPage: async (limit: number): Promise<ProjectListPage> => {
+		const data = await fetchApi<{ items: Project[]; total: number; ready_total?: number }>(
+			`/api/v1/projects?limit=${limit}`,
+		);
+		return Object.assign(data.items, {
+			total: data.total,
+			readyTotal: data.ready_total,
+		});
 	},
 
 	get: (id: number) => fetchApi<Project>(`/api/v1/projects/${id}`),
