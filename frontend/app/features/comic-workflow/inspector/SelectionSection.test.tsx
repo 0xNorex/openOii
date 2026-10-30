@@ -45,9 +45,23 @@ describe("SelectionSection", () => {
 		unmount();
 		render(
 			<SelectionSection
-				node={{ id: "shot:1", kind: "shot", title: "S01", subtitle: "灯室", status: "approved", characterNames: ["阿岚"], shot: { order: 1, scene: "灯室", camera: "中景", duration: 5 } } as unknown as ComicWorkflowNode}
+				node={{ id: "shot:1", kind: "shot", title: "S01", subtitle: "门外", status: "approved", characterNames: ["阿岚"], shot: { order: 1, scene: "灯室", camera: "中景", duration: 5 } } as unknown as ComicWorkflowNode}
 			/>,
 		);
 		expect(labels()).toEqual(["场景", "机位", "时长", "角色", "状态"]);
+	});
+});
+
+describe("SelectionSection header echo", () => {
+	it("drops the scene row when the header subtitle already is the scene, and the output status row", () => {
+		const { unmount } = render(
+			<SelectionSection
+				node={{ id: "shot:1", kind: "shot", title: "S01", subtitle: "灯室", status: "approved", characterNames: [], shot: { order: 1, scene: "灯室", camera: "中景", duration: 5 } } as unknown as ComicWorkflowNode}
+			/>,
+		);
+		expect(labels()).toEqual(["机位", "时长", "角色", "状态"]);
+		unmount();
+		render(<SelectionSection node={{ id: "output", kind: "output", title: "成片", subtitle: "可预览", status: "ready", videoUrl: "x", blockingClips: [] } as unknown as ComicWorkflowNode} />);
+		expect(labels()).toEqual(["视频", "阻塞镜头"]);
 	});
 });

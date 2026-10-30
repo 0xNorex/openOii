@@ -82,10 +82,11 @@ export function WorkflowInspector({
 		<div className="flex h-full min-h-0 flex-col bg-paper-100" data-shell="inspector">
 			<div className="border-b border-line px-2 py-1.5">
 				<p className="m-0 label text-ink-muted">{KIND_LABELS[selectedNode.kind]}</p>
-				<h2 className="m-0 truncate text-sm font-bold">
+				<h2 className="m-0 truncate text-sm font-bold" title={selectedNode.title}>
 					{selectedNode.title}
 				</h2>
-				<p className="m-0 truncate text-xs text-ink-muted">
+				{/* 概览不再重复副标题（如分镜场景），这里两行内说完，全文在 title 里 */}
+				<p className="m-0 line-clamp-2 text-xs text-ink-muted" title={selectedNode.subtitle}>
 					{selectedNode.subtitle}
 				</p>
 			</div>
