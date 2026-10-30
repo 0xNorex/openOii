@@ -82,8 +82,12 @@ export default defineConfig(({ command }) => ({
     cssCodeSplit: true,
     // Gzip budgets are enforced by scripts/check-bundle-budget.mjs.
     chunkSizeWarningLimit: 600,
-    // 启用压缩
-    minify: 'esbuild',
+    // terser 两遍压缩比 esbuild 小约 3%（gzip），只影响构建耗时
+    minify: 'terser',
+    terserOptions: {
+      compress: { passes: 2 },
+      format: { comments: false },
+    },
     // 启用源码映射（仅用于错误追踪）
     sourcemap: false,
   },

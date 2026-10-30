@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
+// 生产环境 devtools 本就是直通（enabled: DEV）；这里在构建期直接去掉它，让 tree-shaking 删掉整段中间件代码
+const withDevtools = (import.meta.env.DEV ? devtools : (fn: unknown) => fn) as typeof devtools;
+
 export type RunMode = "manual" | "yolo";
 
 /**
@@ -32,7 +35,7 @@ const initialState = {
 };
 
 export const useEditorStore = create<EditorState>()(
-	devtools(
+	withDevtools(
 		(set) => ({
 			...initialState,
 
