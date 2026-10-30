@@ -565,6 +565,35 @@ export class SharedDb {
     return info.changes === 1;
   }
 
+  /**
+   * Take the lease back after a renewal missed (box suspend, wall-clock jump) when
+   * nobody else holds it. A run the gateway already marked lease-expired returns
+   * to running; a cancel, a finished run, a new owner or another active run of
+   * the project wins.
+   */
+  reclaimRunLease(runId: number, owner: string, token: string, ttlSeconds: number): boolean {
+    const info = this.db
+      .prepare(
+        `UPDATE agentrun
+         SET lease_owner = ?, lease_token = ?, lease_expires_at = datetime('now', ?),
+             status = CASE WHEN status = 'failed' THEN 'running' ELSE status END,
+             error = CASE WHEN status = 'failed' THEN NULL ELSE error END,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+         WHERE id = ?
+           AND cancel_requested_at IS NULL
+           AND (status IN ('queued', 'running')
+                OR (status = 'failed' AND error LIKE '%Execution lease missing or expired%'))
+           AND (lease_token IS NULL OR lease_token = ? OR lease_expires_at IS NULL
+                OR lease_expires_at <= datetime('now'))
+           AND NOT EXISTS (
+             SELECT 1 FROM agentrun other
+             WHERE other.project_id = agentrun.project_id AND other.id != agentrun.id
+               AND other.status IN ('queued', 'running', 'waiting_for_approval', 'cancelling'))`,
+      )
+      .run(owner, token, `+${ttlSeconds} seconds`, runId, token);
+    return info.changes === 1;
+  }
+
   releaseRunLease(runId: number, owner: string, token: string): boolean {
     const info = this.db
       .prepare(

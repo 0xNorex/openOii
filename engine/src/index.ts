@@ -140,7 +140,9 @@ export function createEngineApp(dbPath: string) {
       pipelines.set(runId, runner);
 
       const heartbeat = setInterval(() => {
-        const renewed = shared.renewRunLease(runId, ownerId, leaseToken, LEASE_TTL_SECONDS);
+        const renewed =
+          shared.renewRunLease(runId, ownerId, leaseToken, LEASE_TTL_SECONDS) ||
+          reclaimLease(runId, request.projectId, leaseToken);
         if (!renewed) {
           clearInterval(heartbeat);
           runner.requestCancel();
@@ -158,6 +160,20 @@ export function createEngineApp(dbPath: string) {
       shared.releaseRunLease(runId, ownerId, leaseToken);
       throw error;
     }
+  }
+
+  /** A missed heartbeat (suspended box) is not a dead executor: take the lease back if it is free. */
+  function reclaimLease(runId: number, projectId: number, leaseToken: string): boolean {
+    if (!shared.reclaimRunLease(runId, ownerId, leaseToken, LEASE_TTL_SECONDS)) return false;
+    console.warn(`run ${runId}: lease renewal missed; reclaimed the free lease and kept running`);
+    const run = shared.getRun(runId);
+    db.appendEvent(runId, projectId, "run_progress", {
+      run_id: runId,
+      project_id: projectId,
+      current_agent: run?.current_agent ?? null,
+      progress: run?.progress ?? 0,
+    });
+    return true;
   }
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {

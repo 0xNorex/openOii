@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Any, Literal, cast
 from uuid import uuid4
@@ -80,7 +81,40 @@ _RECOVERABLE_RUN_STATUSES = ("failed",)
 _TERMINAL_RUN_STATUSES = {"cancelled", "succeeded", "failed"}
 _TERMINAL_RUN_STATUS_TUPLE = ("cancelled", "succeeded", "failed")
 EXECUTOR_GONE_ERROR = "Engine restarted; the executor that owned this run is gone; run is safe to resume"
-LEASE_EXPIRED_ERROR = "Execution lease missing or expired; run is safe to resume"
+LEASE_EXPIRED_ERROR = (
+    "执行中断（引擎租约过期），已完成的步骤都保留着，可以点继续"
+    "（Execution lease missing or expired; run is safe to resume）"
+)
+
+# A suspended box (or VM pause) freezes the engine's heartbeat while the wall clock
+# keeps going, so every lease looks expired on wake. Monotonic time does not count
+# the pause; when the two disagree, give the engine a few heartbeats to renew or
+# reclaim its lease before calling the run dead.
+CLOCK_JUMP_THRESHOLD_SECONDS = 30.0
+CLOCK_JUMP_GRACE_SECONDS = 120.0
+
+
+class _ClockJumpGuard:
+    def __init__(self) -> None:
+        self._wall = time.time()
+        self._mono = time.monotonic()
+        self._grace_until = 0.0
+
+    def in_grace(self) -> bool:
+        wall, mono = time.time(), time.monotonic()
+        jump = (wall - self._wall) - (mono - self._mono)
+        self._wall, self._mono = wall, mono
+        if jump > CLOCK_JUMP_THRESHOLD_SECONDS:
+            self._grace_until = mono + CLOCK_JUMP_GRACE_SECONDS
+            logger.warning(
+                "wall clock jumped %.0fs past monotonic time (suspend?); lease expiry waits %.0fs",
+                jump,
+                CLOCK_JUMP_GRACE_SECONDS,
+            )
+        return mono < self._grace_until
+
+
+_clock_jump = _ClockJumpGuard()
 
 def _has_live_lease(run: AgentRun) -> bool:
     return bool(
@@ -554,6 +588,8 @@ async def _reconcile_active_candidate(
 
     # A cancel requested before the executor died ends as cancelled, not failed.
     cancelled = run.cancel_requested_at is not None
+    if not cancelled and not executor_gone and run.lease_token and _clock_jump.in_grace():
+        return run, None
     run.status = "cancelled" if cancelled else "failed"
     run.error = None if cancelled else EXECUTOR_GONE_ERROR if executor_gone else LEASE_EXPIRED_ERROR
     run.lease_owner = None
