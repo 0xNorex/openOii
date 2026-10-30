@@ -57,8 +57,10 @@ const STAGE_ITEM_TIMEOUT_MS: Record<string, number> = {
   render_characters: 3 * 60 * 1000,
   render_shots: 3 * 60 * 1000,
   critique_character_images: 60 * 1000,
-  critique_shot_images: 60 * 1000,
-  compose_videos: 6 * 60 * 1000,
+  // A local vision model reads the keyframe plus the cast sheets (~40 s).
+  critique_shot_images: 3 * 60 * 1000,
+  // Each clip can be checked and redone up to twice (CRITIQUE_MAX_ROUNDS).
+  compose_videos: 12 * 60 * 1000,
   compose_merge: 2 * 60 * 1000,
 };
 

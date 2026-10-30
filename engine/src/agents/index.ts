@@ -83,6 +83,8 @@ export interface StageContext {
   completionInfo: CompletionInfo | null;
   /** Whether the previous critique decided to regenerate (route handling). */
   willRegenerate: boolean;
+  /** Why the critic rejected a shot's keyframe; folded into its next render. */
+  critiqueNotes?: Map<number, string>;
   /** Production stage being run; live LLM output advances its progress. */
   stage?: StageId;
 }
@@ -720,6 +722,11 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
         .map((id) => byId.get(id))
         .filter((character): character is CharacterRow => character !== undefined);
       const names = ids.map((id) => idToName.get(id) ?? `#${id}`);
+      const critiqueNote = ctx.critiqueNotes?.get(shot.id);
+      ctx.critiqueNotes?.delete(shot.id);
+      const feedback = [ctx.userFeedback, critiqueNote ? `上一版审查未通过，这次必须修正：${critiqueNote}` : ""]
+        .filter(Boolean)
+        .join("\n");
       // Character bible + continuity lock + style lock (Python render parity).
       const prompt = ctx.style
         ? buildShotPrompt({
@@ -727,14 +734,14 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             characters: boundCharacters,
             style: ctx.style,
             universeStyle: ctx.universeStyle,
-            userFeedback: ctx.userFeedback,
+            userFeedback: feedback || undefined,
           })
         : [
             `分镜首帧：${shot.description}`,
             shot.scene ? `场景：${shot.scene}` : "",
             shot.lighting ? `光线：${shot.lighting}` : "",
             names.length ? `角色：${names.join("、")}` : "",
-            ctx.userFeedback ? `修改要求：${ctx.userFeedback}` : "",
+            feedback ? `修改要求：${feedback}` : "",
           ]
             .filter(Boolean)
             .join("。");
@@ -822,6 +829,139 @@ async function critiqueImage(ctx: StageContext, url: string | null): Promise<Llm
   }
 }
 
+const SHOT_STATE_MARK = "\n画面状态：";
+
+/** A planned shot's description is "<action>\n画面状态：<end state>". */
+export function splitShotState(description: string | null): { action: string; end: string } {
+  const text = description ?? "";
+  const at = text.indexOf(SHOT_STATE_MARK);
+  return at < 0
+    ? { action: text.trim(), end: "" }
+    : { action: text.slice(0, at).trim(), end: text.slice(at + SHOT_STATE_MARK.length).trim() };
+}
+
+const CHECK_LABELS: Record<string, string> = {
+  characters: "画面内角色不对",
+  state: "画面状态不对",
+  props: "道具前后不一致",
+  look: "角色画风或外观和设定图不一致",
+  no_future_beat: "提前出现了后面镜头的情节",
+};
+
+const SHOT_CHECK_OUTPUT = `逐项检查后只输出一个 JSON 对象（不要 markdown）：
+{"score": 0-10, "checks": {"characters": true/false, "state": true/false, "props": true/false, "look": true/false, "no_future_beat": true/false}, "issues": ["简短中文问题"], "suggestions": ["简短中文修改建议"]}
+characters=画面里只有「画面内角色」；state=画面符合上面的状态要求；props=关键道具的材质、大小、透明度符合设定且前后一致；look=角色外观和画风与角色设定图一致；no_future_beat=没有出现「后续镜头情节」。
+看不到图片时不要猜，返回 "score": null。`;
+
+/** The story facts one shot has to show, for the critic to check pixels against. */
+export function shotChecklist(
+  ctx: StageContext,
+  shot: ShotRow,
+  allShots: ShotRow[],
+  kind: "keyframe" | "clip",
+): string {
+  const index = allShots.findIndex((item) => item.id === shot.id);
+  const { action, end } = splitShotState(shot.description);
+  const start = index > 0 ? splitShotState(allShots[index - 1]!.description).end : "";
+  const names = new Map(ctx.shared.charactersForProject(ctx.projectId).map((c) => [c.id, c.name]));
+  const cast = parseJsonColumn(shot.character_ids, [] as number[]).map((id) => names.get(id) ?? `#${id}`);
+  const later = allShots
+    .slice(index + 1)
+    .map((item, offset) => `${offset + 1}. ${splitShotState(item.description).action.slice(0, 80)}`);
+  const bible = (ctx.shared.getProject(ctx.projectId)?.visual_bible ?? "").trim().slice(0, 500);
+  return [
+    kind === "keyframe"
+      ? "附图第 1 张是这个镜头的首帧图，后面是角色设定图。首帧应表现开始状态或动作刚开始，不能超过结束状态。"
+      : "附图第 1 张是这个镜头视频的首帧、中间帧、末帧横向拼接，后面是角色设定图。末帧必须符合结束状态。",
+    `画面内角色：${cast.length ? cast.join("、") : "无角色"}`,
+    `本镜头动作：${action}`,
+    start ? `开始状态：${start}` : "",
+    end ? `结束状态：${end}` : "",
+    bible ? `全局视觉与道具设定：${bible}` : "",
+    later.length ? `后续镜头情节（本镜头绝不能出现）：\n${later.join("\n")}` : "",
+    SHOT_CHECK_OUTPUT,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+interface CriticVerdict {
+  score: number;
+  dimensions: Record<string, number>;
+  issues: string[];
+  suggestions: string[];
+  failedChecks: string[];
+  passed: boolean;
+}
+
+/** One critic call; null (with the reason) when it gave no usable verdict. */
+async function askCritic(
+  ctx: StageContext,
+  systemPrompt: string,
+  prompt: string,
+  images: LlmImageInput[],
+): Promise<{ verdict: CriticVerdict | null; failure: string }> {
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024, {
+      validate: OUTPUT_SHAPES.critique,
+      images,
+    });
+  } catch (error) {
+    if (ctx.signal.aborted) throw error;
+    return { verdict: null, failure: error instanceof Error ? error.message : String(error) };
+  }
+  const score = critiqueScore(data);
+  if (score === null) return { verdict: null, failure: "" };
+  const rawDimensions = isRecord(data.dimensions) ? data.dimensions : {};
+  const dimension = (key: string): number => {
+    const value = Number(rawDimensions[key] ?? data![key]);
+    return Number.isFinite(value) ? value : 0;
+  };
+  const checks = isRecord(data.checks) ? data.checks : {};
+  const failedChecks = Object.keys(CHECK_LABELS).filter(
+    (key) => checks[key] === false || checks[key] === "false",
+  );
+  return {
+    verdict: {
+      score,
+      dimensions: {
+        consistency: dimension("consistency"),
+        quality: dimension("quality"),
+        composition: dimension("composition"),
+      },
+      issues: Array.isArray(data.issues) ? data.issues.map(String) : [],
+      suggestions: Array.isArray(data.suggestions) ? data.suggestions.map(String) : [],
+      failedChecks,
+      passed: score >= ctx.critiqueScoreThreshold && failedChecks.length === 0,
+    },
+    failure: "",
+  };
+}
+
+/** The reason a shot failed, short enough to fold into the next prompt. */
+function critiqueNote(verdict: CriticVerdict): string {
+  return [...verdict.failedChecks.map((key) => CHECK_LABELS[key]), ...verdict.issues, ...verdict.suggestions]
+    .filter(Boolean)
+    .join("；")
+    .slice(0, 300);
+}
+
+/** Up to two sheets of the characters in frame, so the critic can compare looks. */
+async function castSheets(ctx: StageContext, shot: ShotRow): Promise<LlmImageInput[]> {
+  const byId = new Map(ctx.shared.charactersForProject(ctx.projectId).map((c) => [c.id, c]));
+  const sheets: LlmImageInput[] = [];
+  for (const id of parseJsonColumn(shot.character_ids, [] as number[]).slice(0, 2)) {
+    const sheet = await critiqueImage(ctx, byId.get(id)?.image_url ?? null);
+    if (sheet) sheets.push(sheet);
+  }
+  return sheets;
+}
+
+function shotLabel(shot: ShotRow): string {
+  return `S${String(shot.order).padStart(2, "0")}`;
+}
+
 export async function runCritique(
   ctx: StageContext,
   entityType: "character" | "shot",
@@ -830,6 +970,7 @@ export async function runCritique(
     entityType === "character"
       ? ctx.shared.charactersForProject(ctx.projectId)
       : ctx.shared.shotsForProject(ctx.projectId);
+  const allShots = entityType === "shot" ? (entities as ShotRow[]) : [];
   const rounds = entityType === "character" ? ctx.critiqueRounds.characters : ctx.critiqueRounds.shots;
   await ctx.emitter.sendMessage("critic", `开始审查 ${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}…`);
 
@@ -845,27 +986,22 @@ export async function runCritique(
       : PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"];
   for (const entity of entities) {
     const label =
-      entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : `S${String((entity as ShotRow).order).padStart(2, "0")}`;
+      entityType === "character" ? ((entity as CharacterRow).name ?? "角色") : shotLabel(entity as ShotRow);
     // The model has to see the pixels: the render goes in as image content,
     // never as a URL in the prompt text (a text model cannot open it).
     const image = await critiqueImage(ctx, entity.image_url);
-    const description = entity.description ?? "";
-    const prompt = image
-      ? `Review the attached ${entityType === "character" ? "character image" : "shot image"} for ${label}.\nDescription: ${description}\nReturn JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.\nIf you cannot actually see an attached image, do not guess: return "score": null with one issue saying the image was not visible.`
-      : `No image is available to review for ${label}. Do not guess a score: return JSON with "score": null and one issue explaining that the image could not be reviewed.`;
-    let data: Record<string, unknown> | null = null;
-    let failure = "";
-    try {
-      data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024, {
-        validate: OUTPUT_SHAPES.critique,
-        images: image ? [image] : undefined,
-      });
-    } catch (error) {
-      if (ctx.signal.aborted) throw error;
-      failure = error instanceof Error ? error.message : String(error);
-    }
-    const score = data && image ? critiqueScore(data) : null;
-    if (score === null) {
+    const prompt = !image
+      ? `No image is available to review for ${label}. Do not guess a score: return JSON with "score": null and one issue explaining that the image could not be reviewed.`
+      : entityType === "shot"
+        ? `审查分镜 ${label} 的首帧图。\n${shotChecklist(ctx, entity as ShotRow, allShots, "keyframe")}`
+        : `Review the attached character image for ${label}.\nDescription: ${entity.description ?? ""}\nReturn JSON with score, dimensions (consistency, quality, composition), issues, and suggestions.\nIf you cannot actually see an attached image, do not guess: return "score": null with one issue saying the image was not visible.`;
+    const images = image
+      ? [image, ...(entityType === "shot" ? await castSheets(ctx, entity as ShotRow) : [])]
+      : [];
+    const { verdict, failure } = image
+      ? await askCritic(ctx, systemPrompt, prompt, images)
+      : { verdict: null, failure: "" };
+    if (!verdict) {
       // No verdict is not a failing grade: regenerating on a missing score
       // only burns provider time (the old `?? 0` redrew every image twice).
       const reason = !image
@@ -883,37 +1019,31 @@ export async function runCritique(
       continue;
     }
     judged += 1;
-    const rawDimensions = isRecord(data!.dimensions) ? data!.dimensions : {};
-    const dimension = (key: string): number => {
-      const value = Number(rawDimensions[key] ?? data![key]);
-      return Number.isFinite(value) ? value : 0;
-    };
-    const dimensions: Record<string, number> = {
-      consistency: dimension("consistency"),
-      quality: dimension("quality"),
-      composition: dimension("composition"),
-    };
-    const issues = Array.isArray(data!.issues) ? data!.issues.map(String) : [];
-    const suggestions = Array.isArray(data!.suggestions) ? data!.suggestions.map(String) : [];
-    const belowThreshold = score < ctx.critiqueScoreThreshold;
+    const { score } = verdict;
     if (score < minScore) minScore = score;
-    const willRegen = belowThreshold && rounds < ctx.critiqueMaxRounds;
+    const willRegen = !verdict.passed && rounds < ctx.critiqueMaxRounds;
+    const note = critiqueNote(verdict);
     if (willRegen) {
       willRegenerate = true;
       regenerateEntityIds.push(entity.id);
+      if (entityType === "shot") (ctx.critiqueNotes ??= new Map()).set(entity.id, note);
     }
     ctx.emitter.critiqueResult({
       score,
-      dimensions,
-      issues,
-      suggestions,
+      dimensions: verdict.dimensions,
+      issues: [...verdict.failedChecks.map((key) => CHECK_LABELS[key]!), ...verdict.issues],
+      suggestions: verdict.suggestions,
       entity_type: entityType,
       entity_id: entity.id,
       will_regenerate: willRegen,
     });
     await ctx.emitter.sendMessage(
       "critic",
-      `${label} 审查结果：总分 ${score.toFixed(1)}/10${willRegen ? "，将重新生成" : "，质量达标"}`,
+      verdict.passed
+        ? `${label} 审查结果：总分 ${score.toFixed(1)}/10，质量达标`
+        : willRegen
+          ? `${label} 审查结果：总分 ${score.toFixed(1)}/10，未通过（${note || "低于分数线"}），将重新生成`
+          : `⚠️ ${label} 已自动重新生成 ${rounds} 次仍未通过检查（${note || "低于分数线"}）。请修改这个${entityType === "shot" ? "分镜" : "角色"}的描述后手动重新生成。`,
     );
   }
   if (entityType === "character" && !willRegenerate && judged > 0) {
@@ -922,6 +1052,48 @@ export async function runCritique(
     ctx.emitter.consistencyEvalCompleted(overall, judged);
   }
   return { willRegenerate, minScore, regenerateEntityIds };
+}
+
+/**
+ * Checks a fresh clip's first, middle and last frames against the shot's story
+ * state. Null means pass or "could not check" (never block on a missing verdict).
+ */
+async function reviewClip(
+  ctx: StageContext,
+  shot: ShotRow,
+  allShots: ShotRow[],
+  videoUrl: string,
+): Promise<CriticVerdict | null> {
+  if (!ctx.critiqueEnabled || !ctx.llm.resolveVisionProvider?.()) return null;
+  let strip: Buffer | null = null;
+  try {
+    strip = await ctx.media.videoFrameStrip(videoUrl);
+  } catch (error) {
+    if (ctx.signal.aborted) throw error;
+    console.warn(`clip check: frames unavailable (shot ${shot.id})`);
+  }
+  if (!strip) return null;
+  const prompt = `审查分镜 ${shotLabel(shot)} 的视频片段。\n${shotChecklist(ctx, shot, allShots, "clip")}`;
+  const { verdict, failure } = await askCritic(
+    ctx,
+    PROMPTS["critic.SHOT_REVIEW_SYSTEM_PROMPT"],
+    prompt,
+    [{ data: strip.toString("base64"), mimeType: "image/png" }, ...(await castSheets(ctx, shot))],
+  );
+  if (!verdict) {
+    console.warn(`clip check: no verdict for shot ${shot.id}: ${failure || "no score"}`);
+    return null;
+  }
+  ctx.emitter.critiqueResult({
+    score: verdict.score,
+    dimensions: verdict.dimensions,
+    issues: [...verdict.failedChecks.map((key) => CHECK_LABELS[key]!), ...verdict.issues],
+    suggestions: verdict.suggestions,
+    entity_type: "shot",
+    entity_id: shot.id,
+    will_regenerate: false,
+  });
+  return verdict;
 }
 
 // ---------------------------------------------------------------------------
@@ -959,14 +1131,19 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       const boundCharacters = parseJsonColumn(shot.character_ids, [] as number[])
         .map((id) => byId.get(id))
         .filter((character): character is CharacterRow => character !== undefined);
-      const prompt = ctx.style
-        ? buildVideoPrompt({
-            shot,
-            characters: boundCharacters,
-            style: ctx.style,
-            userFeedback: ctx.userFeedback,
-          })
-        : shot.prompt || shot.description;
+      const basePrompt = (note: string): string => {
+        const feedback = [ctx.userFeedback, note ? `上一版检查未通过，这次必须修正：${note}` : ""]
+          .filter(Boolean)
+          .join("\n");
+        return ctx.style
+          ? buildVideoPrompt({
+              shot,
+              characters: boundCharacters,
+              style: ctx.style,
+              userFeedback: feedback || undefined,
+            })
+          : [shot.prompt || shot.description, feedback].filter(Boolean).join("\n");
+      };
       let imageUrl = useI2V ? shot.image_url : null;
       const referenceMode = ctx.mediaSettings.videoImageMode === "reference";
       let useReferenceBoard = false;
@@ -986,11 +1163,12 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
           console.warn(`Nine-grid reference skipped (shot ${shot.id})`);
         }
       }
-      const videoPrompt = imageUrl
-        ? useReferenceBoard
-          ? `The input is a 3x3 reference board. Use the top-center panel as the first frame and the other panels only for character identity and continuity. Generate one full-frame video; do not reproduce the grid. Preserve the comic/anime style and do not redesign characters. ${prompt}`
-          : `Use the provided image as the first-frame visual anchor. Preserve visible characters, outfits, hair colors, scene layout, framing, camera distance, and the 2D comic/anime style. Do not convert it to live-action, photorealistic, hyperrealistic, or realistic 3D footage; do not redesign characters. ${prompt}`
-        : prompt;
+      const videoPrompt = (prompt: string): string =>
+        imageUrl
+          ? useReferenceBoard
+            ? `The input is a 3x3 reference board. Use the top-center panel as the first frame and the other panels only for character identity and continuity. Generate one full-frame video; do not reproduce the grid. Preserve the comic/anime style and do not redesign characters. ${prompt}`
+            : `Use the provided image as the first-frame visual anchor. Preserve visible characters, outfits, hair colors, scene layout, framing, camera distance, and the 2D comic/anime style. Do not convert it to live-action, photorealistic, hyperrealistic, or realistic 3D footage; do not redesign characters. ${prompt}`
+          : prompt;
       // Providers take whole seconds (doubao only 5 or 10); the stored shot
       // duration is the length of the clip that was actually requested.
       const duration = normalizeVideoDuration(
@@ -998,11 +1176,32 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
         shot.duration && shot.duration > 0 ? shot.duration : defaultDuration,
         ctx.mediaSettings.videoModel,
       );
-      const videoUrl = await ctx.media.generateVideoUrl({
-        prompt: videoPrompt,
-        imageUrl,
-        duration,
-      });
+      // Each clip is checked against the shot's story state; a failed check
+      // redoes only this clip with the reason in the prompt, up to the
+      // critique round limit, then the user is told what is still wrong.
+      let note = "";
+      let videoUrl = "";
+      for (let attempt = 0; ; attempt += 1) {
+        videoUrl = await ctx.media.generateVideoUrl({
+          prompt: videoPrompt(basePrompt(note)),
+          imageUrl,
+          duration,
+        });
+        const verdict = await reviewClip(ctx, shot, allShots, videoUrl);
+        if (!verdict || verdict.passed) break;
+        note = critiqueNote(verdict) || "低于分数线";
+        if (attempt >= ctx.critiqueMaxRounds) {
+          await ctx.emitter.sendMessage(
+            "critic",
+            `⚠️ ${shotLabel(shot)} 视频已自动重新生成 ${attempt} 次仍未通过检查（${note}）。请修改这个分镜的描述后手动重新生成视频。`,
+          );
+          break;
+        }
+        await ctx.emitter.sendMessage(
+          "critic",
+          `${shotLabel(shot)} 视频检查未通过（${note}），正在重新生成（第 ${attempt + 1} 次）…`,
+        );
+      }
       const before = ctx.shared.getLiveShot(shot.id);
       if (!before) continue;
       ctx.emitter.commit("shot_updated", () => {

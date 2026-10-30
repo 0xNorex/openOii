@@ -1226,6 +1226,43 @@ export class MediaService {
     }
   }
 
+  /**
+   * First, middle and last frame of a local clip side by side in one PNG, so
+   * the clip check costs one image instead of three.
+   */
+  async videoFrameStrip(url: string): Promise<Buffer | null> {
+    const path = this.localPathFor(url);
+    if (!path) return null;
+    const signal = this.abortSignal ?? undefined;
+    const probe = await execFileAsync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+      { signal },
+    );
+    const duration = Number(String(probe.stdout).trim());
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    const times = [Math.min(0.1, duration / 2), duration / 2, Math.max(0, duration - 0.15)];
+    const dir = mkdtempSync(join(this.settings.staticDir, ".frames-"));
+    try {
+      const out = join(dir, "strip.png");
+      await execFileAsync(
+        "ffmpeg",
+        [
+          "-v", "error", "-y",
+          ...times.flatMap((t) => ["-ss", t.toFixed(2), "-i", path]),
+          "-filter_complex",
+          "[0:v]scale=512:-2[a];[1:v]scale=512:-2[b];[2:v]scale=512:-2[c];[a][b][c]hstack=inputs=3",
+          "-frames:v", "1",
+          out,
+        ],
+        { signal },
+      );
+      return readFileSync(out);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
   localPathFor(url: string): string | null {
     if (!url.startsWith("/static/")) return null;
     const root = realpathSync(this.settings.staticDir);

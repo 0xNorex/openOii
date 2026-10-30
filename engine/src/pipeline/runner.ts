@@ -597,6 +597,10 @@ export class PipelineRunner {
             stage = rerenderStage;
             continue;
           }
+          // A critique redo narrows the targets to the redone entities; once
+          // it passes, later stages work on the run's own scope again.
+          if (entityType === "character") ctx.targetCharacterIds = request.targetCharacterIds;
+          else ctx.targetShotIds = request.targetShotIds;
           this.db.saveCheckpoint(request.runId, stage, {
             completed_at: new Date().toISOString(),
             will_regenerate: false,
