@@ -300,7 +300,7 @@ class AudioService:
         """整部片用的一条背景音乐。
 
         BGM_PROVIDER=library 用本地曲库（缺的情绪用 numpy 现场合成）；云端服务商
-        生成失败时退回本地曲库，并把原因放进 error。返回 track_url / source / error。
+        生成失败时退回本地曲库，并把原因放进 fallback_reason（不能叫 error：引擎会把带 error 键的结果当成失败）。返回 track_url / source / mood / fallback_reason。
         """
         from app.services import bgm_library
         from app.services.bgm_providers import BGMConfig, BGMProviderError, generate, music_prompt
@@ -320,7 +320,7 @@ class AudioService:
                 _ensure_output_dir()
                 filename = f"bgm_{uuid.uuid4().hex[:8]}.mp3"
                 (AUDIO_OUTPUT_DIR / filename).write_bytes(data)
-                return {"track_url": f"/static/audio/{filename}", "source": config.provider, "mood": mood, "error": None}
+                return {"track_url": f"/static/audio/{filename}", "source": config.provider, "mood": mood, "fallback_reason": None}
             except BGMProviderError as exc:
                 error = str(exc)
             except Exception as exc:  # noqa: BLE001
@@ -329,9 +329,9 @@ class AudioService:
         bgm_dir = BGM_BASE_DIR / self.settings.bgm_directory
         track = await asyncio.to_thread(bgm_library.ensure_track, bgm_dir, mood)
         if track is None:
-            return {"track_url": None, "source": None, "mood": mood, "error": error or "本地曲库合成失败"}
+            return {"track_url": None, "source": None, "mood": mood, "fallback_reason": error or "本地曲库合成失败"}
         relative = track.resolve().relative_to((BGM_BASE_DIR / "static").resolve())
-        return {"track_url": f"/static/{relative.as_posix()}", "source": "library", "mood": mood, "error": error}
+        return {"track_url": f"/static/{relative.as_posix()}", "source": "library", "mood": mood, "fallback_reason": error}
 
     def _resolve_bgm_path(self, bgm_type: str) -> str | None:
         """解析 BGM 文件路径

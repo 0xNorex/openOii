@@ -1546,26 +1546,25 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
           bgm_directory: ctx.mediaSettings.bgmDirectory,
         },
       });
-      if (track.error) {
+      if (!track.track_url) throw new Error(track.fallback_reason ?? "没有可用的曲子");
+      if (track.fallback_reason) {
         await ctx.emitter.sendMessage(
           "compose",
-          `⚠️ 背景音乐服务没生成出来（${track.error.slice(0, 120)}），先用本地曲库。`,
+          `⚠️ 背景音乐服务没生成出来（${track.fallback_reason.slice(0, 120)}），先用本地曲库。`,
         );
       }
-      if (track.track_url) {
-        mergedUrl = await ctx.media.addBackgroundMusic(
-          mergedUrl,
-          track.track_url,
-          voices,
-          ctx.mediaSettings.bgmVolume,
-          ctx.mediaSettings.bgmDucking ?? true,
-        );
-        const where = track.source === "library" ? "本地曲库" : track.source;
-        await ctx.emitter.sendMessage(
-          "compose",
-          `已铺上背景音乐（${where}，${track.mood ?? "ambient"}）${ctx.mediaSettings.bgmDucking === false ? "" : "，台词处自动压低"}。`,
-        );
-      }
+      mergedUrl = await ctx.media.addBackgroundMusic(
+        mergedUrl,
+        track.track_url,
+        voices,
+        ctx.mediaSettings.bgmVolume,
+        ctx.mediaSettings.bgmDucking ?? true,
+      );
+      const where = track.source === "library" ? "本地曲库" : track.source;
+      await ctx.emitter.sendMessage(
+        "compose",
+        `已铺上背景音乐（${where}，${track.mood ?? "ambient"}）${ctx.mediaSettings.bgmDucking === false ? "" : "，台词处自动压低"}。`,
+      );
     } catch (error) {
       if (ctx.signal.aborted) throw error;
       const reason = error instanceof Error ? error.message : String(error);

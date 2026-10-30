@@ -21,7 +21,7 @@ export interface BgmTrackResult {
   source: string | null;
   mood: string | null;
   /** 云端服务商失败的原因（已退回本地曲库）；不含密钥 */
-  error: string | null;
+  fallback_reason: string | null;
 }
 
 /** Reuse the backend's existing image, face, and audio helpers from Engine. */
@@ -119,7 +119,7 @@ export class BackendWorker {
       track_url: typeof result.track_url === "string" ? result.track_url : null,
       source: typeof result.source === "string" ? result.source : null,
       mood: typeof result.mood === "string" ? result.mood : null,
-      error: typeof result.error === "string" ? result.error : null,
+      fallback_reason: typeof result.fallback_reason === "string" ? result.fallback_reason : null,
     };
   }
 
