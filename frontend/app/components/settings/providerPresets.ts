@@ -45,7 +45,7 @@ export interface ProviderPreset {
 	name: string;
 	/** 文字标记，1–3 个字符：没有 logo 或 logo 加载失败时显示 */
 	mark: string;
-	/** public/provider-logos/{logo}.svg（Lobe Icons，MIT），单色，按 currentColor 着色 */
+	/** public/provider-logos/{logo}.svg（Lobe Icons，MIT）：品牌彩色标，放在浅色方块上显示 */
 	logo?: string;
 	tagline: string;
 	regions: PresetRegion[];
@@ -63,7 +63,7 @@ export interface ProviderPreset {
 	fields?: PresetField[];
 	notes?: string[];
 	experimental?: boolean;
-	/** 自定义：不改地址和模型，展开高级设置 */
+	/** 通用自定义（每个服务一个）：只切接口协议，地址、密钥和模型就地填写 */
 	custom?: boolean;
 }
 
@@ -326,7 +326,7 @@ const TEXT_PRESETS: ProviderPreset[] = [
 		],
 		notes: [
 			"走 Anthropic 官方的 OpenAI 兼容层，Claude 5.5 系列可直接用；提示缓存、引用等原生特性不可用。",
-			"需要原生 Messages 接口或中转站时选「Anthropic 原生 / 中转」。",
+			"需要原生 Messages 接口或中转站时，选「自定义」后在「高级设置」里把接口协议切到 Anthropic。",
 		],
 	},
 	{
@@ -535,9 +535,9 @@ const TEXT_PRESETS: ProviderPreset[] = [
 		service: "text",
 		provider: "openai",
 		group: "local",
-		name: "自定义 OpenAI 兼容",
+		name: "自定义 · OpenAI 兼容",
 		mark: "…",
-		tagline: "网关、中转或自建服务",
+		tagline: "填地址、密钥和模型",
 		regions: [],
 		endpoint: CHAT,
 		defaultModel: "",
@@ -547,28 +547,11 @@ const TEXT_PRESETS: ProviderPreset[] = [
 		custom: true,
 	},
 	{
-		id: "anthropic-native",
-		service: "text",
-		provider: "anthropic",
-		group: "local",
-		name: "Anthropic 原生 / 中转",
-		mark: "A·",
-		logo: "anthropic",
-		tagline: "Messages 接口",
-		regions: [],
-		defaultModel: "",
-		models: ["claude-sonnet-4-5-20250929"],
-		keyHint: "官方用 API 密钥，中转站用 Token",
-		sources: [],
-		custom: true,
-		notes: ["引擎的原生 Claude 适配只认 4.x 型号；Claude 5.5 请用上面的「Anthropic Claude」。"],
-	},
-	{
 		id: "fake-text",
 		service: "text",
 		provider: "fake",
 		group: "local",
-		name: "Fake 本地测试",
+		name: "测试模式（Fake）",
 		mark: "F",
 		tagline: "不调用外部 API",
 		regions: [],
@@ -663,9 +646,9 @@ const IMAGE_PRESETS: ProviderPreset[] = [
 		service: "image",
 		provider: "openai",
 		group: "local",
-		name: "自定义 OpenAI 兼容",
+		name: "自定义 · OpenAI 兼容",
 		mark: "…",
-		tagline: "/images/generations 接口",
+		tagline: "填地址、密钥和模型",
 		regions: [],
 		endpoint: "/images/generations",
 		defaultModel: "",
@@ -679,7 +662,7 @@ const IMAGE_PRESETS: ProviderPreset[] = [
 		service: "image",
 		provider: "fake",
 		group: "local",
-		name: "Fake 本地测试",
+		name: "测试模式（Fake）",
 		mark: "F",
 		tagline: "返回占位图",
 		regions: [],
@@ -899,9 +882,9 @@ const VIDEO_PRESETS: ProviderPreset[] = [
 		service: "video",
 		provider: "openai",
 		group: "local",
-		name: "自定义 OpenAI 兼容",
+		name: "自定义 · OpenAI 兼容",
 		mark: "…",
-		tagline: "/videos/generations 接口",
+		tagline: "填地址、密钥和模型",
 		regions: [],
 		endpoint: "/videos/generations",
 		defaultModel: "",
@@ -915,7 +898,7 @@ const VIDEO_PRESETS: ProviderPreset[] = [
 		service: "video",
 		provider: "fake",
 		group: "local",
-		name: "Fake 本地测试",
+		name: "测试模式（Fake）",
 		mark: "F",
 		tagline: "使用本地视频素材",
 		regions: [],
@@ -935,6 +918,34 @@ export const PROVIDER_PRESETS: Record<PresetService, ProviderPreset[]> = {
 
 export function isPresetService(tab: string): tab is PresetService {
 	return tab === "text" || tab === "image" || tab === "video";
+}
+
+/** 配置里的 provider；没填时按后端默认值（文本 anthropic、图像 modelscope、视频 openai） */
+export function formProvider(service: PresetService, form: Record<string, unknown>): string {
+	const key = `${service.toUpperCase()}_PROVIDER`;
+	const fallback = service === "text" ? "anthropic" : service === "image" ? "modelscope" : "openai";
+	return (String(form[key] ?? form[key.toLowerCase()] ?? "") || fallback).toLowerCase();
+}
+
+/** 每个服务只有一个通用自定义入口 */
+export function customPreset(service: PresetService): ProviderPreset {
+	return PROVIDER_PRESETS[service].find((p) => p.custom)!;
+}
+
+/** 测试模式（Fake）：不作为服务商卡片，单独一个小选项 */
+export function isTestMode(preset: ProviderPreset) {
+	return preset.provider === "fake";
+}
+
+/**
+ * 自定义预设沿用当前的接口协议：例如老配置 TEXT_PROVIDER=anthropic + 中转地址，
+ * 自定义入口显示和编辑的是 ANTHROPIC_* 键。
+ */
+export function effectiveKeys(preset: ProviderPreset, form: Record<string, unknown>): PresetKeys {
+	if (!preset.custom) return presetKeys(preset);
+	const current = formProvider(preset.service, form);
+	if (current === "fake") return presetKeys(preset);
+	return presetKeys({ ...preset, provider: current as PresetProvider });
 }
 
 export function presetById(service: PresetService, id: string) {
@@ -1027,9 +1038,7 @@ export interface DetectedPreset {
 /** 根据现有配置反推正在用哪个预设；认不出的落到对应的自定义 / Fake 预设。 */
 export function detectPreset(service: PresetService, form: Record<string, unknown>): DetectedPreset {
 	const read = (key: string) => String(form[key] ?? form[key.toLowerCase()] ?? "");
-	const providerKey = `${service.toUpperCase()}_PROVIDER`;
-	const fallbackProvider = service === "text" ? "anthropic" : service === "image" ? "modelscope" : "openai";
-	const provider = (read(providerKey) || fallbackProvider).toLowerCase();
+	const provider = formProvider(service, form);
 	const presets = PROVIDER_PRESETS[service].filter((p) => p.provider === provider);
 	for (const preset of presets) {
 		if (preset.custom) continue;
@@ -1050,7 +1059,7 @@ export function detectPreset(service: PresetService, form: Record<string, unknow
 			}
 		}
 	}
-	const custom = PROVIDER_PRESETS[service].find((p) => p.custom && p.provider === provider);
-	const fake = PROVIDER_PRESETS[service].find((p) => p.provider === provider);
-	return { preset: custom ?? fake ?? PROVIDER_PRESETS[service].find((p) => p.custom)!, fields: {} };
+	// 认不出的一律落到唯一的通用自定义；接口协议（如 Anthropic 原生、中转）原样保留，只在高级设置里改
+	if (provider === "fake") return { preset: PROVIDER_PRESETS[service].find((p) => p.provider === "fake")!, fields: {} };
+	return { preset: customPreset(service), fields: {} };
 }

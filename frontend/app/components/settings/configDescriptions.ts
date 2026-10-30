@@ -55,7 +55,7 @@ export function getConfigDescription(key: string): string {
 		// 视频服务
 		VIDEO_PROVIDER:
 			"视频服务提供商：openai（OpenAI 兼容）/ doubao（豆包）/ kling / vidu / zhipu / minimax / dashscope / veo（服务商原生接口）/ fake（本地测试）",
-		VIDEO_BASE_URL: "视频生成服务地址（OpenAI 兼容接口）",
+		VIDEO_BASE_URL: "视频生成服务的基础地址；选上面的服务商会自动填好",
 		VIDEO_API_KEY: "视频生成 API 密钥",
 		VIDEO_MODEL: "视频生成模型名称",
 		VIDEO_ENDPOINT: "视频生成 API 端点路径",

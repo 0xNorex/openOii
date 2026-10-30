@@ -47,7 +47,12 @@ export const LOCAL_GATEWAY_CONFIG: Item[] = [
 
 export async function mockConfig(
 	page: Page,
-	opts: { testResponse?: Record<string, unknown>; onTest?: (req: Request) => void; onSave?: (req: Request) => void } = {},
+	opts: {
+		testResponse?: Record<string, unknown>;
+		onTest?: (req: Request) => void;
+		onSave?: (req: Request) => void;
+		config?: Item[];
+	} = {},
 ) {
 	await page.route("**/api/v1/config**", (route) => {
 		const req = route.request();
@@ -61,7 +66,7 @@ export async function mockConfig(
 			});
 		}
 		if (path === "/api/v1/config" && req.method() === "GET") {
-			return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(LOCAL_GATEWAY_CONFIG) });
+			return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(opts.config ?? LOCAL_GATEWAY_CONFIG) });
 		}
 		if (path === "/api/v1/config") {
 			opts.onSave?.(req);
@@ -111,37 +116,114 @@ const savedValues = (req: Request) => {
 	return (body.configs ?? body) as Record<string, string>;
 };
 
-test("当前本机网关配置识别为「自定义」，高级设置默认展开并保留原值", async ({ page }) => {
-	await mockConfig(page);
+test("当前本机网关配置在文本 / 图像 / 视频里都识别为唯一的「自定义」，原值不变", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });
 	await openSettings(page);
 	const dialog = page.getByRole("dialog", { name: /系统设置/ });
-	await expect(dialog.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+	const detail = dialog.getByTestId("preset-detail");
+	await expect(dialog.getByRole("radio", { name: /自定义 · OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
 	await expect(dialog.getByRole("button", { name: /高级设置/ })).toHaveAttribute("aria-expanded", "true");
-	await expect(dialog.locator("#TEXT_BASE_URL")).toHaveValue("http://127.0.0.1:18790/v1");
+	// 通用自定义：地址、模型、密钥就地填写
+	await expect(detail.locator("#TEXT_BASE_URL")).toHaveValue("http://127.0.0.1:18790/v1");
+	await expect(detail.getByLabel("模型", { exact: true })).toHaveValue("muse-spark");
+	await expect(dialog.locator("#TEXT_ENDPOINT")).toHaveValue("/chat/completions");
 	// 中文标签为主，环境变量名作次要信息
 	const baseField = dialog.locator('[data-config-key="TEXT_BASE_URL"]');
 	await expect(baseField.getByText("接口地址（Base URL）")).toBeVisible();
 	await expect(baseField.getByText("TEXT_BASE_URL", { exact: true })).toBeVisible();
+
+	for (const [tab, prefix, base, endpoint, model] of [
+		["图像服务", "IMAGE", "http://127.0.0.1:18790", "/v1/images/generations", "muse-image"],
+		["视频服务", "VIDEO", "http://127.0.0.1:18790", "/v1/videos/generations", "muse-video"],
+	] as const) {
+		await dialog.getByRole("tab", { name: new RegExp(tab) }).click();
+		await expect(dialog.getByRole("radio", { name: /自定义 · OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+		await expect(detail.locator(`#${prefix}_BASE_URL`)).toHaveValue(base);
+		await expect(detail.getByLabel("模型", { exact: true })).toHaveValue(model);
+		await expect(dialog.locator(`#${prefix}_ENDPOINT`)).toHaveValue(endpoint);
+	}
+	// 只是打开看，不改任何值：保存按钮无事可做
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await page.waitForTimeout(300);
+	expect(saves).toEqual([]);
 });
 
-test("服务商卡片显示单色 logo，logo 文件能加载；高级设置的单选卡用主色", async ({ page }) => {
-	const logoResponses: number[] = [];
-	page.on("response", (res) => {
-		if (res.url().includes("/provider-logos/")) logoResponses.push(res.status());
-	});
+test("「本地与自定义」只剩本地服务和一个通用自定义；测试模式是小选项", async ({ page }) => {
 	await mockConfig(page);
 	await openSettings(page);
 	const dialog = page.getByRole("dialog", { name: /系统设置/ });
 	const presets = dialog.getByTestId("provider-presets");
-	const deepseekMark = presets.locator('[data-preset="deepseek"] [data-logo="deepseek"] .provider-logo');
-	await expect(deepseekMark).toBeVisible();
-	// 遮罩拿到 logo，颜色跟随文字色
-	const mask = await deepseekMark.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
-	expect(mask).toContain("/provider-logos/deepseek.svg");
+	const localCards = presets.locator("div:has(> p:text-is('本地与自定义')) [data-preset]");
+	for (const [tab, ids] of [
+		["文本生成", ["ollama", "lmstudio", "custom-openai"]],
+		["图像服务", ["custom-image"]],
+		["视频服务", ["custom-video"]],
+	] as const) {
+		await dialog.getByRole("tab", { name: new RegExp(tab) }).click();
+		await expect(localCards).toHaveCount(ids.length);
+		expect(await localCards.evaluateAll((els) => els.map((el) => el.getAttribute("data-preset")))).toEqual(ids);
+		await expect(presets.getByRole("radio", { name: /自定义/ })).toHaveCount(1);
+		await expect(presets.locator('[data-preset^="anthropic-native"]')).toHaveCount(0);
+		// Fake 不再是卡片：一个小的「测试模式」选项
+		const testMode = presets.getByRole("radio", { name: /测试模式/ });
+		await expect(testMode).toHaveCount(1);
+		const box = await testMode.boundingBox();
+		expect(box!.height).toBeLessThan(40);
+	}
+	await presets.getByRole("radio", { name: /测试模式/ }).click();
+	await expect(dialog.getByTestId("preset-detail")).toContainText("不调用任何外部服务");
+});
+
+test("老的 Anthropic 原生 / 中转配置也落到通用自定义，协议和地址保持不变", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	const config = LOCAL_GATEWAY_CONFIG.map((i) =>
+		i.key === "TEXT_PROVIDER" ? item("TEXT_PROVIDER", "anthropic") : i.key === "ANTHROPIC_BASE_URL" ? item("ANTHROPIC_BASE_URL", "https://relay.example.com") : i,
+	);
+	await mockConfig(page, { config, onSave: (req) => saves.push(savedValues(req)) });
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	const detail = dialog.getByTestId("preset-detail");
+	const custom = dialog.getByRole("radio", { name: /自定义 · OpenAI 兼容/ });
+	await expect(custom).toHaveAttribute("aria-checked", "true");
+	await expect(detail.getByTestId("custom-protocol")).toContainText("Anthropic 原生");
+	await expect(detail.locator("#ANTHROPIC_BASE_URL")).toHaveValue("https://relay.example.com");
+	await expect(detail.getByLabel("模型", { exact: true })).toHaveValue("claude-sonnet-4-5-20250929");
+	// 再点一次自定义不会把协议改成 OpenAI；协议只在高级设置里改
+	await custom.click();
+	await expect(dialog.getByTestId("advanced-settings").getByRole("radio", { name: /Anthropic Claude/ })).toBeChecked();
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await page.waitForTimeout(300);
+	expect(saves).toEqual([]);
+});
+
+test("服务商卡片显示品牌彩色 logo，深色模式下也放在浅色方块里；高级设置的单选卡用主色", async ({ page }) => {
+	const logoResponses: number[] = [];
+	page.on("response", (res) => {
+		if (res.url().includes("/provider-logos/")) logoResponses.push(res.status());
+	});
+	await page.emulateMedia({ colorScheme: "dark" });
+	await page.addInitScript(() => localStorage.setItem("openoii-theme", JSON.stringify({ state: { theme: "dark" }, version: 0 })));
+	await mockConfig(page);
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	const presets = dialog.getByTestId("provider-presets");
+	const tile = presets.locator('[data-preset="deepseek"] [data-logo="deepseek"]');
+	const img = tile.locator("img");
+	await expect(img).toBeVisible();
+	await expect(img).toHaveAttribute("src", "/provider-logos/deepseek.svg");
+	await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+	// 方块是固定的浅色，尺寸统一
+	const bg = await tile.evaluate((el) => getComputedStyle(el).backgroundColor);
+	const [r, g, b] = (bg.match(/[\d.]+/g) ?? []).map(Number);
+	const lightness = bg.startsWith("oklch") ? r! : (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) / 255;
+	expect(lightness).toBeGreaterThan(0.9);
+	const sizes = await presets.locator(".provider-tile").evaluateAll((els) => [...new Set(els.map((el) => `${el.clientWidth}x${el.clientHeight}`))]);
+	expect(sizes).toEqual(["28x28"]);
 	// 自定义没有 logo，退回文字标记
-	await expect(presets.locator('[data-preset="custom-openai"] .provider-logo')).toHaveCount(0);
+	await expect(presets.locator('[data-preset="custom-openai"] img')).toHaveCount(0);
 	await expect.poll(() => logoResponses.length).toBeGreaterThan(5);
-	expect(logoResponses.every((s) => s === 200)).toBe(true);
+	expect(logoResponses.every((s) => s === 200 || s === 304)).toBe(true);
 	// 高级设置里选中的单选卡不再是青色
 	const advanced = dialog.getByTestId("advanced-settings");
 	const checked = advanced.locator('label:has(input[type="radio"]:checked)').first();
@@ -198,7 +280,7 @@ test("高级模式：手动改地址后回到「自定义」，并原样保存",
 	const dialog = page.getByRole("dialog", { name: /系统设置/ });
 	await dialog.getByRole("radio", { name: /DeepSeek/ }).click();
 	await dialog.locator("#TEXT_BASE_URL").fill("https://gateway.example.com/v1");
-	await expect(dialog.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+	await expect(dialog.getByRole("radio", { name: /自定义 · OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
 	await dialog.getByRole("button", { name: "保存配置" }).click();
 	await expect.poll(() => saves.length).toBe(1);
 	expect(saves[0]!.TEXT_BASE_URL).toBe("https://gateway.example.com/v1");
@@ -239,6 +321,10 @@ test("视频：选可灵 / Veo 切到服务商原生接口，地域和项目 ID 
 	await expect(dialog.getByText("服务商原生接口配置")).toBeVisible();
 	await expect(dialog.locator("#VIDEO_RATIO")).toBeVisible();
 	await expect(dialog.locator("#VIDEO_ENDPOINT")).toHaveCount(0);
+	// 原生接口的地址说明按服务商写，不再说「OpenAI 兼容」
+	const baseField = dialog.locator('[data-config-key="VIDEO_BASE_URL"]');
+	await expect(baseField).toContainText("可灵原生接口的基础地址");
+	await expect(baseField).not.toContainText("OpenAI 兼容");
 
 	await dialog.getByRole("radio", { name: /Google Veo/ }).click();
 	await detail.getByRole("radio", { name: /项目/ }).click();

@@ -241,8 +241,8 @@ describe("SettingsModal", () => {
 		await user.click(openaiRadio);
 
 		await waitFor(() => {
-			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
-			expect(screen.getByRole("radio", { name: /自定义 OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+			expect(screen.getByRole("radio", { name: /自定义 · OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+			expect(within(screen.getByTestId("preset-detail")).getByDisplayValue("https://video-openai.example.com")).toBeInTheDocument();
 			expect(
 				screen.getByDisplayValue("https://video-openai.example.com"),
 			).toBeInTheDocument();
@@ -317,7 +317,6 @@ describe("SettingsModal", () => {
 		await openAdvanced();
 
 		await waitFor(() => {
-			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
 			expect(advanced().getByRole("radio", { name: /OpenAI 兼容/ })).toBeChecked();
 			expect(
 				screen.getByDisplayValue("text-openai-fallback-key"),
@@ -587,16 +586,9 @@ describe("SettingsModal", () => {
 		await user.click(openaiRadio);
 
 		await waitFor(() => {
-			expect(screen.getByText("OpenAI 兼容接口配置")).toBeInTheDocument();
-			const openaiSection = screen
-				.getByText("OpenAI 兼容接口配置")
-				.closest("div");
-			expect(openaiSection).toBeTruthy();
-			if (openaiSection) {
-				expect(
-					within(openaiSection).getByDisplayValue("https://api.openai.com"),
-				).toBeInTheDocument();
-			}
+			// 通用自定义把地址、密钥和模型放在预设详情里就地填写
+			expect(screen.getByRole("radio", { name: /自定义 · OpenAI 兼容/ })).toHaveAttribute("aria-checked", "true");
+			expect(within(screen.getByTestId("preset-detail")).getByDisplayValue("https://api.openai.com")).toBeInTheDocument();
 		});
 
 		const anthropicRadio = advanced().getByRole("radio", {

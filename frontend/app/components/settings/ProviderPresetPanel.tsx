@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ConfigItem, ConfigValue } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { PlainButton } from "~/components/ui/PlainButton";
@@ -8,7 +8,10 @@ import {
 	PRESETS_VERIFIED_AT,
 	PROVIDER_PRESETS,
 	detectPreset,
+	effectiveKeys,
 	fillBaseUrl,
+	formProvider,
+	isTestMode,
 	presetById,
 	presetConfigValues,
 	presetKeys,
@@ -54,27 +57,35 @@ function pendingStillApplies(
 	return readForm(form, keys.baseUrl).replace(/\/+$/, "") === expected.replace(/\/+$/, "");
 }
 
-/** 卡片上的服务商标记：有 logo 用单色 logo，没有就用文字标记 */
+/** 只有单色标的品牌：logo 文件自带整块品牌底色（见 scripts/build-provider-logos.py） */
+const BAKED_TILE = new Set(["openai", "xai", "groq", "ollama", "lmstudio"]);
+
+/** 服务商标记：品牌彩色 logo 放在固定的浅色方块里（深浅色主题都清楚）；没有 logo 用文字标记 */
 export function ProviderMark({ preset, selected }: { preset: ProviderPreset; selected: boolean }) {
+	if (preset.logo) {
+		return (
+			<span aria-hidden data-logo={preset.logo} data-baked={BAKED_TILE.has(preset.logo) || undefined} className="provider-tile">
+				<img src={`/provider-logos/${preset.logo}.svg`} alt="" width={20} height={20} loading="lazy" decoding="async" draggable={false} />
+			</span>
+		);
+	}
 	return (
 		<span
 			aria-hidden
-			data-logo={preset.logo ?? undefined}
 			className={`inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 text-xs font-bold ${
 				selected ? "bg-primary text-primary-content" : "bg-paper-300 text-ink"
 			}`}
 		>
-			{preset.logo ? (
-				<span
-					className="provider-logo h-4 w-4"
-					style={{ "--provider-logo": `url(/provider-logos/${preset.logo}.svg)` } as CSSProperties}
-				/>
-			) : (
-				preset.mark
-			)}
+			{preset.mark}
 		</span>
 	);
 }
+
+const PROTOCOL_LABEL: Record<string, string> = {
+	anthropic: "Anthropic 原生（Messages）",
+	modelscope: "ModelScope 异步任务",
+	doubao: "豆包视频",
+};
 
 /** 选服务商 → 自动填好地址、接口路径和推荐模型；地域和专属字段单独给输入。 */
 export function ProviderPresetPanel({ service, items, formState, onChange, onApply, renderAdvanced }: Props) {
@@ -89,13 +100,16 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 	// 刚点过的预设 / 地域以本地选择为准，否则按配置反推
 	const activeRegionId = pending && preset === pending ? regionId : detected.regionId ?? regionId;
 	const region = preset.regions.find((r) => r.id === activeRegionId) ?? preset.regions[0];
-	const keys = presetKeys(preset);
+	const keys = effectiveKeys(preset, formState);
+	const protocol = formProvider(service, formState);
 	const keyItem = keys.apiKey ? items.find((i) => i.key.toUpperCase() === keys.apiKey) : undefined;
 	const model = keys.model ? readForm(formState, keys.model) : "";
 	const needs = regionNeeds(region);
 	const missing = needs.filter((id) => !(fields[id] ?? "").trim());
 
 	const choose = (next: ProviderPreset) => {
+		// 再点一次已选中的自定义不改接口协议（老配置可能是 Anthropic 原生 / 中转）
+		if (next.custom && next.id === preset.id) return;
 		const nextRegion = next.regions[0];
 		setPendingId(next.id);
 		setRegionId(nextRegion?.id);
@@ -122,14 +136,16 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 		if (keys.baseUrl && url) onApply({ [keys.baseUrl]: url });
 	};
 
+	const testMode = PROVIDER_PRESETS[service].find(isTestMode);
 	const baseUrl = keys.baseUrl ? readForm(formState, keys.baseUrl) : "";
+	const baseUrlItem = preset.custom && keys.baseUrl ? items.find((i) => i.key.toUpperCase() === keys.baseUrl) : undefined;
 	const showsModel = Boolean(keys.model) && preset.provider !== "fake";
 	const showsKey = Boolean(keyItem) && preset.provider !== "fake";
 	// 上方已经显示的字段不在高级设置里重复出现
 	const shownKeys = items
 		.filter((i) => {
 			const k = i.key.toUpperCase();
-			return (showsKey && k === keys.apiKey) || (showsModel && k === keys.model);
+			return (showsKey && k === keys.apiKey) || (showsModel && k === keys.model) || (Boolean(baseUrlItem) && k === keys.baseUrl);
 		})
 		.map((i) => i.key);
 
@@ -137,7 +153,7 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 		<div className="space-y-3" data-testid="provider-presets">
 			<div role="radiogroup" aria-label="选择服务商" className="space-y-2">
 				{GROUPS.map((group) => {
-					const presets = PROVIDER_PRESETS[service].filter((p) => p.group === group);
+					const presets = PROVIDER_PRESETS[service].filter((p) => p.group === group && !isTestMode(p));
 					if (presets.length === 0) return null;
 					return (
 						<div key={group} className="space-y-1.5">
@@ -168,6 +184,23 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 						</div>
 					);
 				})}
+				{testMode ? (
+					<PlainButton
+						role="radio"
+						aria-checked={testMode.id === preset.id}
+						data-preset={testMode.id}
+						onClick={() => choose(testMode)}
+						className={`touch-target-dense inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-fast ${
+							testMode.id === preset.id
+								? "border-primary bg-primary/10 text-ink"
+								: "border-dashed border-line-strong text-ink-muted hover:bg-paper-300"
+						}`}
+					>
+						<SvgIcon name="tools" size={12} />
+						{testMode.name}
+						<span className="text-ink-muted">· {testMode.tagline}</span>
+					</PlainButton>
+				) : null}
 			</div>
 
 			<section
@@ -197,7 +230,19 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 				</div>
 
 				{preset.custom ? (
-					<p className="m-0 text-xs text-ink-muted">自定义模式：地址、路径和模型在下方「高级设置」里逐项填写。</p>
+					<p className="m-0 text-xs text-ink-muted" data-testid="custom-protocol">
+						{PROTOCOL_LABEL[protocol]
+							? `当前接口协议：${PROTOCOL_LABEL[protocol]}，沿用原有配置；要换协议或改接口路径请到「高级设置」。`
+							: "任意 OpenAI 兼容的网关、中转或自建服务：填好地址、密钥和模型即可；接口路径在「高级设置」里。"}
+					</p>
+				) : null}
+				{baseUrlItem ? (
+					<ConfigField
+						item={baseUrlItem}
+						value={formState[baseUrlItem.key]}
+						onChange={onChange}
+						hint={protocol === "openai" ? "服务的基础地址，如 https://example.com/v1" : undefined}
+					/>
 				) : null}
 				{preset.provider === "fake" ? (
 					<p className="m-0 text-xs text-ink-muted">不调用任何外部服务，适合本地联调和演示，不产生费用。</p>

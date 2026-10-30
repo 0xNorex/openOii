@@ -6,7 +6,8 @@
 - 预设只是把值写进现有的配置键，后端和引擎没有新增 provider 类型。所有预设都落在已有的 `openai` / `anthropic` / `modelscope` / `doubao` / `fake` 五种类型上。
 - 选预设**不会写入或清空密钥**。切换到另一家服务商后需要重新填写对应的 API Key。
 - 「高级设置」保留所有原始字段（中文名为主，环境变量名作次要信息），可以逐项手动填写。手动改了地址后，卡片会自动回到「自定义」。
-- 已有配置会按「provider 类型 + Base URL」反推回对应的预设。识别不出的（例如本机网关 `http://127.0.0.1:18790/v1`）显示为「自定义」，高级设置默认展开，原值不变。
+- 已有配置会按「provider 类型 + Base URL」反推回对应的预设。识别不出的（例如本机网关 `http://127.0.0.1:18790/v1`、Anthropic 中转站）一律显示为唯一的「自定义 · OpenAI 兼容」，接口协议和原值都不变，高级设置默认展开。
+- 每个页签只有一个通用自定义入口：地址、密钥和模型在卡片下方就地填写，接口路径在高级设置里。其它接口协议（Anthropic 原生 Messages、ModelScope、豆包）只在「高级设置 → 接口协议」里切换，不再单独做卡片。Fake 改成卡片下方的小选项「测试模式（Fake）」。
 
 ## 测试连接
 
@@ -53,7 +54,7 @@
 | 国内 | [腾讯混元](https://cloud.tencent.com/document/product/1823/130051) | `openai` | 国内：`https://tokenhub.tencentmaas.com/v1`<br>国际：`https://tokenhub-intl.tencentcloudmaas.com/v1` | `/chat/completions` | `hy4-preview`, `hy3` | 旧地址 api.hunyuan.cloud.tencent.com 已于 2026-09-30 停用。 |
 | 国内 | [硅基流动](https://docs.siliconflow.cn/) | `openai` | 国内：`https://api.siliconflow.cn/v1` | `/chat/completions` | `deepseek-ai/DeepSeek-V4.1-Flash`, `zai-org/GLM-5.3`, `tencent/Hy4-preview` | 官方已从 .com 迁移到 api.siliconflow.cn。 |
 | 海外 | [OpenAI](https://developers.openai.com/api/reference/python/resources/chat/index.md) | `openai` | 官方：`https://api.openai.com/v1` | `/chat/completions` | `gpt-6-astra`, `gpt-6.1-terra`, `gpt-6.1-sol` | — |
-| 海外 | [Anthropic Claude](https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk) | `openai` | 官方：`https://api.anthropic.com/v1` | `/chat/completions` | `claude-sonnet-5-5`, `claude-opus-5-5`, `claude-haiku-5-5` | 走 Anthropic 官方的 OpenAI 兼容层，Claude 5.5 系列可直接用；提示缓存、引用等原生特性不可用。；需要原生 Messages 接口或中转站时选「Anthropic 原生 / 中转」。 |
+| 海外 | [Anthropic Claude](https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk) | `openai` | 官方：`https://api.anthropic.com/v1` | `/chat/completions` | `claude-sonnet-5-5`, `claude-opus-5-5`, `claude-haiku-5-5` | 走 Anthropic 官方的 OpenAI 兼容层，Claude 5.5 系列可直接用；提示缓存、引用等原生特性不可用。；需要原生 Messages 接口或中转站时，选「自定义」后在「高级设置」里把接口协议切到 Anthropic。 |
 | 海外 | [Google Gemini](https://ai.google.dev/gemini-api/docs/openai) | `openai` | 官方：`https://generativelanguage.googleapis.com/v1beta/openai` | `/chat/completions` | `gemini-3.8-flash` | — |
 | 海外 | [xAI Grok](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions) | `openai` | 官方：`https://api.x.ai/v1` | `/chat/completions` | `grok-4.7`, `grok-4.6` | 推理模型响应较慢，可把高级设置里的请求超时调大。 |
 | 海外 | [Mistral](https://docs.mistral.ai/api) | `openai` | 官方：`https://api.mistral.ai/v1` | `/chat/completions` | `mistral-large-4`, `mistral-medium-3-5` | — |
@@ -64,9 +65,8 @@
 | 海外 | [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html) | `openai` | us-east-1：`https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1`<br>us-west-2：`https://bedrock-runtime.us-west-2.amazonaws.com/openai/v1` | `/chat/completions` | `openai.gpt-oss-120b-1:0`, `openai.gpt-oss-20b-1:0` | 只能用 Bedrock API Key（Bearer）；AWS SigV4 签名不支持。 |
 | 本地与自定义 | [Ollama](https://docs.ollama.com/api/openai-compatibility) | `openai` | 本机：`http://localhost:11434/v1` | `/chat/completions` | — | localhost 指运行 openOii 后端的机器；本地地址需先保存再测试连接。 |
 | 本地与自定义 | [LM Studio](https://lmstudio.ai/docs/developer/openai-compat) | `openai` | 本机：`http://localhost:1234/v1` | `/chat/completions` | — | localhost 指运行 openOii 后端的机器；本地地址需先保存再测试连接。 |
-| 本地与自定义 | 自定义 OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
-| 本地与自定义 | Anthropic 原生 / 中转 | `anthropic` | — | — | `claude-sonnet-4-5-20250929` | 只切换类型，保留已有地址和模型；引擎的原生 Claude 适配只认 4.x 型号；Claude 5.5 请用上面的「Anthropic Claude」。 |
-| 本地与自定义 | Fake 本地测试 | `fake` | — | — | — | — |
+| 本地与自定义 | 自定义 · OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
+| 测试模式（小选项） | 测试模式（Fake） | `fake` | — | — | — | — |
 
 ## 图像服务（写入 `IMAGE_*`）
 
@@ -76,8 +76,8 @@
 | 国内 | [智谱 CogView](https://docs.bigmodel.cn/cn/guide/models/image-generation/cogview-4) | `openai` | 国内：`https://open.bigmodel.cn/api/paas/v4` | `/images/generations` | `cogview-4-250304`, `cogview-4` | — |
 | 国内 | [ModelScope 魔搭](https://modelscope.cn/docs/model-service/API-Inference/intro) | `modelscope` | 国内：`https://api-inference.modelscope.cn` | `/v1/images/generations` | `Tongyi-MAI/Z-Image-Turbo`, `Qwen/Qwen-Image` | 异步任务：提交后轮询 /v1/tasks/{id}，引擎和后端都已支持。 |
 | 海外 | [OpenAI 图像](https://developers.openai.com/api/docs/guides/image-generation) | `openai` | 官方：`https://api.openai.com/v1` | `/images/generations` | `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst` | — |
-| 本地与自定义 | 自定义 OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
-| 本地与自定义 | Fake 本地测试 | `fake` | — | — | — | — |
+| 本地与自定义 | 自定义 · OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
+| 测试模式（小选项） | 测试模式（Fake） | `fake` | — | — | — | — |
 
 ## 视频服务（写入 `VIDEO_*`（豆包为 `DOUBAO_*`））
 
@@ -98,15 +98,15 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 国内 | [火山方舟 Seedance](https://ark.volcengine.com/region:cn-beijing/docs/list-video-generation-tasks-api) | `doubao` | — | — | `doubao-seedance-2-5-260628`, `doubao-seedance-1-5-pro-251215` | 固定使用北京地域；时长和画幅在高级设置里调整。 |
 | 海外 | [xAI Grok Imagine](https://docs.x.ai/developers/model-capabilities/video/generation) | `openai` | 官方：`https://api.x.ai/v1` | `/videos/generations` | `grok-imagine-video-1.5`, `grok-imagine-video-1.5-lite` | **实验性**；返回 request_id 后轮询 /v1/videos/{id}，与 openOii 的异步任务流程一致。；xAI 的图生视频参数叫 image，openOii 发送的是 image_url：目前按文生视频使用。 |
-| 本地与自定义 | 自定义 OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
-| 本地与自定义 | Fake 本地测试 | `fake` | — | — | — | — |
+| 本地与自定义 | 自定义 · OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
+| 测试模式（小选项） | 测试模式（Fake） | `fake` | — | — | — | — |
 
 ## 处理过的特殊配置
 
 - **地域绑定密钥**：阿里云百炼（北京、新加坡，以及北京 / 弗吉尼亚 / 东京专属域名）、Kimi（国内 / 海外）、MiniMax（国内 / 海外）、腾讯混元 TokenHub（国内 / 国际）、Bedrock（us-east-1 / us-west-2）都用地域切换。401 的中文提示会提醒检查地域。
 - **按模板拼地址**：百炼专属域名 `https://{workspaceId}.{region}.maas.aliyuncs.com/compatible-mode/v1`、Azure `https://{resource}.openai.azure.com/openai/v1`。字段没填时不写 Base URL。
 - **模型字段语义不同**：Azure 填部署名称；火山方舟可以填模型 ID 或接入点 ID（`ep-…`）。
-- **Claude 5.5**：引擎的原生 Anthropic 适配只认 4.x 型号，所以「Anthropic Claude」预设走官方 OpenAI 兼容层 `https://api.anthropic.com/v1`。原生 Messages 接口或中转站选「Anthropic 原生 / 中转」（`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`）。
+- **Claude 5.5**：引擎的原生 Anthropic 适配只认 4.x 型号，所以「Anthropic Claude」预设走官方 OpenAI 兼容层 `https://api.anthropic.com/v1`。原生 Messages 接口或中转站：选「自定义」，在「高级设置 → 接口协议」里选 Anthropic Claude（`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`）；老配置会原样显示在自定义里。
 - **ModelScope 异步出图**：引擎提交时带 `X-ModelScope-Async-Mode: true`，再轮询 `/v1/tasks/{id}`（`X-ModelScope-Task-Type: image_generation`），见 PR #106。
 - **Seedream**：openOii 固定请求 1024×1024，最低要求 2K 的 5.0 lite 不在推荐列表里。另外 Seedream 默认带水印。
 - **Seedance**：走方舟原生任务接口（`DOUBAO_*`）。时长目前按 5 或 10 秒提交（引擎 `normalizeVideoDuration`），画幅在高级设置里调。
@@ -136,7 +136,13 @@
 
 ## 服务商 logo
 
-卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载。用的是单色版，去掉了 `<title>`、宽高和内联样式，坐标保留 3 位小数，放在 `frontend/public/provider-logos/`（共 29 个，约 32 KB，按需由浏览器加载，不进 JS 包）。界面用 CSS 遮罩显示，颜色跟随文字色，深浅色主题都一致。许可全文见 `frontend/public/provider-logos/LICENSE.txt`，汇总在仓库根目录 `NOTICE`。
+卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 27 个，约 36 KB，浏览器按需加载，不进 JS 包）。
+
+- 有彩色变体（`*-color.svg`）的品牌直接用彩色版，只去掉 `<title>`、宽高和内联样式。
+- 只有单色标的 5 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标。
+- 界面统一放在 28px 的浅色方块里（4px 内边距、1px 细边），方块颜色不随主题变，深色模式下深色和浅色的标都看得清；烘焙底色的 5 个铺满方块。
+
+许可全文见 `frontend/public/provider-logos/LICENSE.txt`，汇总在仓库根目录 `NOTICE`。
 
 logo 是各公司的商标，这里只用来标明服务商，openOii 与它们没有关联，也未获其背书。
 
@@ -152,29 +158,27 @@ logo 是各公司的商标，这里只用来标明服务商，openOii 与它们�
 | 百度千帆 | baiducloud.svg | BaiduCloud |
 | 腾讯混元 | hunyuan.svg | Hunyuan |
 | 硅基流动 | siliconcloud.svg | SiliconCloud |
-| OpenAI / OpenAI 图像 | openai.svg | OpenAI |
+| OpenAI / OpenAI 图像 | openai.svg | OpenAI（单色，烘焙头像配色） |
 | Claude（OpenAI 兼容层）| claude.svg | Claude |
-| Anthropic 原生 | anthropic.svg | Anthropic |
 | Google Gemini | gemini.svg | Gemini |
-| xAI Grok（文本、视频）| xai.svg | XAI |
+| xAI Grok（文本、视频）| xai.svg | XAI（单色，烘焙头像配色） |
 | Mistral | mistral.svg | Mistral |
 | OpenRouter | openrouter.svg | OpenRouter |
-| Groq | groq.svg | Groq |
+| Groq | groq.svg | Groq（单色，烘焙头像配色） |
 | Together AI | together.svg | Together |
 | Azure OpenAI | azure.svg | Azure |
 | Amazon Bedrock | bedrock.svg | Bedrock |
-| Ollama | ollama.svg | Ollama |
-| LM Studio | lmstudio.svg | LMStudio |
+| Ollama | ollama.svg | Ollama（单色，烘焙头像配色） |
+| LM Studio | lmstudio.svg | LMStudio（单色，烘焙头像配色） |
 | ModelScope | modelscope.svg | ModelScope |
 | 可灵 / Vidu / MiniMax 海螺 / Google Veo（视频）| kling.svg、vidu.svg、hailuo.svg、deepmind.svg | Kling、Vidu、Hailuo、DeepMind |
 | 智谱 CogVideoX / 通义万相（视频）| zhipu.svg、bailian.svg | Zhipu、Bailian |
-| Sora（未接入，见上文）| sora.svg | Sora |
 
-自定义和 Fake 选项没有品牌，继续用文字标记。新增预设时在 `providerPresets.ts` 里填 `logo`，单元测试会检查文件存在、单色、无脚本和外链、小于 4 KB。
+自定义和测试模式没有品牌，继续用文字标记。新增预设时在 `providerPresets.ts` 里填 `logo` 并重跑生成脚本；单元测试会检查文件存在、是彩色、无脚本和外链、小于 4 KB，且目录里没有用不到的文件。
 
 ## 维护
 
 1. 改 `providerPresets.ts`：更新地址、模型和 `sources`，并把 `PRESETS_VERIFIED_AT` 改成核对日期。
-2. `providerPresets.test.ts` 会检查：每个真实预设都有 https 来源；地址里的占位字段都有输入说明；预设写入的值能反推回同一个预设和地域；本机网关配置识别为「自定义」。
+2. `providerPresets.test.ts` 会检查：每个真实预设都有 https 来源；地址里的占位字段都有输入说明；预设写入的值能反推回同一个预设和地域；本机网关配置在三个页签都识别为唯一的「自定义」。
 3. 同步更新本文档。
 

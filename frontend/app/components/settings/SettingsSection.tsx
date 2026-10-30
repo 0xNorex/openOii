@@ -17,8 +17,8 @@ interface SectionProps {
 /** 一个设置页签的内容：provider 页签先选服务商再显示分组，其它页签直接列出配置项 */
 export function SettingsSection({ tab, items, formState, onChange }: SectionProps) {
 	const provider = PROVIDER_TABS[tab];
-	const field = (item: ConfigItem) => (
-		<ConfigField key={item.key} item={item} value={formState[item.key]} onChange={onChange} />
+	const field = (item: ConfigItem, hint?: string) => (
+		<ConfigField key={item.key} item={item} value={formState[item.key]} onChange={onChange} hint={hint} />
 	);
 	return (
 		<div className="space-y-3">
@@ -51,7 +51,7 @@ export function SettingsSection({ tab, items, formState, onChange }: SectionProp
 				<ProviderBody tab={provider} items={items} formState={formState} onChange={onChange} field={field} />
 			) : (
 				<>
-					<div className="space-y-2">{items.map(field)}</div>
+					<div className="space-y-2">{items.map((item) => field(item))}</div>
 					{items.length === 0 && (
 						<div className="py-8 text-center text-xs text-ink-muted">
 							<SvgIcon name="info" size={32} className="mx-auto mb-1.5 opacity-50" />
@@ -113,7 +113,7 @@ function ProviderBody({
 	items: ConfigItem[];
 	formState: Record<string, ConfigValue>;
 	onChange: ConfigChangeHandler;
-	field: (item: ConfigItem) => React.ReactNode;
+	field: (item: ConfigItem, hint?: string) => React.ReactNode;
 	hasProviderItem?: boolean;
 }) {
 	const provider = currentProvider(tab, formState);
@@ -166,7 +166,7 @@ function ProviderBody({
 							{typeof group.title === "function" ? group.title(provider) : group.title}
 						</h4>
 						<div className={`space-y-2 border-l-2 pl-2.5 ${common ? "border-line" : "border-primary/30"}`}>
-							{groupItems.map(field)}
+							{groupItems.map((item) => field(item, group.hint?.(item.key.toLowerCase(), provider)))}
 							{group.note ? <p className="m-0 px-1 text-xs text-ink-muted">{group.note}</p> : null}
 						</div>
 					</div>

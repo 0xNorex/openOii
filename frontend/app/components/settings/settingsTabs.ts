@@ -28,6 +28,8 @@ export interface ProviderGroup {
 	providers?: string[];
 	match: (key: string) => boolean;
 	note?: string;
+	/** 按当前 provider 给出更贴切的字段说明（替代通用说明） */
+	hint?: (key: string, provider: string) => string | undefined;
 }
 
 export interface ProviderTab {
@@ -43,6 +45,13 @@ export interface ProviderTab {
 const VIDEO_COMMON = ["video_image_mode", "enable_image_to_video", "video_inline_local_images"];
 const VIDEO_VENDORS = ["kling", "vidu", "zhipu", "minimax", "dashscope", "veo"];
 const VIDEO_VENDOR_NAMES = ["可灵", "Vidu", "智谱 CogVideoX", "MiniMax 海螺", "通义万相", "Google Veo"];
+const VIDEO_VENDOR_HINTS: Record<string, (name: string) => string> = {
+	video_base_url: (name) => `${name}原生接口的基础地址，选上面的预设会按地域自动填好`,
+	video_api_key: (name) => `${name}的 API 密钥`,
+	video_model: (name) => `${name}的模型名称，推荐值见上方预设`,
+	video_ratio: (name) => `生成画幅（如 16:9、9:16）；${name}不支持的画幅会换成最接近的可选值`,
+};
+const vendorName = (provider: string) => VIDEO_VENDOR_NAMES[VIDEO_VENDORS.indexOf(provider)] ?? provider;
 const isVideoKey = (k: string) => k.startsWith("video_") && k !== "video_provider" && !VIDEO_COMMON.includes(k);
 
 /** 文本 / 图像 / 视频三个 provider 页签的声明：选 provider，再显示对应分组 */
@@ -53,7 +62,7 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 		icon: "sparks",
 		layout: "row",
 		options: [
-			{ value: "anthropic", title: "Anthropic Claude", desc: "Anthropic Messages 接口，官方或中转" },
+			{ value: "anthropic", title: "Anthropic Claude", desc: "Messages 原生接口，官方或中转；引擎原生适配只认 Claude 4.x 型号" },
 			{ value: "openai", title: "OpenAI 兼容", desc: "支持任何 OpenAI 兼容接口" },
 			{ value: "fake", title: "Fake 本地测试", desc: "不调用外部文本 API，避免测试扣费" },
 		],
@@ -119,11 +128,13 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 				title: "OpenAI 兼容接口配置",
 				providers: ["openai"],
 				match: (k) => isVideoKey(k) && k !== "video_ratio",
+				hint: (k) => (k === "video_base_url" ? "OpenAI 兼容视频服务的基础地址，接口路径单独填在下面" : undefined),
 			},
 			{
 				title: "服务商原生接口配置",
 				providers: VIDEO_VENDORS,
 				match: (k) => isVideoKey(k) && k !== "video_endpoint",
+				hint: (k, provider) => VIDEO_VENDOR_HINTS[k]?.(vendorName(provider)),
 			},
 			{ title: "Fake 本地测试配置", providers: ["fake"], match: (k) => k.startsWith("fake_video_") },
 			{ title: "通用配置", match: (k) => VIDEO_COMMON.includes(k) },

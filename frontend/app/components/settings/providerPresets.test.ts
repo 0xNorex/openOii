@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
 	PRESETS_VERIFIED_AT,
 	PROVIDER_PRESETS,
+	customPreset,
 	detectPreset,
+	effectiveKeys,
 	fillBaseUrl,
+	isTestMode,
 	presetById,
 	presetConfigValues,
 	presetKeys,
@@ -44,11 +47,21 @@ describe("providerPresets 数据", () => {
 		}
 	});
 
-	it("每个服务都有自定义和 Fake 两个兜底选项", () => {
+	it("每个服务只有一个通用自定义（OpenAI 兼容）和一个测试模式", () => {
 		for (const service of SERVICES) {
-			expect(PROVIDER_PRESETS[service].some((p) => p.custom)).toBe(true);
-			expect(PROVIDER_PRESETS[service].some((p) => p.provider === "fake")).toBe(true);
+			const customs = PROVIDER_PRESETS[service].filter((p) => p.custom);
+			expect(customs.map((p) => [p.provider, p.name]), service).toEqual([["openai", "自定义 · OpenAI 兼容"]]);
+			expect(PROVIDER_PRESETS[service].filter(isTestMode)).toHaveLength(1);
 		}
+	});
+
+	it("「本地与自定义」只剩本地服务和通用自定义，没有按协议分的自定义卡片", () => {
+		const local = (service: PresetService) =>
+			PROVIDER_PRESETS[service].filter((p) => p.group === "local" && !isTestMode(p)).map((p) => p.id);
+		expect(local("text")).toEqual(["ollama", "lmstudio", "custom-openai"]);
+		expect(local("image")).toEqual(["custom-image"]);
+		expect(local("video")).toEqual(["custom-video"]);
+		expect(presetById("text", "anthropic-native")).toBeUndefined();
 	});
 });
 
@@ -62,15 +75,16 @@ describe("服务商 logo", () => {
 		for (const p of ALL) expect(p.mark.length).toBeGreaterThan(0);
 	});
 
-	it("每个 logo 文件都存在、单色、不带脚本或外链", () => {
+	it("每个 logo 文件都存在、是彩色、不带脚本或外链", () => {
 		const used = new Set(ALL.flatMap((p) => (p.logo ? [p.logo] : [])));
 		for (const name of used) {
 			const svg = readFileSync(resolve(logoDir, `${name}.svg`), "utf-8");
 			expect(svg.startsWith("<svg"), name).toBe(true);
 			expect(svg, name).toMatch(/viewBox="0 0 24 24"/);
-			expect(svg, name).not.toMatch(/<script|<image|href=|url\(|Gradient/i);
-			const fills = [...svg.matchAll(/fill="([^"]+)"/g)].map((m) => m[1]).filter((f) => f !== "none");
-			expect(new Set(fills), name).toEqual(new Set(["#000"]));
+			expect(svg, name).not.toMatch(/<script|<image|<foreignObject|href=|url\((?!#)|currentColor/i);
+			// 彩色：至少有一种不是黑 / 白的颜色（或渐变），不再是单色遮罩
+			const colors = [...svg.matchAll(/(?:fill|stop-color)="([^"]+)"/g)].map((m) => m[1]!.toLowerCase());
+			expect(colors.some((c) => !["#000", "#000000", "#fff", "#ffffff", "none"].includes(c)) || /<rect[^>]*fill="#(?:000|fff)"/.test(svg), name).toBe(true);
 			expect(svg.length, name).toBeLessThan(4096);
 		}
 	});
@@ -80,7 +94,8 @@ describe("服务商 logo", () => {
 		expect(license).toMatch(/lobe-icons/);
 		expect(license).toMatch(/MIT License/);
 		const files = readdirSync(logoDir).filter((f) => f.endsWith(".svg"));
-		expect(files.length).toBeGreaterThanOrEqual(new Set(ALL.map((p) => p.logo).filter(Boolean)).size);
+		// 没有用不到的 logo 文件
+		expect(new Set(files)).toEqual(new Set(ALL.flatMap((p) => (p.logo ? [`${p.logo}.svg`] : []))));
 	});
 });
 
@@ -147,10 +162,18 @@ describe("presetConfigValues", () => {
 		expect(PROVIDER_PRESETS.video.some((p) => /sora/i.test(p.id + p.defaultModel))).toBe(false);
 	});
 
-	it("Claude 预设走 OpenAI 兼容层，原生 Anthropic 用 ANTHROPIC_* 键", () => {
+	it("Claude 预设走 OpenAI 兼容层；老的 Anthropic 原生配置在自定义里沿用 ANTHROPIC_* 键", () => {
 		const compat = presetById("text", "anthropic")!;
 		expect(presetConfigValues(compat).TEXT_BASE_URL).toBe("https://api.anthropic.com/v1");
-		expect(presetKeys(presetById("text", "anthropic-native")!).apiKey).toBe("ANTHROPIC_AUTH_TOKEN");
+		const custom = customPreset("text");
+		expect(effectiveKeys(custom, { TEXT_PROVIDER: "anthropic" })).toEqual({
+			provider: "TEXT_PROVIDER",
+			baseUrl: "ANTHROPIC_BASE_URL",
+			model: "ANTHROPIC_MODEL",
+			apiKey: "ANTHROPIC_AUTH_TOKEN",
+		});
+		expect(effectiveKeys(custom, { TEXT_PROVIDER: "openai" }).baseUrl).toBe("TEXT_BASE_URL");
+		expect(effectiveKeys(customPreset("video"), { VIDEO_PROVIDER: "fake" }).baseUrl).toBe("VIDEO_BASE_URL");
 	});
 });
 
@@ -162,6 +185,22 @@ describe("detectPreset", () => {
 			TEXT_MODEL: "muse-large",
 		});
 		expect(detected.preset.id).toBe("custom-openai");
+		// 图像、视频两个页签的本机网关配置也落到各自唯一的自定义
+		expect(
+			detectPreset("image", { IMAGE_PROVIDER: "openai", IMAGE_BASE_URL: "http://127.0.0.1:18790", IMAGE_ENDPOINT: "/v1/images/generations" })
+				.preset.id,
+		).toBe("custom-image");
+		expect(
+			detectPreset("video", { VIDEO_PROVIDER: "openai", VIDEO_BASE_URL: "http://127.0.0.1:18790", VIDEO_ENDPOINT: "/v1/videos/generations" })
+				.preset.id,
+		).toBe("custom-video");
+	});
+
+	it("认不出的其它协议（Anthropic 中转、未知地址的服务商）也落到通用自定义，不误认成某个预设", () => {
+		expect(detectPreset("text", { TEXT_PROVIDER: "anthropic", ANTHROPIC_BASE_URL: "https://relay.example.com" }).preset.id).toBe(
+			"custom-openai",
+		);
+		expect(detectPreset("video", { VIDEO_PROVIDER: "kling", VIDEO_BASE_URL: "https://proxy.example.com" }).preset.id).toBe("custom-video");
 	});
 
 	it("预设写入的值能被反推回同一个预设和地域", () => {
@@ -190,7 +229,7 @@ describe("detectPreset", () => {
 	});
 
 	it("没填 provider 时按后端默认值识别（文本 anthropic、图像 modelscope、视频 openai）", () => {
-		expect(detectPreset("text", {}).preset.id).toBe("anthropic-native");
+		expect(detectPreset("text", {}).preset.id).toBe("custom-openai");
 		expect(detectPreset("image", { IMAGE_BASE_URL: "https://api-inference.modelscope.cn" }).preset.id).toBe("modelscope");
 		expect(detectPreset("video", {}).preset.id).toBe("custom-video");
 	});

@@ -168,12 +168,30 @@
 }
 
 @layer components {
-  /* 服务商 logo：public/provider-logos 里的单色 SVG 当遮罩，颜色跟随 currentColor（深浅色都合适） */
-  .provider-logo {
-    display: inline-block;
-    background-color: currentColor;
-    -webkit-mask: var(--provider-logo) center / contain no-repeat;
-    mask: var(--provider-logo) center / contain no-repeat;
+  /* 服务商 logo：品牌彩色 SVG（public/provider-logos）放在固定的浅色方块里。
+     方块颜色不随主题变化，深色模式下深色 / 浅色的标也都看得清；统一 28px、4px 内边距。 */
+  .provider-tile {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    background-color: oklch(0.985 0.004 95);
+    /* outline 画在图片上面，白底的标（Ollama、xAI）在浅色页面上也有边 */
+    outline: 1px solid oklch(0.2 0.01 95 / 0.15);
+    outline-offset: -1px;
+  }
+  /* 只有单色标的品牌已按 Lobe Icons 的头像配色烘焙成整块底色，铺满方块 */
+  .provider-tile[data-baked] {
+    padding: 0;
+  }
+  .provider-tile > img {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .card-doodle {
