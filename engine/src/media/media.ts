@@ -1351,7 +1351,3 @@ async function downloadPublicMedia(url: string, destination: string, deadline: n
 function sleep(ms: number): Promise<void> {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
-
-export function mediaDirOf(staticDir: string, kind: "images" | "videos"): string {
-  return join(resolve(staticDir), kind);
-}

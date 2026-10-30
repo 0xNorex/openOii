@@ -38,3 +38,6 @@ frontend-*.png
 frontend-*.json.gz
 lighthouse-*/
 tmp/
+
+# local runtime pid files
+.run/

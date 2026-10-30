@@ -178,6 +178,3 @@ export function MenuLink({
 	);
 }
 
-export function MenuSeparator() {
-	return <li role="separator" className="my-1 h-px bg-line" />;
-}

@@ -360,30 +360,3 @@ class UniverseService:
             existing_names.add(sc.name)
 
         return imported
-
-    async def get_sibling_chapter_summaries(
-        self, universe_id: int, *, exclude_project_id: int | None = None, limit: int = 8
-    ) -> list[dict]:
-        """Prior chapters for continuity injection into outline/plan."""
-        links = await self.get_universe_chapters(universe_id)
-        summaries: list[dict] = []
-        for link in links:
-            if exclude_project_id is not None and link.project_id == exclude_project_id:
-                continue
-            project = await self.session.get(Project, link.project_id)
-            if project is None:
-                continue
-            summaries.append(
-                {
-                    "project_id": project.id,
-                    "chapter_number": link.chapter_number or project.chapter_number,
-                    "chapter_title": link.chapter_title or project.chapter_title or project.title,
-                    "title": project.title,
-                    "summary": project.summary,
-                    "status": project.status,
-                    "is_main_story": link.is_main_story,
-                }
-            )
-            if len(summaries) >= limit:
-                break
-        return summaries

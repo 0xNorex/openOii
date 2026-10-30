@@ -352,8 +352,6 @@ const ICON_PATHS = {
 } satisfies Record<string, IconPath[]>;
 
 export type IconName = keyof typeof ICON_PATHS;
-export const ICON_NAMES = Object.keys(ICON_PATHS) as IconName[];
-export const DOMAIN_ICON_NAMES: IconName[] = ["approve-gate", "arrow-down-to-line", "crop", "layers", "registration", "render", "screentone", "shot", "stop", "storyboard"];
 
 interface SvgIconProps {
   name: IconName;

@@ -782,46 +782,6 @@ export interface AssetCreatePayload {
 	tags?: string | null;
 }
 
-export interface StyleTemplateList {
-	items: StyleTemplate[];
-	total: number;
-}
-
-export interface StyleTemplate {
-	id: number;
-	name: string;
-	slug: string;
-	category: "builtin" | "custom";
-	description: string | null;
-	style_prompt: string;
-	color_palette: string[];
-	negative_prompt: string | null;
-	preview_image_url: string | null;
-	sort_order: number;
-	is_active: boolean;
-	created_at: string;
-	updated_at: string;
-}
-
-export interface StyleTemplateCreatePayload {
-	name: string;
-	slug: string;
-	description?: string | null;
-	style_prompt: string;
-	color_palette?: string[];
-	negative_prompt?: string | null;
-	preview_image_url?: string | null;
-}
-
-export interface StyleTemplateUpdatePayload {
-	name?: string | null;
-	description?: string | null;
-	style_prompt?: string | null;
-	color_palette?: string[] | null;
-	negative_prompt?: string | null;
-	preview_image_url?: string | null;
-}
-
 // ── Universe / IP 宇宙 ──────────────────────────────────────
 
 export interface Universe {

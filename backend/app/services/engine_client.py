@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 from collections.abc import Sequence
 from typing import Any, BinaryIO
-from urllib.parse import urlsplit
 
 import httpx
 
@@ -236,11 +235,6 @@ async def engine_owner_gone(base_url: str, lease_owner: str | None) -> bool:
     return not _pid_alive(int(match.group(1)))
 
 
-async def engine_healthy(base_url: str) -> bool:
-    health = await engine_health(base_url)
-    return health is not None and health.get("workflow_version") == WORKFLOW_VERSION
-
-
 def _raise_engine_response_error(action: str, res: httpx.Response) -> None:
     if res.status_code == 409:
         code = "RUN_ALREADY_ACTIVE"
@@ -319,18 +313,3 @@ async def engine_cancel_run(base_url: str, run_id: int) -> None:
     if res.status_code != 202:
         _raise_engine_response_error("cancel", res)
 
-
-async def engine_events_since(base_url: str, run_id: int, after_seq: int) -> list[dict[str, Any]]:
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            res = await client.get(f"{base_url}/runs/{run_id}/events", params={"after": after_seq})
-    except httpx.HTTPError:
-        return []
-    if res.status_code != 200:
-        return []
-    return res.json().get("events", [])  # type: ignore[no-any-return]
-
-
-def redact_url(url: str) -> str:
-    parts = urlsplit(url)
-    return f"{parts.scheme}://{parts.hostname or ''}:{parts.port or ''}"

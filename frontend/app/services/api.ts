@@ -537,29 +537,6 @@ export const versionsApi = {
 		),
 };
 
-export type SkillApiRow = {
-	id: string;
-	title: string;
-	description: string;
-	badge: string | null;
-	start_stage: string;
-	start_agent: string;
-	prefer_auto_mode: boolean;
-	default_style: string | null;
-	default_creation_mode: string | null;
-	default_target_shot_count: number | null;
-	story_prefix: string;
-	story_template: string;
-	directives: string;
-	pipeline_hints: Record<string, unknown>;
-	placeholder: string;
-	available: boolean;
-};
-
-export const skillsApi = {
-	list: () => fetchApi<SkillApiRow[]>("/api/v1/skills"),
-};
-
 export const configApi = {
 	get: () => fetchApi<import("~/types").ConfigItem[]>("/api/v1/config"),
 	update: (config: Record<string, import("~/types").ConfigValue>) => {
@@ -614,40 +591,6 @@ export const configApi = {
 		fetchApi<{ key: string; value: string | null }>("/api/v1/config/reveal", {
 			method: "POST",
 			body: JSON.stringify({ key }),
-		}),
-};
-
-export const styleTemplatesApi = {
-	list: (params?: { category?: string }) => {
-		const qs = params?.category ? `?category=${params.category}` : "";
-		return fetchApi<import("~/types").StyleTemplateList>(
-			`/api/v1/style-templates${qs}`,
-		).then((data) => data.items);
-	},
-
-	get: (slug: string) =>
-		fetchApi<import("~/types").StyleTemplate>(
-			`/api/v1/style-templates/${slug}`,
-		),
-
-	create: (data: import("~/types").StyleTemplateCreatePayload) =>
-		fetchApi<import("~/types").StyleTemplate>("/api/v1/style-templates", {
-			method: "POST",
-			body: JSON.stringify(data),
-		}),
-
-	update: (slug: string, data: import("~/types").StyleTemplateUpdatePayload) =>
-		fetchApi<import("~/types").StyleTemplate>(
-			`/api/v1/style-templates/${slug}`,
-			{
-				method: "PUT",
-				body: JSON.stringify(data),
-		},
-	),
-
-	delete: (slug: string) =>
-		fetchApi<void>(`/api/v1/style-templates/${slug}`, {
-			method: "DELETE",
 		}),
 };
 

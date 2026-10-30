@@ -62,45 +62,6 @@ def _provider_snapshot_payload(snapshot: object) -> dict[str, object] | None:
     return None
 
 
-def settings_with_provider_snapshot(
-    settings: Settings,
-    provider_snapshot: dict[str, object] | None,
-) -> Settings:
-    """Use snapshot selection as source of truth for settings.
-
-    text_provider, image_provider, and video_provider are copied from snapshot.selected_key directly,
-    without any fallback to current settings.
-    """
-    snapshot = _provider_snapshot_payload(provider_snapshot)
-    if snapshot is None:
-        return settings.model_copy()
-
-    text_key = None
-    image_key = None
-    video_key = None
-
-    text_entry = snapshot.get("text")
-    if isinstance(text_entry, dict):
-        text_key = text_entry.get("selected_key")
-
-    image_entry = snapshot.get("image")
-    if isinstance(image_entry, dict):
-        image_key = image_entry.get("selected_key")
-
-    video_entry = snapshot.get("video")
-    if isinstance(video_entry, dict):
-        video_key = video_entry.get("selected_key")
-
-    if isinstance(text_key, str):
-        settings = settings.model_copy(update={"text_provider": text_key})
-    if isinstance(image_key, str):
-        settings = settings.model_copy(update={"image_provider": image_key})
-    if isinstance(video_key, str):
-        settings = settings.model_copy(update={"video_provider": video_key})
-
-    return settings
-
-
 def _text_probe_cache_key(settings: Settings) -> str:
     return build_provider_capability_cache_key(
         provider=settings.text_provider,

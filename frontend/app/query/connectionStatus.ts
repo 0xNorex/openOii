@@ -55,8 +55,3 @@ export function useConnectionStatus(projectId: number): ConnectionStatus {
 	);
 }
 
-/** 测试用 */
-export function resetConnectionStatuses(): void {
-	statuses.clear();
-	emit();
-}

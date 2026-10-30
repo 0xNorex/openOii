@@ -20,8 +20,6 @@ import uuid
 from pathlib import Path
 
 from app.config import Settings
-from app.models.project import Character
-from app.services.tts_voices import get_voice_for_character
 
 logger = logging.getLogger(__name__)
 
@@ -224,37 +222,6 @@ class AudioService:
             logger.info("Local TTS placeholder generated: %s", output_path)
             return f"/static/audio/{filename}"
         return None
-
-    async def generate_character_tts(
-        self,
-        dialogue: str,
-        character_name: str,
-        characters: list[Character],
-    ) -> str | None:
-        """根据角色选择合适的 TTS 语音并生成
-
-        Args:
-            dialogue: 对白文本
-            character_name: 角色名称
-            characters: 项目角色列表
-
-        Returns:
-            TTS 音频 URL，失败返回 None
-        """
-        if not dialogue or not dialogue.strip():
-            return None
-
-        if not self.settings.tts_enabled:
-            return None
-
-        # 查找匹配的角色
-        voice = self.settings.tts_default_voice
-        for char in characters:
-            if char.name == character_name:
-                voice = get_voice_for_character(char)
-                break
-
-        return await self.generate_tts(dialogue, voice=voice)
 
     def match_bgm(
         self,
@@ -506,28 +473,3 @@ class AudioService:
 
         logger.info("Audio mixed successfully: %s", output_path)
         return output_path
-
-    async def mix_bgm_into_video(
-        self,
-        video_path: str,
-        bgm_path: str | None = None,
-        bgm_volume: float | None = None,
-    ) -> str:
-        """仅将 BGM 混入最终合并视频
-
-        与 mix_audio_into_video 类似，但专门用于最终视频的 BGM 叠加。
-
-        Args:
-            video_path: 最终视频路径
-            bgm_path: BGM 文件路径
-            bgm_volume: BGM 音量
-
-        Returns:
-            新视频路径，失败返回原路径
-        """
-        return await self.mix_audio_into_video(
-            video_path,
-            tts_path=None,
-            bgm_path=bgm_path,
-            bgm_volume=bgm_volume,
-        )

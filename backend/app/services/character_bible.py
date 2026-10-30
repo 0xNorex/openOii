@@ -22,32 +22,8 @@ from app.services.face_cropper import detect_faces, is_face_cropping_available
 
 if TYPE_CHECKING:
     from app.models.project import Character
-    from app.services.llm import LLMService
 
 logger = logging.getLogger(__name__)
-
-
-def build_character_bible(character: Character) -> str:
-    """将角色的 visual_notes + description 合并为一段"角色圣经"文本。
-
-    Args:
-        character: Character 对象
-
-    Returns:
-        合并后的圣经文本
-    """
-    parts: list[str] = []
-
-    if character.description:
-        parts.append(character.description)
-
-    if character.visual_notes:
-        parts.append(f"Visual notes: {character.visual_notes}")
-
-    if not parts:
-        return character.name
-
-    return " | ".join(parts)
 
 
 async def compute_face_embedding(image_url: str) -> list[float] | None:
@@ -144,60 +120,6 @@ async def find_similar_characters(
 
     results.sort(key=lambda x: x[1], reverse=True)
     return results
-
-
-async def auto_populate_visual_notes(
-    character: Character,
-    llm_service: LLMService,
-) -> str | None:
-    """用 LLM 从角色 description 自动提取关键视觉特征，填充 visual_notes。
-
-    Args:
-        character: Character 对象
-        llm_service: LLM 服务实例
-
-    Returns:
-        生成的 visual_notes 文本，失败返回 None
-    """
-    if not character.description:
-        return None
-
-    system_prompt = (
-        "You are a character visual design assistant. "
-        "Extract key VISUAL traits from the character description. "
-        "Focus ONLY on observable, visual characteristics: "
-        "hair color, hairstyle, eye color, skin tone, body type, height, "
-        "distinguishing features (scars, tattoos, accessories), "
-        "clothing style, color palette, signature items. "
-        "Output a concise paragraph in the same language as the description. "
-        "Do NOT include personality, backstory, or non-visual traits."
-    )
-
-    user_prompt = f"Character name: {character.name}\nDescription: {character.description}\n\nExtract the key visual traits."
-
-    try:
-        messages = [{"role": "user", "content": user_prompt}]
-        final = None
-        async for event in llm_service.stream(
-            messages=messages,
-            system=system_prompt,
-            max_tokens=512,
-        ):
-            if event.get("type") == "final":
-                resp = event.get("response")
-                if resp is not None:
-                    final = resp
-
-        if final is None:
-            return None
-
-        visual_notes = final.text.strip()
-        if visual_notes:
-            return visual_notes  # type: ignore[no-any-return]
-        return None
-    except Exception as e:
-        logger.warning("Failed to auto-populate visual notes for %s: %s", character.name, e)
-        return None
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:

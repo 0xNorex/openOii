@@ -74,6 +74,3 @@ export function getConfigLabel(key: string): string {
 	return LABELS[key.toUpperCase()] ?? key.toUpperCase();
 }
 
-export function hasConfigLabel(key: string): boolean {
-	return key.toUpperCase() in LABELS;
-}

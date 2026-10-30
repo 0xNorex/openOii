@@ -45,52 +45,6 @@ export async function saveShotPatch(
 	}
 }
 
-export async function approveShot(shotId: number): Promise<boolean> {
-	try {
-		const updated = await shotsApi.approve(shotId);
-		upsertShot(updated);
-		toast.success({ title: "分镜已通过", message: "该格已锁定为当前版本", duration: 2500 });
-		return true;
-	} catch (error) {
-		reportError("通过失败", error);
-		return false;
-	}
-}
-
-export async function regenerateShot(shotId: number): Promise<boolean> {
-	try {
-		await shotsApi.regenerate(shotId, "image");
-		toast.info({ title: "已开始重做本格", message: "生成进度见对话流", duration: 3000 });
-		return true;
-	} catch (error) {
-		reportError("重做失败", error);
-		return false;
-	}
-}
-
-export async function approveCharacter(characterId: number): Promise<boolean> {
-	try {
-		const updated = await charactersApi.approve(characterId);
-		upsertCharacter(updated);
-		toast.success({ title: "角色已通过", message: "角色设定已锁定为当前版本", duration: 2500 });
-		return true;
-	} catch (error) {
-		reportError("通过失败", error);
-		return false;
-	}
-}
-
-export async function regenerateCharacter(characterId: number): Promise<boolean> {
-	try {
-		await charactersApi.regenerate(characterId);
-		toast.info({ title: "已开始重做角色图", message: "生成进度见对话流", duration: 3000 });
-		return true;
-	} catch (error) {
-		reportError("重做失败", error);
-		return false;
-	}
-}
-
 /** 参考图操作后重拉整份角色列表：bible 接口只返回 bible，Query 里是 Character */
 async function refreshCharacters(projectId: number) {
 	const list = await projectsApi.getCharacters(projectId);

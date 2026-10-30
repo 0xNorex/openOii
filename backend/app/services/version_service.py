@@ -253,44 +253,6 @@ class VersionService:
             trigger="rollback",
         )
 
-    async def auto_snapshot_character(
-        self,
-        session: AsyncSession,
-        character: Character,
-        run_id: int | None = None,
-        trigger: str = "generation",
-    ) -> ArtifactVersion | None:
-        """Create a Character snapshot before mutation when entity is persisted."""
-        if character.id is None:
-            return None
-        return await self.create_version(
-            session,
-            "character",
-            character.id,
-            character_snapshot(character),
-            run_id=run_id,
-            trigger=trigger,
-        )
-
-    async def auto_snapshot_shot(
-        self,
-        session: AsyncSession,
-        shot: Shot,
-        run_id: int | None = None,
-        trigger: str = "generation",
-    ) -> ArtifactVersion | None:
-        """Create a Shot snapshot before mutation when entity is persisted."""
-        if shot.id is None:
-            return None
-        return await self.create_version(
-            session,
-            "shot",
-            shot.id,
-            shot_snapshot(shot),
-            run_id=run_id,
-            trigger=trigger,
-        )
-
     async def _project_id_for_entity(
         self, session: AsyncSession, entity_type: EntityType, entity_id: int
     ) -> int:

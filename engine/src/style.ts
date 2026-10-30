@@ -1,11 +1,11 @@
 /**
  * Style + character-quality prompt locks, ported from the Python render agent.
  *
- * These are the quality features that previously existed ONLY on the Python
- * side (`app/services/style_prompts.py`, `character_bible.py`, `agents/utils.py`).
- * ADR 0008 makes porting them a hard precondition for deleting the Python agent
- * implementations — deleting first would be a functional regression, not a
- * refactor.
+ * These quality features previously lived on the Python side
+ * (`style_prompts.py`, `character_bible.py`, `agents/utils.py`; ADR 0008). The
+ * engine is now the only owner — the Python copies of `style_prompts.py`,
+ * `build_character_bible` and `universe_style_appendix` were removed as dead
+ * code; "Python:" notes below record the original names for prompt parity.
  *
  * SQLite remains owned by backend Alembic (`styletemplate` is a product
  * table); this module only READS it.

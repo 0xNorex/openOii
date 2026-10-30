@@ -275,30 +275,6 @@ class ImageComposer:
         canvas.save(buffer, format="PNG")
         return buffer.getvalue()
 
-    async def compose_and_save_nine_grid_reference_image(
-        self,
-        *,
-        current_image_url: str,
-        previous_image_url: str | None = None,
-        next_image_url: str | None = None,
-        character_image_urls: list[str] | None = None,
-    ) -> str:
-        """Compose 3×3 reference board and save to /static/images."""
-        image_bytes = await self.compose_nine_grid_reference_image(
-            current_image_url=current_image_url,
-            previous_image_url=previous_image_url,
-            next_image_url=next_image_url,
-            character_image_urls=character_image_urls,
-        )
-        filename = f"nine_grid_{uuid4().hex}.png"
-        images_dir = STATIC_DIR / "images"
-        images_dir.mkdir(parents=True, exist_ok=True)
-        file_path = images_dir / filename
-        with open(file_path, "wb") as f:
-            f.write(image_bytes)
-        logger.info("Saved nine-grid reference image to %s", file_path)
-        return f"/static/images/{filename}"
-
     async def compose_character_reference_image(
         self,
         character_image_urls: list[str],
