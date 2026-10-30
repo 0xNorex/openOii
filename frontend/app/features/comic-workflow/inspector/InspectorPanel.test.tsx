@@ -21,7 +21,9 @@ describe("InspectorPanel", () => {
 	it("shows the project view with the universe timeline when nothing is selected", () => {
 		render(<InspectorPanel {...base} selectedNode={null} universeId={3} open />);
 
-		expect(screen.getByRole("complementary", { name: "检查器" })).toHaveTextContent("项目");
+		// 面板标题始终是「检查器」：「项目」只由内容头部（项目概要 · 标题）说一次
+		expect(screen.getByRole("heading", { name: "检查器" })).toBeInTheDocument();
+		expect(screen.queryByRole("heading", { name: "项目" })).toBeNull();
 		expect(screen.getByTestId("workflow-inspector")).toHaveTextContent("brief");
 		expect(screen.getByTestId("universe-timeline")).toBeInTheDocument();
 	});

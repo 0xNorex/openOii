@@ -336,7 +336,7 @@ test("comic workflow canvas supports core review interactions", async ({ page })
 	await expect(card).toBeVisible();
 
 	await card.click();
-	for (const name of ["选区", "属性", "生成", "历史"]) {
+	for (const name of ["概览", "属性", "生成", "历史"]) {
 		await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
 	}
 
@@ -389,6 +389,25 @@ test("mobile studio is one readable column at 390×844", async ({ page }) => {
 		() => document.documentElement.scrollWidth - document.documentElement.clientWidth,
 	);
 	expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("the project switcher's chevron stays whole and legible next to the title at 390px", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/project/7");
+	const switcher = page.locator('header button[aria-haspopup="listbox"]');
+	await expect(switcher).toBeVisible();
+	const geo = await switcher.evaluate((button) => {
+		const clip = button.parentElement!.getBoundingClientRect();
+		const icons = [...button.querySelectorAll("svg")].filter((svg) => svg.getBoundingClientRect().width > 0);
+		const chevron = icons.at(-1)!.getBoundingClientRect();
+		return { clipRight: clip.right, buttonRight: button.getBoundingClientRect().right, chevronRight: chevron.right, chevronSize: chevron.width, icons: icons.length };
+	});
+	// 按钮不比裁切它的 wrapper 宽：chevron 不会被切成半截
+	expect(geo.buttonRight).toBeLessThanOrEqual(geo.clipRight + 0.5);
+	expect(geo.chevronRight).toBeLessThanOrEqual(geo.clipRight + 0.5);
+	expect(geo.chevronSize).toBeGreaterThanOrEqual(16);
+	// 窄屏只留标题和 chevron
+	expect(geo.icons).toBe(1);
 });
 
 test("panels re-fit the board until the user pans", async ({ page }) => {

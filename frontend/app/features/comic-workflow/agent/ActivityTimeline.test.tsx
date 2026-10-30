@@ -133,4 +133,27 @@ describe("ActivityTimeline", () => {
 		expect(container).toHaveTextContent("大纲 · 进行中");
 		expect(container).toHaveTextContent("正在生成故事大纲…");
 	});
+
+	it("folds repeated warnings into one ×N row that expands in order, keyboard and screen-reader friendly", async () => {
+		const reason = "未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。";
+		const warn = (id: string, who: string) => entry(id, { kind: "warning", agent: "review", agentLabel: "质量审查", title: `${who} ${reason}` });
+		const { container } = render(<ActivityTimeline entries={[entry("a"), warn("w1", "阿岚"), warn("w2", "橘猫"), entry("b")]} />);
+
+		const rows = [...container.querySelectorAll("ol > li")].map((li) => li.getAttribute("data-activity"));
+		expect(rows).toEqual(["step", "warning-group", "step"]);
+		expect(screen.getByTestId("warning-count")).toHaveTextContent("×2");
+		expect(container).toHaveTextContent("质量审查 · 提醒，共 2 条");
+		expect(screen.getByText(`阿岚、橘猫 ${reason}`)).toBeInTheDocument();
+
+		const toggle = screen.getByRole("button", { name: /逐条查看 2 条/ });
+		expect(toggle).toHaveAttribute("aria-expanded", "false");
+		const list = document.getElementById(toggle.getAttribute("aria-controls") ?? "");
+		expect(list).toHaveAttribute("inert");
+
+		toggle.focus();
+		await userEvent.keyboard("{Enter}");
+		expect(toggle).toHaveAttribute("aria-expanded", "true");
+		expect(list).not.toHaveAttribute("inert");
+		expect([...(list?.querySelectorAll("li") ?? [])].map((li) => li.textContent)).toEqual([`阿岚 ${reason}`, `橘猫 ${reason}`]);
+	});
 });

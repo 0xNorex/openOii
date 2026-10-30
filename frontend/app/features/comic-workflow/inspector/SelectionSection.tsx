@@ -3,14 +3,16 @@ import { styleLabel } from "~/features/projects/styleCategories";
 import { FieldList } from "./fields";
 import { nodeStatusLabel } from "../canvas/WorkflowCards";
 
-/** 选区：类型、名称、状态与关键字段。 */
+/**
+ * 概览：只列头部（类型 · 名称 · 副标题）没说的字段。
+ * 头部已经写了名称（项目标题 / 角色名 / S01），这里不再重复；风格就是项目的副标题，只在未设置时列出。
+ */
 export function SelectionSection({ node }: { node: ComicWorkflowNode }) {
 	if (node.kind === "brief") {
 		return (
 			<FieldList
 				items={[
-					["标题", node.project.title],
-					["风格", styleLabel(node.project.style) || "未设置"],
+					...(styleLabel(node.project.style) ? [] : ([["风格", "未设置"]] as Array<[string, string]>)),
 					["目标镜头", node.project.target_shot_count ?? "未设置"],
 					["角色", node.metrics.characterCount],
 					["镜头", node.metrics.shotCount],
@@ -24,7 +26,6 @@ export function SelectionSection({ node }: { node: ComicWorkflowNode }) {
 		return (
 			<FieldList
 				items={[
-					["名称", node.character.name],
 					["状态", nodeStatusLabel(node.status)],
 					// 一致性特征是可选的后台索引：没有时不显示，免得像是出了问题
 					...(node.character.has_embedding ? ([["一致性特征", "已计算"]] as Array<[string, string]>) : []),
@@ -37,7 +38,6 @@ export function SelectionSection({ node }: { node: ComicWorkflowNode }) {
 		return (
 			<FieldList
 				items={[
-					["顺序", node.shot.order],
 					["场景", node.shot.scene || "未设置"],
 					["机位", node.shot.camera || "未设置"],
 					["时长", node.shot.duration ? `${node.shot.duration}s` : "未设置"],

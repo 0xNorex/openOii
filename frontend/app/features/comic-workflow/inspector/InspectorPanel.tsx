@@ -66,7 +66,7 @@ export function InspectorPanel({
 			}}
 		>
 			<div className="flex items-center justify-between gap-1 border-b border-line py-1 pl-3 pr-1">
-				<h2 className="text-sm font-semibold">{hasSelection ? "检查器" : "项目"}</h2>
+				<h2 className="text-sm font-semibold">检查器</h2>
 				<IconButton
 					className="shrink-0 text-ink-muted hover:text-ink"
 					onClick={() => onOpenChange(false)}

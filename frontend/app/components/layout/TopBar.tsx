@@ -47,15 +47,17 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 			<div className="overflow-hidden">
 				<PlainButton
 					onClick={() => setOpen(!open)}
-					className="touch-target-dense flex max-w-24 items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-56"
+					className="touch-target-dense flex w-full max-w-24 items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-56"
 					aria-expanded={open}
 					aria-haspopup="listbox"
 				>
-					<SvgIcon name="storyboard" size={14} className="flex-shrink-0 text-primary" />
+					{/* 手机上标题只剩两三个字：装饰图标让位给标题 */}
+					<SvgIcon name="storyboard" size={14} className="hidden flex-shrink-0 text-primary sm:block" />
 					<span className="min-w-0 truncate" title={currentTitle}>
 						{currentTitle}
 					</span>
-					<SvgIcon name="chevron-down" size={12} className={`flex-shrink-0 transition-transform duration-fast ${open ? "rotate-180" : ""}`} />
+					{/* 16px：1.5 描边在 24 网格上缩到 12px 只剩 0.75px，看不清 */}
+					<SvgIcon name="chevron-down" size={16} className={`flex-shrink-0 text-ink-muted transition-transform duration-fast ${open ? "rotate-180" : ""}`} />
 				</PlainButton>
 			</div>
 

@@ -290,3 +290,52 @@ export function attachLiveStream(
 	}
 	return { entries: entries.slice(0, i), host };
 }
+
+export interface WarningGroup {
+	kind: "warning-group";
+	id: string;
+	agentLabel: string;
+	/** 一行说完：同一句话只换主语时合并主语，否则列出主语和条数 */
+	summary: string;
+	items: ActivityEntry[];
+}
+
+/** 「阿岚 未能完成审查…」：主语是第一个空格前的部分，后面是原因。 */
+function splitSubject(title: string): [string, string] | null {
+	const at = title.indexOf(" ");
+	return at > 0 ? [title.slice(0, at), title.slice(at + 1)] : null;
+}
+
+function warningSummary(items: ActivityEntry[]): string {
+	const parts = items.map((e) => splitSubject(e.title));
+	if (parts.every((p) => p !== null)) {
+		const subjects = (parts as [string, string][]).map(([s]) => s).join("、");
+		const rest = (parts as [string, string][]).map(([, r]) => r);
+		if (rest.every((r) => r === rest[0])) return `${subjects} ${rest[0]}`;
+		return `${subjects}：${items.length} 条提醒`;
+	}
+	return `${items.length} 条提醒`;
+}
+
+/**
+ * 同一 agent 连续发出的提醒合成一行（×N，可展开看每条）。顺序不变；单条提醒原样保留。
+ */
+export function groupRepeatedWarnings(entries: ActivityEntry[]): (ActivityEntry | WarningGroup)[] {
+	const out: (ActivityEntry | WarningGroup)[] = [];
+	let i = 0;
+	while (i < entries.length) {
+		const first = entries[i];
+		let j = i + 1;
+		if (first.kind === "warning") {
+			while (j < entries.length && entries[j].kind === "warning" && entries[j].agent === first.agent) j += 1;
+		}
+		if (j - i >= 2) {
+			const items = entries.slice(i, j);
+			out.push({ kind: "warning-group", id: `warnings-${first.id}`, agentLabel: first.agentLabel, summary: warningSummary(items), items });
+		} else {
+			out.push(first);
+		}
+		i = j;
+	}
+	return out;
+}

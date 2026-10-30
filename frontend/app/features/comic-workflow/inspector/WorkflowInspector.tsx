@@ -29,7 +29,7 @@ const KIND_LABELS: Record<ComicWorkflowNode["kind"], string> = {
 };
 
 const TAB_LABELS: Record<InspectorTab, string> = {
-	selection: "选区",
+	selection: "概览",
 	properties: "属性",
 	generation: "生成",
 	history: "历史",
@@ -101,7 +101,7 @@ export function WorkflowInspector({
 						}`}
 						onClick={() => setActiveTab(tab)}
 					>
-						{tab === "selection" && selectedNode.kind === "brief" ? "项目" : TAB_LABELS[tab]}
+						{TAB_LABELS[tab]}
 					</PlainButton>
 				))}
 			</div>

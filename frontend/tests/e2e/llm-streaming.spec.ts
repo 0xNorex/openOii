@@ -324,3 +324,32 @@ test("the timeline keeps only what happened: no stale 正在…, no repeated thi
 	await expect(timeline).not.toContainText("⚠");
 	await expect(timeline).not.toContainText("#76");
 });
+
+test("repeated review warnings fold into one ×N row that expands to each, in order", async ({ page }) => {
+	const state = await setup(page);
+	await open(page);
+	await startRun(page, state);
+	const message = (agent: string, role: string, content: string) => ({
+		type: "run_message",
+		data: { agent, role, content, isLoading: false, project_id: 7, run_id: 901 },
+	});
+	const reason = "未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。";
+	await dispatch(page, message("critic", "step", "检查角色一致性"));
+	await dispatch(page, message("critic", "assistant", `⚠️ 阿岚 ${reason}`));
+	await dispatch(page, message("critic", "assistant", `⚠️ 橘猫 ${reason}`));
+	await dispatch(page, message("critic", "assistant", `⚠️ 灯塔 ${reason}`));
+
+	const timeline = page.getByRole("list", { name: "活动时间线" });
+	const group = timeline.locator("[data-activity='warning-group']");
+	await expect(group).toHaveCount(1);
+	await expect(timeline.locator(":scope > li[data-activity='warning']")).toHaveCount(0);
+	await expect(group).toContainText("×3");
+	await expect(group).toContainText(`阿岚、橘猫、灯塔 ${reason}`);
+
+	const toggle = group.getByRole("button", { name: /逐条查看 3 条/ });
+	await expect(toggle).toHaveAttribute("aria-expanded", "false");
+	await toggle.focus();
+	await page.keyboard.press("Enter");
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+	await expect(group.locator("[data-activity='warning-item']")).toHaveText([`阿岚 ${reason}`, `橘猫 ${reason}`, `灯塔 ${reason}`]);
+});

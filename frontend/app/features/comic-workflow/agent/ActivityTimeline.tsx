@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
-import type { ActivityEntry } from "./activityTimeline";
-import { attachLiveStream, formatDuration } from "./activityTimeline";
+import type { ActivityEntry, WarningGroup } from "./activityTimeline";
+import { attachLiveStream, formatDuration, groupRepeatedWarnings } from "./activityTimeline";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MonoRuns } from "~/components/ui/MonoRuns";
 import type { LiveStream } from "./liveStream";
@@ -118,6 +118,47 @@ function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) 
 	);
 }
 
+/** 连续的同类提醒：一行摘要 + ×N，展开逐条看。默认收起，顺序与原文不变。 */
+function WarningGroupRow({ group }: { group: WarningGroup }) {
+	const [open, setOpen] = useState(false);
+	const listId = useId();
+	const count = group.items.length;
+	return (
+		<li className="flex gap-2 py-1" data-activity="warning-group" data-count={count}>
+			<SvgIcon name="triangle-alert" size={14} className="mt-0.5 shrink-0 text-warning-fg" />
+			<div className="min-w-0 flex-1">
+				<div className="flex items-baseline justify-between gap-2">
+					<span className="text-xs font-semibold text-ink-muted">
+						{group.agentLabel} · 提醒<span className="sr-only">，共 {count} 条</span>
+					</span>
+					<span className="shrink-0 font-mono text-xs tabular-nums text-ink-muted" aria-hidden="true" data-testid="warning-count">
+						×{count}
+					</span>
+				</div>
+				<p className="m-0 select-text whitespace-pre-wrap break-words text-sm font-medium">{group.summary}</p>
+				<PlainButton
+					className="mt-0.5 inline-flex items-center gap-0.5 text-xs text-ink-muted hover:text-ink"
+					onClick={() => setOpen((v) => !v)}
+					aria-expanded={open}
+					aria-controls={listId}
+				>
+					<SvgIcon name="chevron-right" size={12} className={clsx("transition-transform duration-fast", open && "rotate-90")} />
+					逐条查看 {count} 条
+				</PlainButton>
+				<div id={listId} className="collapse-rows" data-open={open || undefined} {...(open ? {} : { inert: "" })}>
+					<ul className="m-0 list-none space-y-0.5 border-l border-line pl-2">
+						{group.items.map((item) => (
+							<li key={item.id} className="select-text text-xs text-ink-muted first:mt-0.5" data-activity="warning-item">
+								{item.title}
+							</li>
+						))}
+					</ul>
+				</div>
+			</div>
+		</li>
+	);
+}
+
 /**
  * 步骤时间线。默认跟随最新；用户上滑后停止跟随，出现“跳到最新”。
  */
@@ -169,9 +210,13 @@ export function ActivityTimeline({
 				data-testid="activity-scroll"
 			>
 				<ol className="m-0 list-none p-0" aria-label="活动时间线">
-					{rows.map((entry) => (
-						<EntryRow key={entry.id} entry={entry} />
-					))}
+					{groupRepeatedWarnings(rows).map((row) =>
+						row.kind === "warning-group" ? (
+							<WarningGroupRow key={row.id} group={row} />
+						) : (
+							<EntryRow key={row.id} entry={row} />
+						),
+					)}
 					{host && live ? (
 						<EntryRow key={host.id} entry={host} live={live} />
 					) : live ? (

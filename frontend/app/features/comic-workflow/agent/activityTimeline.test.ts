@@ -5,8 +5,10 @@ import {
 	deriveActivityTimeline,
 	formatDuration,
 	formatEta,
+	groupRepeatedWarnings,
 	tidyEllipsis,
 	type ActivityEntry,
+	type WarningGroup,
 } from "./activityTimeline";
 
 const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s)).toISOString();
@@ -231,5 +233,31 @@ describe("deriveActivityTimeline: feedback receipts", () => {
 		]);
 		expect(entries.map((entry) => entry.kind)).toEqual(["feedback"]);
 		expect(entries[0].receipt?.state).toBe("received");
+	});
+});
+
+describe("groupRepeatedWarnings", () => {
+	const w = (id: string, title: string, agent = "review"): ActivityEntry => ({
+		id, kind: "warning", agent, agentLabel: agent === "review" ? "质量审查" : "渲染", title, status: "done", children: [],
+	});
+	const step = (id: string): ActivityEntry => ({ id, kind: "step", agent: "render", agentLabel: "渲染", title: id, status: "done", children: [] });
+	const reason = "未能完成审查（审查模型没有给出有效评分），保留当前画面，不重新生成。";
+
+	it("folds consecutive warnings from one agent into one row, merging subjects when only the subject differs", () => {
+		const rows = groupRepeatedWarnings([step("a"), w("1", `阿岚 ${reason}`), w("2", `橘猫 ${reason}`), step("b")]);
+		expect(rows.map((r) => r.kind)).toEqual(["step", "warning-group", "step"]);
+		const group = rows[1] as WarningGroup;
+		expect(group.summary).toBe(`阿岚、橘猫 ${reason}`);
+		expect(group.items.map((i) => i.id)).toEqual(["1", "2"]);
+	});
+
+	it("lists subjects and a count when the reasons differ", () => {
+		const [group] = groupRepeatedWarnings([w("1", `S01 ${reason}`), w("2", "S02 未能完成审查（审查模型调用失败），保留当前画面，不重新生成。")]);
+		expect((group as WarningGroup).summary).toBe("S01、S02：2 条提醒");
+	});
+
+	it("leaves a single warning, warnings split by a step, and warnings from different agents alone", () => {
+		const rows = groupRepeatedWarnings([w("1", "a"), step("s"), w("2", "b"), w("3", "c", "render")]);
+		expect(rows.map((r) => r.kind)).toEqual(["warning", "step", "warning", "warning"]);
 	});
 });

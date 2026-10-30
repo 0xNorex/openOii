@@ -80,11 +80,11 @@ describe("WorkflowInspector", () => {
 		expect(screen.getByRole("button", { name: /批准/ })).toBeDisabled();
 	});
 
-	it("splits the inspector into four sections, starting at 选区", async () => {
+	it("splits the inspector into four sections, starting at 概览", async () => {
 		const user = userEvent.setup();
 		renderWithClient(<WorkflowInspector projectId={15} selectedNode={characterNode()} structureLocked={false} />);
 
-		for (const name of ["选区", "属性", "生成", "历史"]) {
+		for (const name of ["概览", "属性", "生成", "历史"]) {
 			expect(screen.getByRole("button", { name })).toBeInTheDocument();
 		}
 		// 和卡片同一个词：卡片是「待确认」，这里也是
