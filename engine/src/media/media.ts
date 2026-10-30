@@ -1226,6 +1226,36 @@ export class MediaService {
     }
   }
 
+  /** Images side by side at one height (PNG), e.g. cast sheet + previous keyframe. */
+  async stackImages(images: Buffer[]): Promise<Buffer> {
+    if (images.length === 1) return images[0]!;
+    const dir = mkdtempSync(join(this.settings.staticDir, ".stack-"));
+    try {
+      const inputs = images.map((image, i) => {
+        const path = join(dir, `${i}.img`);
+        writeFileSync(path, image);
+        return path;
+      });
+      const scaled = inputs.map((_, i) => `[${i}:v]scale=-2:768[s${i}]`).join(";");
+      const labels = inputs.map((_, i) => `[s${i}]`).join("");
+      const out = join(dir, "board.png");
+      await execFileAsync(
+        "ffmpeg",
+        [
+          "-v", "error", "-y",
+          ...inputs.flatMap((path) => ["-i", path]),
+          "-filter_complex", `${scaled};${labels}hstack=inputs=${inputs.length}`,
+          "-frames:v", "1",
+          out,
+        ],
+        { signal: this.abortSignal ?? undefined },
+      );
+      return readFileSync(out);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
   /**
    * First, middle and last frame of a local clip side by side in one PNG, so
    * the clip check costs one image instead of three.

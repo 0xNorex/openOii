@@ -274,14 +274,28 @@ export function buildCharacterPrompt(args: {
  * The shot prompt the Python render agent builds: description, then each
  * character's bible text, then character context, continuity lock, style.
  */
+/**
+ * Keeps every shot drawn like the character sheet; without it the image and
+ * video models drift to realistic eyes and proportions shot by shot.
+ */
+export const ART_STYLE_LOCK =
+  "画风锁定：角色造型、头身比、眼睛大小与形状（设定图里的大而可爱的眼睛）、线条和上色方式必须与角色设定图完全一致，全片不改画风，不变写实";
+
+/** The project's visual/prop bible, trimmed for a prompt. */
+function bibleLine(visualBible: string | null | undefined): string {
+  const bible = visualBible?.trim();
+  return bible ? `全局视觉与道具设定（全片不变）：${bible.slice(0, 600)}` : "";
+}
+
 export function buildShotPrompt(args: {
   shot: { image_prompt: string | null; description: string };
   characters: CharacterRow[];
   style: ResolvedStylePrompt;
   universeStyle?: string;
   userFeedback?: string | null;
+  visualBible?: string | null;
 }): string {
-  const { shot, characters, style, universeStyle, userFeedback } = args;
+  const { shot, characters, style, universeStyle, userFeedback, visualBible } = args;
   const parts: string[] = [(shot.image_prompt || shot.description).trim()];
   for (const character of characters) {
     const bible = buildCharacterBible(character);
@@ -289,7 +303,8 @@ export function buildShotPrompt(args: {
   }
   const charContext = buildCharacterContext(characters);
   if (charContext) parts.push(charContext);
-  if (characters.length > 0) parts.push(SHOT_CONTINUITY_LOCK);
+  if (characters.length > 0) parts.push(SHOT_CONTINUITY_LOCK, ART_STYLE_LOCK);
+  parts.push(bibleLine(visualBible));
   parts.push(style.stylePrompt);
   if (universeStyle) parts.push(universeStyle);
   const feedback = stripFocusPrefix(userFeedback);
@@ -303,9 +318,15 @@ export function buildVideoPrompt(args: {
   characters: CharacterRow[];
   style: ResolvedStylePrompt;
   userFeedback?: string | null;
+  visualBible?: string | null;
 }): string {
-  const { shot, characters, style, userFeedback } = args;
+  const { shot, characters, style, userFeedback, visualBible } = args;
   const parts = [(shot.prompt || shot.description).trim()];
+  // The planned end state is where the clip stops; later beats belong to later shots.
+  const stateAt = shot.description.indexOf("\n画面状态：");
+  if (shot.prompt && stateAt >= 0) {
+    parts.push(`结束画面：${shot.description.slice(stateAt + "\n画面状态：".length).trim()}，停在这个状态，不要演出后面的情节`);
+  }
   // The user's motion note is the most direct direction for the clip.
   const motion = shot.motion_note?.trim();
   if (motion) parts.push(`Motion: ${motion}`);
@@ -314,7 +335,9 @@ export function buildVideoPrompt(args: {
   }
   const context = buildCharacterContext(characters);
   if (context) parts.push(context);
-  if (characters.length > 0) parts.push(`Continuity lock: ${VIDEO_CONTINUITY_LOCK}`);
+  if (characters.length > 0) parts.push(`Continuity lock: ${VIDEO_CONTINUITY_LOCK}`, ART_STYLE_LOCK);
+  const bible = bibleLine(visualBible);
+  if (bible) parts.push(bible);
   parts.push(`Visual style lock: ${style.stylePrompt}`, `Avoid: ${style.negativePrompt}`);
   const feedback = stripFocusPrefix(userFeedback);
   if (feedback) parts.push(`用户反馈：${feedback}`);

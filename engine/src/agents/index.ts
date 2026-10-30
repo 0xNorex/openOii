@@ -335,6 +335,10 @@ interface PlanShot {
   characters_in_frame?: string[];
   /** Visible end state (prop counts, levels, positions) the next shot starts from. */
   continuity?: string;
+  /** The shot's opening frame (the previous end state), for the keyframe. */
+  image_prompt?: string;
+  /** Start-to-end motion of this one shot, for the clip. */
+  video_prompt?: string;
 }
 
 function planBasePayload(ctx: StageContext, task: "characters" | "shots"): Record<string, unknown> {
@@ -511,9 +515,16 @@ async function applyShotPlan(ctx: StageContext, data: Record<string, unknown>): 
     // prompts and stays editable with the rest of the shot text.
     const continuity = typeof s.continuity === "string" ? s.continuity.trim() : "";
     const description = continuity ? `${base}\n画面状态：${continuity}` : base;
+    // The planner writes a start-state keyframe prompt and a start-to-end
+    // video prompt; dropping them drew every keyframe at the END state, so
+    // each shot showed its own result (and the next beat) before it happened.
+    const text = (value: unknown): string | null =>
+      typeof value === "string" && value.trim() ? value.trim() : null;
     const id = ctx.shared.insertShot(ctx.projectId, index + 1, {
       description,
       character_ids: characterIds,
+      image_prompt: text(s.image_prompt),
+      prompt: text(s.video_prompt),
     });
     ctx.shared.updateShot(id, {
       scene: s.scene ?? null,
@@ -711,12 +722,18 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const idToName = new Map(characters.map((c) => [c.id, c.name]));
   const byId = new Map(characters.map((c) => [c.id, c]));
+  const visualBible = ctx.shared.getProject(ctx.projectId)?.visual_bible ?? null;
   let index = 0;
   const worker = new BackendWorker(ctx.signal);
   try {
     for (const shot of shots) {
       index += 1;
       ctx.emitter.sendProgress("render", "render_shots", "shot_images_approval", index / shots.length);
+      // Keyframes chain: shot N is drawn from shot N-1's keyframe (read live,
+      // so a keyframe redrawn earlier in this loop is the one carried on).
+      const order = allShots.findIndex((item) => item.id === shot.id);
+      const previous = order > 0 ? ctx.shared.getShot(allShots[order - 1]!.id) : null;
+      const previousImage = previous?.image_url ?? null;
       const ids = parseJsonColumn(shot.character_ids, [] as number[]);
       const boundCharacters = ids
         .map((id) => byId.get(id))
@@ -735,6 +752,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             style: ctx.style,
             universeStyle: ctx.universeStyle,
             userFeedback: feedback || undefined,
+            visualBible,
           })
         : [
             `分镜首帧：${shot.description}`,
@@ -747,6 +765,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             .join("。");
       await ctx.emitter.sendMessage("render", `正在绘制分镜 (${index}/${shots.length})`);
       let imageBytes: Buffer | null = null;
+      let chained = false;
       if (ctx.mediaSettings.enableImageToImage) {
         const references = characterReferenceUrls(boundCharacters);
         if (references.length > 0) {
@@ -757,8 +776,23 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             console.warn(`Character references skipped (shot ${shot.id})`);
           }
         }
+        if (previousImage) {
+          try {
+            const previousBytes = await ctx.media.readImageBytes(previousImage);
+            imageBytes = imageBytes
+              ? await ctx.media.stackImages([imageBytes, previousBytes])
+              : previousBytes;
+            chained = true;
+          } catch (error) {
+            if (ctx.signal.aborted) throw error;
+            console.warn(`Previous keyframe skipped (shot ${shot.id})`);
+          }
+        }
       }
-      const imageUrl = await ctx.media.generateImageUrl({ prompt, imageBytes });
+      const imagePrompt = chained
+        ? `参考图${boundCharacters.length > 0 ? "左边是角色设定，最右边" : ""}是上一个镜头的画面：沿用同一地点、机位方向、光线和画风，关键道具（材质、大小、透明度、里面的状态）保持一致，只画本镜头开始那一刻；不要把参考图拼贴进画面。${prompt}`
+        : prompt;
+      const imageUrl = await ctx.media.generateImageUrl({ prompt: imagePrompt, imageBytes });
       const before = ctx.shared.getShot(shot.id);
       if (!before) continue;
       ctx.emitter.commit("shot_updated", () => {
@@ -1119,6 +1153,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
   const useI2V = ctx.mediaSettings.enableImageToVideo;
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const byId = new Map(characters.map((character) => [character.id, character]));
+  const visualBible = ctx.shared.getProject(ctx.projectId)?.visual_bible ?? null;
   const defaultDuration =
     ctx.mediaSettings.videoProvider === "doubao" ? ctx.mediaSettings.doubaoVideoDuration : 5;
   let index = 0;
@@ -1141,6 +1176,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
               characters: boundCharacters,
               style: ctx.style,
               userFeedback: feedback || undefined,
+              visualBible,
             })
           : [shot.prompt || shot.description, feedback].filter(Boolean).join("\n");
       };
