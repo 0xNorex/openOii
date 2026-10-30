@@ -334,7 +334,7 @@ export function UniverseDetailPage() {
 												) : null}
 											</div>
 											<IconButton
-								className="text-error-fg hover:bg-error-bg"
+								className="text-ink-muted hover:bg-error-bg hover:text-error-fg focus-visible:text-error-fg"
 												aria-label={`从宇宙移除${ch.chapter_title || ch.project_title || "未命名项目"}`}
 												title="从宇宙移除"
 												onClick={() =>

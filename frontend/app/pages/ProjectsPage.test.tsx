@@ -247,6 +247,39 @@ describe('ProjectsPage', () => {
     expect(create.querySelector('button')).toBeNull();
   });
 
+  it('shows readable labels instead of stored ids', () => {
+    queryState = {
+      data: [
+        buildProject(1, { style: 'anime', creation_mode: 'story', target_shot_count: null }),
+        buildProject(2, { style: 'my-custom', creation_mode: 'quick', target_shot_count: 4 }),
+      ],
+      isLoading: false,
+      error: null,
+    };
+
+    render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+
+    expect(screen.getByText('日漫')).toBeInTheDocument();
+    expect(screen.getByText('my-custom')).toBeInTheDocument();
+    expect(screen.queryByText('anime')).not.toBeInTheDocument();
+    expect(screen.queryByText('story')).not.toBeInTheDocument();
+    expect(screen.getByText('逐步确认')).toBeInTheDocument();
+    expect(screen.getByText('自动确认')).toBeInTheDocument();
+    expect(screen.getByText('镜头数自动')).toBeInTheDocument();
+    expect(screen.getByText('计划 4 镜头')).toBeInTheDocument();
+  });
+
+  it('shows table-shaped skeleton rows while loading', () => {
+    queryState = { data: undefined, isLoading: true, error: null };
+
+    render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent('正在加载项目…');
+    expect(status.querySelectorAll('.skeleton-line').length).toBeGreaterThan(0);
+  });
+
   it('shows the empty state when there are no projects', () => {
     queryState = {
       data: [],
@@ -256,8 +289,8 @@ describe('ProjectsPage', () => {
 
     render(<MemoryRouter><ProjectsPage /></MemoryRouter>);
 
-    expect(screen.getByText('暂无项目')).toBeInTheDocument();
-    expect(screen.getByText('开始创作你的第一个故事')).toBeInTheDocument();
+    expect(screen.getByText('还没有项目')).toBeInTheDocument();
+    expect(screen.getByText('写下一段故事，生成你的第一部漫剧')).toBeInTheDocument();
   });
 
   it('shows load errors and wires the retry action to invalidate the project list query', async () => {
@@ -277,7 +310,10 @@ describe('ProjectsPage', () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalled();
     });
-    expect(screen.getByText('加载失败，请重试')).toBeInTheDocument();
+    expect(screen.getByText('项目列表加载失败')).toBeInTheDocument();
+    screen.getByRole('button', { name: '重试' }).click();
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['projects'] });
+    invalidateQueries.mockClear();
 
     const toastPayload = toastError.mock.calls[0][0] as {
       actions?: Array<{ label: string; onClick: () => void }>;

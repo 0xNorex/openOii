@@ -241,7 +241,7 @@ function CreateAssetForm({ isOpen, onClose, onCreated }: CreateAssetFormProps) {
 									className="w-full h-28 object-cover rounded-lg border border-line"
 								/>
 								<IconButton
-									className="absolute top-1 right-1 rounded-full bg-paper-100/90 text-error-fg hover:bg-error-bg"
+									className="absolute top-1 right-1 rounded-full bg-paper-100/90 text-ink-muted hover:bg-error-bg hover:text-error-fg focus-visible:text-error-fg"
 									onClick={() => {
 										setImageFile(null);
 										setImagePreview(null);
@@ -384,7 +384,7 @@ function AssetCard({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="!px-1 !py-0 !min-h-0 !h-5 text-xs text-error-fg hover:text-error-fg"
+						className="!px-1 !py-0 !min-h-0 !h-5 text-xs text-ink-muted hover:text-error-fg focus-visible:text-error-fg"
 						onClick={() => onDelete(asset)}
 						aria-label={`删除资产 ${asset.name}`}
 						title="删除资产"

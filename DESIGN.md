@@ -308,6 +308,17 @@ Executable checks: `themeContrast.test.ts` (both themes) and `designContract.tes
 - 打开即聚焦第一项；↑↓/Home/End 移动（跳过禁用项）；Esc 或点外面收起，焦点回到触发按钮；选中一项自动收起。
 - 外观：`rounded-md border-line bg-surface shadow-panel p-1`，项 `text-xs` + 14px 图标，hover/focus 同为 `bg-paper-200`，按住为 `bg-ink/10`（不缩放）。不另起菜单样式。
 
+### States: loading, empty, error
+- **Loading a list:** skeleton rows in the list's own column grid and row height (`.skeleton-line`: the media wait-state halftone sweep as thin `radius-sm` bars), wrapped in `role="status" aria-busy` with a sr-only label. Swapping in the data must not shift the layout. A spinner (`spinner-doodle`) is for buttons and small, unknown-shape areas only. (Linear / Raycast list loading.)
+- **Empty:** `ui/EmptyState` with corner marks, a sentence that says what to do next (not "暂无数据"), and one primary action.
+- **Error:** never shown as empty. A tinted error block names what failed ("项目列表加载失败"), reassures that data is safe, and has an inline 重试. A toast may repeat the retry, but the inline one stays.
+
+### Destructive actions
+- Row-level delete / remove icons sit at `ink-muted` and turn `error-fg` on `bg-error-bg` only on hover or `focus-visible`. A column of red icons reads as an alarm and outweighs the row content (Linear, Figma file browser). Confirmation stays in `ConfirmModal`, and the confirm button there uses `danger`.
+
+### Labels for stored ids
+- Never print a backend id (style `anime`, mode `review`) in the UI. Map it with the shared helper (`styleLabel`, the creation-mode labels), and use a phrase rather than a dangling unit when a value is unset ("镜头数自动", not "计划 自动 镜头").
+
 ### Dialogs
 - Native `<dialog>` via `showModal()`, so the top layer sits above every floating panel. `.dialog-panel` with `shadow-dialog`.
 

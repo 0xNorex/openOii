@@ -17,6 +17,7 @@ import { getProjectStatusMeta } from "~/features/projects/statusMeta";
 import { IconButton } from "../components/ui/IconButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MonoRuns } from "~/components/ui/MonoRuns";
+import { styleLabel } from "~/features/projects/styleCategories";
 
 
 function formatDate(value: string | null | undefined) {
@@ -203,7 +204,11 @@ export function ProjectsPage() {
 					{isLoading ? (
 						<LoadingState />
 					) : error ? (
-						<ErrorState />
+						<ErrorState
+							onRetry={() =>
+								queryClient.invalidateQueries({ queryKey: ["projects"] })
+							}
+						/>
 					) : visibleProjects.length === 0 ? (
 						<EmptyState />
 					) : (
@@ -300,12 +305,13 @@ function ProjectRow({
 					{story || "尚未填写故事内容"}
 				</p>
 				<div className="mt-1 flex flex-wrap gap-1.5 text-xs font-semibold text-ink-muted">
-					<span>{project.style || "未设风格"}</span>
+					<span>{styleLabel(project.style) ?? "未设风格"}</span>
 					<span className="tabular-nums">
-						计划 {project.target_shot_count ?? "自动"} 镜头
+						{project.target_shot_count ? `计划 ${project.target_shot_count} 镜头` : "镜头数自动"}
 					</span>
 					{project.creation_mode ? (
-						<span>{project.creation_mode === "quick" ? "自动确认" : project.creation_mode === "review" ? "逐步确认" : project.creation_mode}</span>
+						<span>{/* 与 useRunController 一致：只有 quick 自动过关，其余（review / 旧数据 story）都逐步确认 */}
+							{project.creation_mode === "quick" ? "自动确认" : "逐步确认"}</span>
 					) : null}
 				</div>
 			</Link>
@@ -324,7 +330,7 @@ function ProjectRow({
 			</div>
 
 			<IconButton
-				className={(selecting ? "col-start-3" : "col-start-2") + " row-start-1 justify-self-end text-error-fg hover:bg-error-bg sm:col-auto sm:row-auto"}
+				className={(selecting ? "col-start-3" : "col-start-2") + " row-start-1 justify-self-end text-ink-muted hover:bg-error-bg hover:text-error-fg focus-visible:text-error-fg sm:col-auto sm:row-auto"}
 				onClick={onDelete}
 				aria-label={`删除项目 ${project.title}`}
 				title="删除"
@@ -335,29 +341,49 @@ function ProjectRow({
 	);
 }
 
+/** 骨架行：沿用表格的列宽与行高，加载完成时版面不跳（DESIGN.md §5 States） */
 function LoadingState() {
 	return (
-		<div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line bg-paper-200/35">
-			<span className="spinner-doodle h-5 w-5 text-primary" aria-hidden="true" />
-			<p className="m-0 text-sm font-semibold text-ink-muted">
-				正在加载项目…
-			</p>
+		<div
+			className="overflow-hidden rounded-lg border border-line bg-surface"
+			role="status"
+			aria-busy="true"
+		>
+			<span className="sr-only">正在加载项目…</span>
+			<div className="divide-y divide-ink/10" aria-hidden="true">
+				{[0, 1, 2, 3].map((row) => (
+					<div
+						key={row}
+						className={"grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-3 sm:gap-3 sm:px-3 sm:py-4 " + ROW_COLS}
+					>
+						<div className="min-w-0">
+							<div className="skeleton-line h-3.5 w-2/5" />
+							<div className="skeleton-line mt-2 h-3 w-3/4" />
+						</div>
+						<div className="skeleton-line hidden h-5 w-16 sm:block" />
+						<div className="skeleton-line hidden h-3 w-20 sm:block" />
+						<div className="skeleton-line h-7 w-7 justify-self-end" />
+					</div>
+				))}
+			</div>
 		</div>
 	);
 }
 
-function ErrorState() {
+function ErrorState({ onRetry }: { onRetry: () => void }) {
 	return (
-		<div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
-			<SvgIcon name="emoji-sad" size={24} className="text-error-fg" />
+		<div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-error/25 bg-error/5 px-3 text-center">
 			<div>
 				<p className="m-0 text-md font-bold text-error-fg">
-					加载失败，请重试
+					项目列表加载失败
 				</p>
 				<p className="m-0 mt-0.5 text-xs text-ink-muted">
-					刷新页面或检查后端是否可用
+					服务暂时不可用，项目都还在，稍后重试
 				</p>
 			</div>
+			<Button size="sm" onClick={onRetry}>
+				重试
+			</Button>
 		</div>
 	);
 }
@@ -367,8 +393,8 @@ function EmptyState() {
 		<div className="min-h-40 rounded-lg border border-dashed border-line bg-paper-200/35">
 			<SharedEmptyState
 				icon={<SvgIcon name="page" size={20} />}
-				title="暂无项目"
-				description="开始创作你的第一个故事"
+				title="还没有项目"
+				description="写下一段故事，生成你的第一部漫剧"
 				action={
 					<ButtonLink to="/" size="sm">
 						<SvgIcon name="plus" size={14} />
