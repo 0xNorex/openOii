@@ -343,6 +343,12 @@ export const projectsApi = {
 	getMessages: (id: number) =>
 		fetchApi<import("~/types").Message[]>(`/api/v1/projects/${id}/messages`),
 
+	/** 只重新合成：用现有分镜视频重新配音并拼接成片，不重跑前面的阶段。 */
+	recompose: (id: number) =>
+		fetchApi<import("~/types").AgentRun>(`/api/v1/projects/${id}/runs/recompose`, {
+			method: "POST",
+		}),
+
 	/** 创建一次生成 run（POST /projects/{id}/runs）。409 时返回恢复控制面。 */
 	startRun: (
 		id: number,

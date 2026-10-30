@@ -21,7 +21,7 @@ from app.exceptions import AppException, BusinessError
 from app.generated.workflow_contract import GRAPH_STAGE_FOR_AGENT, WORKFLOW_VERSION
 from app.models.agent_run import AgentMessage, AgentRun
 from app.models.message import Message
-from app.models.project import Project
+from app.models.project import Project, Shot
 from app.schemas.project import (
     AgentRunRead,
     CancelRunResponse,
@@ -65,6 +65,7 @@ from app.services.provider_resolution import (
 from app.services.run_context import build_run_context_snapshot
 from app.services.run_recovery import build_recovery_control_surface
 from app.services.run_intent import build_rerun_intent
+from app.services.run_lifecycle import TargetedRunSpec, create_local_run
 from app.services.text_factory import create_text_service
 from app.services.video_factory import create_video_service
 from app.ws.manager import ConnectionManager
@@ -1157,6 +1158,56 @@ async def get_run_timing(run_id: int, session: AsyncSession = SessionDep) -> Run
     """Elapsed time per stage and overall, plus a rough remaining estimate."""
     run = await get_or_404(session, AgentRun, run_id)
     return await build_run_timing(session, run)
+
+
+@router.post(
+    "/projects/{project_id}/runs/recompose",
+    response_model=AgentRunRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def recompose_project(
+    project_id: int,
+    session: AsyncSession = SessionDep,
+    settings: Settings = SettingsDep,
+    ws: ConnectionManager = WsManagerDep,
+) -> AgentRunRead:
+    """重新合成: re-mix and re-concatenate the existing clips only.
+
+    After a single-shot regen the final cut is stale but every clip is
+    current, so only compose_merge needs to run, not the whole pipeline.
+    """
+    await get_or_404(session, Project, project_id)
+    shots = (await session.execute(select(Shot).where(Shot.project_id == project_id))).scalars().all()
+    if not shots or any(not shot.video_url for shot in shots):
+        raise AppException(
+            message="还有分镜没有视频，先补齐分镜视频再合成",
+            code="CLIPS_MISSING",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+    active = await session.execute(
+        select(AgentRun.id)
+        .where(AgentRun.project_id == project_id)
+        .where(AgentRun.status.in_(("queued", "running")))
+        .limit(1)
+    )
+    if active.first() is not None:
+        raise AppException(
+            message="项目还有运行在进行，结束后再合成",
+            code="RUN_ACTIVE",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+    result = await create_local_run(
+        session,
+        settings=settings,
+        ws=ws,
+        spec=TargetedRunSpec(
+            project_id=project_id,
+            resource_type="project",
+            resource_id=project_id,
+            stage="compose_merge",
+        ),
+    )
+    return AgentRunRead.model_validate(result.run)
 
 
 @router.get("/projects/{project_id}/runs/regenerate-plan", response_model=RegeneratePlanRead)

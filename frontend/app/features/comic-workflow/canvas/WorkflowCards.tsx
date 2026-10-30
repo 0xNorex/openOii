@@ -498,6 +498,8 @@ function OutputCard({
 								stopAll(e);
 								canvasEvents.emit("request-regenerate", {
 									source: "output-card",
+									// 只差成片：分镜视频都在，只重新拼接；有阻塞项才走完整重新生成
+									...(node.outputState === "needs_recompose" ? { mode: "recompose" as const } : {}),
 								});
 							}}
 							className="btn-doodle touch-target-dense h-7 min-h-7 flex-1 px-2 text-xs bg-transparent text-ink hover:bg-paper-200"

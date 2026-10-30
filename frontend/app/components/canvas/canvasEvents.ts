@@ -9,8 +9,11 @@ export interface CanvasEvents {
   "set-workflow-selection": { nodeIds: string[] };
   /** 不带实体时打开项目级版本对比。 */
   "version-history": { entityType?: "character" | "shot"; entityId?: number };
-  /** 成片卡「重新合成」→ ProjectPage 复用生成/恢复通路 */
-  "request-regenerate": { source: "output-card" };
+  /**
+   * 成片卡「重新合成」→ ProjectPage 复用生成/恢复通路。
+   * mode=recompose：分镜视频都在，只重新配音拼接，不重跑整条流水线。
+   */
+  "request-regenerate": { source: "output-card"; mode?: "recompose" };
 }
 
 type EventCallback<T> = (data: T) => void;

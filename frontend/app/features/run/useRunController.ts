@@ -379,6 +379,32 @@ export function useRunController(args: {
 		onSettled: () => resyncRunState(projectId, { project: true }),
 	});
 
+	const recomposeMutation = useMutation({
+		mutationFn: () => projectsApi.recompose(projectId),
+		onSuccess: (run) => {
+			patchRunState(projectId, {
+				isGenerating: true,
+				currentRunId: run.id,
+				currentAgent: run.current_agent,
+				progress: run.progress,
+				currentRunProviderSnapshot: run.provider_snapshot ?? null,
+				currentStage: "compose",
+				recoveryControl: null,
+				recoverySummary: null,
+				recoveryGate: null,
+			});
+			setLastRunStatus(null);
+		},
+		onError: (error: Error | ApiError) => {
+			const apiError = error instanceof ApiError ? error : null;
+			toast.error({
+				title: "重新合成失败",
+				message: apiError?.message || error.message || "无法开始重新合成，请重试",
+			});
+		},
+		onSettled: () => resyncRunState(projectId, { project: true }),
+	});
+
 	const restoreMutation = useMutation({
 		mutationFn: (runId: number) => runsApi.restorePrevious(runId),
 		onSuccess: (result) => {
@@ -541,8 +567,11 @@ export function useRunController(args: {
 	};
 
 	useEffect(() => {
-		return canvasEvents.on("request-regenerate", () => {
+		return canvasEvents.on("request-regenerate", ({ mode }) => {
 			if (recoveryControl?.state === "recoverable") handleResume();
+			else if (mode === "recompose") {
+				if (!recomposeMutation.isPending) recomposeMutation.mutate();
+			}
 			else if (onRequestRegenerate) onRequestRegenerate();
 			else handleGenerate();
 		});
