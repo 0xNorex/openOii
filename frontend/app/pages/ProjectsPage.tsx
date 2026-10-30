@@ -359,6 +359,7 @@ function LoadingState() {
 						<div className="min-w-0">
 							<div className="skeleton-line h-3.5 w-2/5" />
 							<div className="skeleton-line mt-2 h-3 w-3/4" />
+							<div className="skeleton-line mt-2 h-3 w-1/4" />
 						</div>
 						<div className="skeleton-line hidden h-5 w-16 sm:block" />
 						<div className="skeleton-line hidden h-3 w-20 sm:block" />
