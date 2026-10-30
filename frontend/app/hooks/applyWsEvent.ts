@@ -273,10 +273,13 @@ export function applyWsEvent(
 			const run = readRunState(projectId);
 			if (!run.isGenerating) break;
 			// Output so far nudges the run progress forward, never back.
-			if (typeof frame.progress === "number" && frame.progress > run.progress && frame.progress <= 1) {
-				patchRunState(projectId, { progress: frame.progress });
-			}
+			// One patch per frame: progress and the live row change together (one cache write, one render).
+			const nudge =
+				typeof frame.progress === "number" && frame.progress > run.progress && frame.progress <= 1
+					? { progress: frame.progress }
+					: {};
 			patchRunState(projectId, {
+				...nudge,
 				liveStream: {
 					streamId: frame.stream_id,
 					agent: frame.agent,

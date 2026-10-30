@@ -108,7 +108,7 @@ export function CreationSettings({ value, onChange, universes, disabled }: Creat
 								aria-label={`移除参考图 ${index + 1}`}
 								disabled={disabled}
 							>
-								<img src={url} alt="" className="h-full w-full object-cover" width={40} height={40} />
+								<img src={url} alt="" className="h-full w-full object-cover" width={40} height={40} loading="lazy" decoding="async" />
 							</PlainButton>
 						))}
 						{value.referenceFiles.length < MAX_REFERENCE_IMAGES ? (

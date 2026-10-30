@@ -213,6 +213,10 @@ function CharacterRefStrip({
 							src={getStaticUrl(url) ?? url}
 							alt={`参考图 ${index + 1}`}
 							className={`${MEDIA} h-7 w-7 rounded-sm border border-line-strong object-cover`}
+							width={28}
+							height={28}
+							loading="lazy"
+							decoding="async"
 							draggable={false}
 							{...imageReady}
 						/>

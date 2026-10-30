@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
@@ -28,7 +28,7 @@ function StatusDot({ status }: { status: ActivityEntry["status"] }) {
 }
 
 /** `live`: this step's LLM call is streaming; its output shows inside the step. */
-function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) {
+const EntryRow = memo(function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) {
 	const [open, setOpen] = useState(false);
 	const expanded = open || entry.status === "running";
 
@@ -116,10 +116,10 @@ function EntryRow({ entry, live }: { entry: ActivityEntry; live?: LiveStream }) 
 			</div>
 		</li>
 	);
-}
+});
 
 /** 连续的同类提醒：一行摘要 + ×N，展开逐条看。默认收起，顺序与原文不变。 */
-function WarningGroupRow({ group }: { group: WarningGroup }) {
+const WarningGroupRow = memo(function WarningGroupRow({ group }: { group: WarningGroup }) {
 	const [open, setOpen] = useState(false);
 	const listId = useId();
 	const count = group.items.length;
@@ -157,7 +157,7 @@ function WarningGroupRow({ group }: { group: WarningGroup }) {
 			</div>
 		</li>
 	);
-}
+});
 
 /**
  * 步骤时间线。默认跟随最新；用户上滑后停止跟随，出现“跳到最新”。
@@ -171,7 +171,16 @@ export function ActivityTimeline({
 }) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [following, setFollowing] = useState(true);
-	const { entries: rows, host } = attachLiveStream(entries, live);
+	// 只依赖 live 的 agent/状态：流式文字逐帧变化时，已完成的行保持同一引用，memo 行不重渲
+	const liveAgent = live?.agent ?? null;
+	const liveStatus = live?.status ?? null;
+	const { rows, host } = useMemo(() => {
+		const attached = attachLiveStream(
+			entries,
+			liveAgent === null || liveStatus === null ? null : { agent: liveAgent, status: liveStatus },
+		);
+		return { rows: groupRepeatedWarnings(attached.entries), host: attached.host };
+	}, [entries, liveAgent, liveStatus]);
 
 	const scrollToBottom = () => {
 		const el = scrollRef.current;
@@ -210,7 +219,7 @@ export function ActivityTimeline({
 				data-testid="activity-scroll"
 			>
 				<ol className="m-0 list-none p-0" aria-label="活动时间线">
-					{groupRepeatedWarnings(rows).map((row) =>
+					{rows.map((row) =>
 						row.kind === "warning-group" ? (
 							<WarningGroupRow key={row.id} group={row} />
 						) : (

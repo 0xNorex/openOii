@@ -11,7 +11,8 @@ import {
 	toggleRunNotify,
 	type NotifyAvailability,
 } from "~/utils/runNotifications";
-import { useRunState } from "./useRunState";
+import { useRunStateSelect } from "./useRunState";
+import type { RunState } from "~/query/runState";
 
 /** 服务端每步一刷（换步 / 到闸门时），中间每分钟校准一次；秒表在本地走 */
 export const RUN_TIMING_REFRESH_MS = 60_000;
@@ -27,8 +28,16 @@ function useNow(active: boolean): number {
 	return now;
 }
 
+const selectTimingRun = (state: RunState) => ({
+	currentRunId: state.currentRunId,
+	recoveryControl: state.recoveryControl,
+	isGenerating: state.isGenerating,
+	currentStep: state.currentStep,
+	awaitingConfirm: state.awaitingConfirm,
+});
+
 export function useRunTiming(projectId: number): LiveRunTiming | null {
-	const { currentRunId, recoveryControl, isGenerating, currentStep, awaitingConfirm } = useRunState(projectId);
+	const { currentRunId, recoveryControl, isGenerating, currentStep, awaitingConfirm } = useRunStateSelect(projectId, selectTimingRun);
 	const runId = currentRunId ?? recoveryControl?.active_run.id ?? null;
 	const enabled = Boolean(isGenerating && runId && runId > 0);
 	const query = useQuery({

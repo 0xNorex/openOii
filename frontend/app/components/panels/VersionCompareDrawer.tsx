@@ -9,6 +9,9 @@ import { getStaticUrl, projectsApi, versionsApi } from "~/services/api";
 import type { ArtifactVersion, VersionEntityType } from "~/types";
 import { toast } from "~/utils/toast";
 import { IconButton } from "../../components/ui/IconButton";
+import { blank, DISPLAY_FIELDS, defaultPrevious, diffSnapshots, type FieldDiff, type Snapshot } from "./versionDiff";
+
+export { defaultPrevious, diffSnapshots };
 
 interface VersionCompareDrawerProps {
 	open: boolean;
@@ -34,53 +37,8 @@ const LABELS: Record<string, string> = {
 	visual_notes: "视觉设定",
 };
 
-const DISPLAY_FIELDS = [
-	"name",
-	"description",
-	"scene",
-	"action",
-	"dialogue",
-	"camera",
-	"lighting",
-	"expression",
-	"prompt",
-	"image_prompt",
-	"visual_notes",
-];
-
-/** 参与对比的字段：展示字段 + 图片 */
-const COMPARE_FIELDS = [...DISPLAY_FIELDS, "image_url"];
-
 /** 右侧默认是「当前」：实体此刻的样子，不是某个快照 */
 const CURRENT = 0;
-
-type Snapshot = Record<string, unknown>;
-type FieldDiff = { field: string; before: unknown; after: unknown };
-
-function blank(value: unknown): boolean {
-	return value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
-}
-
-/** 两份快照在对比字段上的差异；空值彼此相等 */
-export function diffSnapshots(before: Snapshot | undefined, after: Snapshot | undefined): FieldDiff[] {
-	if (!before || !after) return [];
-	return COMPARE_FIELDS.flatMap((field) => {
-		const a = before[field];
-		const b = after[field];
-		if (blank(a) && blank(b)) return [];
-		if (JSON.stringify(a) === JSON.stringify(b)) return [];
-		return [{ field, before: a, after: b }];
-	});
-}
-
-/**
- * 默认对比「当前 vs 上一版」：上一版是最新的、和当前确实不同的快照。
- * 都和当前相同（或没有快照）时返回 null，抽屉给出提示而不是空对比。
- */
-export function defaultPrevious(current: Snapshot | undefined, versions: ArtifactVersion[]): number | null {
-	const differing = versions.find((version) => diffSnapshots(version.snapshot, current).length > 0);
-	return differing?.version ?? null;
-}
 
 function valueToText(value: unknown): string {
 	if (value === null || value === undefined || value === "") return "—";
@@ -104,7 +62,7 @@ function VersionColumn({ title, snapshot, changed }: { title: string; snapshot?:
 				className={`mt-1.5 aspect-video overflow-hidden rounded-sm border bg-paper-300 ${changed.has("image_url") ? "border-primary" : "border-line"}`}
 			>
 				{imageUrl ? (
-					<img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+					<img src={imageUrl} alt={title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
 				) : (
 					<div className="flex h-full items-center justify-center text-xs text-ink-muted">
 						这一版还没有图

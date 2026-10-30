@@ -31,12 +31,12 @@ export function runStateRefetchInterval(state: RunState | undefined): number | f
 	return state?.awaitingConfirm ? GATE_POLL_MS : false;
 }
 
-export function useRunState(projectId: number): RunState {
-	const { data } = useQuery({
+function runStateQueryOptions(projectId: number) {
+	return {
 		queryKey: projectQueryKeys.runState(projectId),
 		enabled: projectId > 0,
 		retry: 1,
-		queryFn: async () => {
+		queryFn: async (): Promise<RunState> => {
 			const seq = lifecycleSeq.get(projectId) ?? 0;
 			const control = await projectsApi.currentRun(projectId);
 			const live = readRunState(projectId);
@@ -45,7 +45,22 @@ export function useRunState(projectId: number): RunState {
 		},
 		staleTime: 0,
 		refetchOnWindowFocus: true,
-		refetchInterval: (query) => runStateRefetchInterval(query.state.data as RunState | undefined),
-	});
+		refetchInterval: (query: { state: { data: RunState | undefined } }) =>
+			runStateRefetchInterval(query.state.data),
+	};
+}
+
+export function useRunState(projectId: number): RunState {
+	const { data } = useQuery(runStateQueryOptions(projectId));
 	return data ?? readRunState(projectId);
+}
+
+/**
+ * Subscribe to a slice of the run projection. `select` output is structurally
+ * shared by React Query, so a component only re-renders when its slice changes
+ * — not on every `llm_stream` frame. Pass a module-level (stable) selector.
+ */
+export function useRunStateSelect<T>(projectId: number, select: (state: RunState) => T): T {
+	const { data } = useQuery({ ...runStateQueryOptions(projectId), select });
+	return data ?? select(readRunState(projectId));
 }

@@ -4,7 +4,8 @@ import { ImagePreviewModal, VideoPreviewModal } from "~/components/canvas/Previe
 import { canvasEvents } from "~/components/canvas/canvasEvents";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { projectsApi } from "~/services/api";
-import { useRunState } from "~/hooks/useRunState";
+import { useRunStateSelect } from "~/hooks/useRunState";
+import type { RunState } from "~/query/runState";
 import { gateSection } from "../agent/inboxItems";
 import type { ComicWorkflowGraph } from "../graph/types";
 import { buildComicWorkflow } from "../graph/buildComicWorkflow";
@@ -23,6 +24,14 @@ interface ComicWorkflowCanvasProps {
 	fitInsets?: { left: number; right: number };
 }
 
+const selectCanvasRun = (state: RunState) => ({
+	isGenerating: state.isGenerating,
+	awaitingConfirm: state.awaitingConfirm,
+	currentRunId: state.currentRunId,
+	recoveryGate: state.recoveryGate,
+	currentStep: state.currentStep,
+});
+
 export function ComicWorkflowCanvas({
 	projectId,
 	onSelectedNodeIdChange,
@@ -39,7 +48,7 @@ export function ComicWorkflowCanvas({
 		title: string;
 	} | null>(null);
 
-	const { isGenerating, awaitingConfirm, currentRunId, recoveryGate, currentStep } = useRunState(projectId);
+	const { isGenerating, awaitingConfirm, currentRunId, recoveryGate, currentStep } = useRunStateSelect(projectId, selectCanvasRun);
 	const focusSection = awaitingConfirm ? gateSection(recoveryGate) : null;
 
 	const { data: project, isLoading: projectLoading } = useQuery({

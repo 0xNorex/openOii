@@ -23,9 +23,17 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
 
+	// 整份项目列表（~55KB）只在用户要打开切换器时才拉：悬停/聚焦预取，标题来自已缓存的当前项目
+	const [wanted, setWanted] = useState(false);
 	const { data: projects } = useQuery({
-		queryKey: ["projects"],
+		queryKey: projectQueryKeys.projects(),
 		queryFn: () => projectsApi.list(),
+		enabled: wanted || open,
+	});
+	const { data: currentProject } = useQuery({
+		queryKey: projectQueryKeys.project(currentId ?? 0),
+		queryFn: () => projectsApi.get(currentId as number),
+		enabled: (currentId ?? 0) > 0,
 	});
 
 	useEffect(() => {
@@ -37,7 +45,8 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 	}, [open]);
 
 	const list = (projects ?? []) as Project[];
-	const currentTitle = list.find((p) => p.id === currentId)?.title || "项目";
+	const currentTitle =
+		(currentProject as Project | undefined)?.title || list.find((p) => p.id === currentId)?.title || "项目";
 
 	return (
 		// min-w-12 ≥ 按钮 min-content（两枚 shrink-0 图标 + gap + padding），
@@ -47,6 +56,8 @@ function ProjectDropdown({ currentId }: { currentId?: number }) {
 			<div className="overflow-hidden">
 				<PlainButton
 					onClick={() => setOpen(!open)}
+					onPointerEnter={() => setWanted(true)}
+					onFocus={() => setWanted(true)}
 					className="touch-target-dense flex w-full max-w-24 items-center gap-1 rounded-md px-1.5 text-sm font-bold transition-colors duration-fast hover:bg-paper-200 sm:max-w-56"
 					aria-expanded={open}
 					aria-haspopup="listbox"

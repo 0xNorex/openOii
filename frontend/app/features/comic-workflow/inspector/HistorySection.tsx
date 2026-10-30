@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { canvasEvents } from "~/components/canvas/canvasEvents";
-import { defaultPrevious } from "~/components/panels/VersionCompareDrawer";
+import { defaultPrevious } from "~/components/panels/versionDiff";
 import { versionsApi } from "~/services/api";
 import type { ComicWorkflowNode } from "../graph/types";
 import { ActionButton, ActionStack, FieldList } from "./fields";

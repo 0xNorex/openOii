@@ -2,13 +2,30 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
+import { dirname, join } from "path";
 
-export default defineConfig({
+/**
+ * react-router 7 的 exports 只有 development 条件：不处理的话生产包里带的是
+ * 开发版（多出警告与校验代码）。构建时把 react-router 与 react-router/dom
+ * 指向它自带的 dist/production 版本。
+ */
+function reactRouterProductionAliases() {
+  const fromDom = createRequire(createRequire(import.meta.url).resolve("react-router-dom"));
+  const root = dirname(dirname(dirname(fromDom.resolve("react-router"))));
+  return [
+    { find: /^react-router$/, replacement: join(root, "dist/production/index.mjs") },
+    { find: /^react-router\/dom$/, replacement: join(root, "dist/production/dom-export.mjs") },
+  ];
+}
+
+export default defineConfig(({ command }) => ({
   plugins: [react()],
   resolve: {
-    alias: {
-      "~": fileURLToPath(new URL("./app", import.meta.url)),
-    },
+    alias: [
+      { find: "~", replacement: fileURLToPath(new URL("./app", import.meta.url)) },
+      ...(command === "build" ? reactRouterProductionAliases() : []),
+    ],
   },
   server: {
     port: 15173,
@@ -100,4 +117,4 @@ export default defineConfig({
       ],
     },
   },
-});
+}));

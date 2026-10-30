@@ -38,9 +38,9 @@ import { ConfirmModal } from "~/components/ui/ConfirmModal";
 import { projectQueryKeys } from "~/query/queryKeys";
 import { useProjectData } from "~/features/projects/useProjectData";
 import { exportApi, getStaticUrl, projectsApi } from "~/services/api";
-import { useRunState } from "~/hooks/useRunState";
+import { useRunStateSelect } from "~/hooks/useRunState";
 import { useEditorStore } from "~/stores/editorStore";
-import { readRunState as readRunStateSnapshot } from "~/query/runState";
+import { readRunState as readRunStateSnapshot, type RunState } from "~/query/runState";
 import { AGENT_NAME_MAP, type VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
@@ -63,9 +63,25 @@ const VersionCompareDrawer = lazy(() =>
 // 窄于 1280px 时 Agent 面板与检查器互斥：开一个就收另一个，给画布留出空间
 const isNarrowStudio = () => typeof window !== "undefined" && window.innerWidth < 1280;
 
+/** Only the fields the shell renders: streamed text (liveStream) stays out; progress snaps to 1% steps. */
+function selectWorkbenchRun(state: RunState) {
+	return {
+		isGenerating: state.isGenerating,
+		currentRunId: state.currentRunId,
+		currentStage: state.currentStage,
+		progress: Math.round(state.progress * 100) / 100,
+		awaitingConfirm: state.awaitingConfirm,
+		recoveryControl: state.recoveryControl,
+		currentStep: state.currentStep,
+		recoveryGate: state.recoveryGate,
+		awaitingAgent: state.awaitingAgent,
+		feedbackReceipt: state.feedbackReceipt,
+	};
+}
+
 export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const queryClient = useQueryClient();
-	const runState = useRunState(projectId);
+	const runState = useRunStateSelect(projectId, selectWorkbenchRun);
 	const {
 		isGenerating: runIsGenerating,
 		currentRunId: runCurrentRunId,
