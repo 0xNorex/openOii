@@ -997,14 +997,27 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
           "generation",
         );
         ctx.emitter.versionCreated("shot", shot.id, version, "generation");
-        ctx.shared.updateShot(shot.id, { video_url: videoUrl, duration }, before.revision);
+        // A new clip invalidates the voice/BGM mixed into the old one, so merge
+        // runs audio processing again instead of keeping a stale track.
+        ctx.shared.updateShot(
+          shot.id,
+          { video_url: videoUrl, duration, tts_url: null, bgm_type: null },
+          before.revision,
+        );
         ctx.checkpointTarget("shot_video", shot.id);
         const project = ctx.shared.getProject(ctx.projectId);
         if (project?.video_url && project.status !== "superseded") {
           ctx.shared.updateProject(ctx.projectId, { status: "superseded" });
           ctx.emitter.projectUpdated({ status: "superseded" });
         }
-        const updated: ShotRow = { ...before, video_url: videoUrl, duration, revision: before.revision + 1 };
+        const updated: ShotRow = {
+          ...before,
+          video_url: videoUrl,
+          duration,
+          tts_url: null,
+          bgm_type: null,
+          revision: before.revision + 1,
+        };
         return { shot: shotReadPayload(updated) };
       });
     }
