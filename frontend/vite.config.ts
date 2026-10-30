@@ -59,6 +59,8 @@ export default defineConfig({
         },
       },
     },
+    // 只出 ES2022 语法（Chrome 94+ / Firefox 93+ / Safari 16.4+），省去类字段等降级代码，JS gzip 约少 4.6 KB
+    target: "es2022",
     // 启用 CSS 代码分割
     cssCodeSplit: true,
     // Gzip budgets are enforced by scripts/check-bundle-budget.mjs.

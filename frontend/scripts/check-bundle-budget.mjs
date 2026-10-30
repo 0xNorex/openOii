@@ -1,4 +1,4 @@
-// Budgets for the build, run after `pnpm build`:
+// Budgets for the build, run after `pnpm build` (optional arg: another outDir):
 // - gzip size of the built JS;
 // - raw bytes of the self-hosted woff2 fonts, which are all fetched on first load.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -8,7 +8,7 @@ import { gzipSync } from "node:zlib";
 const TOTAL_KB = 250;
 const CHUNK_KB = 150;
 const FONT_KB = 120;
-const dist = new URL("../dist/", import.meta.url).pathname;
+const dist = process.argv[2] ?? new URL("../dist/", import.meta.url).pathname;
 const dir = join(dist, "assets");
 
 const chunks = readdirSync(dir)
