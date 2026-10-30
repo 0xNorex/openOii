@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/Button";
 import { PlainButton } from "~/components/ui/PlainButton";
 import type { GatePreview, InboxItem } from "./inboxItems";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 export interface InboxActions {
 	onConfirm: (feedback?: string) => Promise<boolean> | void;

@@ -4,6 +4,7 @@ import { toast } from "~/utils/toast";
 import { Button } from "~/components/ui/Button";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { MenuButton, MenuItem } from "~/components/ui/Menu";
+import "~/components/ui/icons/workbenchIcons";
 
 interface ComicCanvasToolbarProps {
 	projectId: number;

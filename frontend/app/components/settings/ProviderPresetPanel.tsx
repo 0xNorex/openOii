@@ -20,6 +20,7 @@ import {
 	type PresetService,
 	type ProviderPreset,
 } from "./providerPresets";
+import "~/components/ui/icons/settingsIcons";
 
 interface Props {
 	service: PresetService;

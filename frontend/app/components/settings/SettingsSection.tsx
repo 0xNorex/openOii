@@ -6,6 +6,7 @@ import { SvgIcon } from "~/components/ui/SvgIcon";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { ProviderPresetPanel } from "./ProviderPresetPanel";
 import { isPresetService } from "./providerPresets";
+import "~/components/ui/icons/settingsIcons";
 
 interface SectionProps {
 	tab: string;

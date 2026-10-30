@@ -15,6 +15,7 @@ import type {
 	ComicWorkflowSection,
 	WorkflowNodeStatus,
 } from "../graph/types";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 卡片底部的标签：一行，过长省略，完整内容放 title。多行的胶囊会撑破卡片底边。 */
 const TAG_PILL = "inline-block max-w-full truncate rounded-full border px-1.5 py-0.5 text-xs";

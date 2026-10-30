@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 创建运行在途的秒数；不在途时为 0。超过 10 秒就要说清楚还在等什么（P1-1）。 */
 function usePendingSeconds(pending: boolean): number {

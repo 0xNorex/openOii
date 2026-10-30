@@ -1,5 +1,6 @@
 import type { IconName } from "~/components/ui/SvgIcon";
 import type { ConfigItem } from "~/types";
+import "~/components/ui/icons/settingsIcons";
 
 
 export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: string }> = {

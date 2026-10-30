@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import type { FeedbackReceipt } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { GATE_COPY } from "./inboxItems";
+import "~/components/ui/icons/workbenchIcons";
 
 type StepState = "done" | "current" | "todo" | "error";
 

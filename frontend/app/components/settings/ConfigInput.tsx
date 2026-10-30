@@ -4,6 +4,7 @@ import type { ConfigItem } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { IconButton } from "../../components/ui/IconButton";
 import { PlainButton } from "../../components/ui/PlainButton";
+import "~/components/ui/icons/settingsIcons";
 
 interface ConfigInputProps {
 	item: ConfigItem;

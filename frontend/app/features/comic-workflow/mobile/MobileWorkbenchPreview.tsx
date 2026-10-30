@@ -4,6 +4,7 @@ import { getStaticUrl } from "~/services/api";
 import type { Character, Shot } from "~/types";
 import { type StudioStatus, studioStatusDotClass, studioStatusText } from "../state/deriveStudioStatus";
 import { WORKFLOW_STEPS } from "~/utils/workflowSteps";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 六步进度：做完的实心，当前一步品牌色，后面的留空（移动端也看得到走到哪了） */
 function StepMeter({ current }: { current: number }) {

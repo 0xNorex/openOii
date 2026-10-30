@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { useConnectionStatus } from "~/query/connectionStatus";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 运行中多久没有任何事件就提示“可能断开了”。 */
 export const STALE_AFTER_MS = 30_000;

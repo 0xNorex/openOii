@@ -8,6 +8,7 @@ import type { ArtifactVersion } from "~/types";
 import type { ComicWorkflowNode } from "../graph/types";
 import { ActionButton, ActionStack, errorMessage, LockNotice, lockReason } from "./fields";
 import { MultiShotActions } from "./MultiShotActions";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 生成：批准、重做、资产与宇宙同步、删除。 */
 export function GenerationSection({

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { shotsApi } from "~/services/api";
 import { toast } from "~/utils/toast";
 import { ActionButton, errorMessage, LockNotice, lockReason } from "./fields";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 多选分镜：批量重做。 */
 export function MultiShotActions({

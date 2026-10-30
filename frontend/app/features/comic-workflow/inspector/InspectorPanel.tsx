@@ -4,6 +4,7 @@ import type { ComicWorkflowNode } from "../graph/types";
 import { UniverseTimelinePanel } from "./UniverseTimelinePanel";
 import { WorkflowInspector } from "./WorkflowInspector";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 interface InspectorPanelProps {
 	projectId: number;

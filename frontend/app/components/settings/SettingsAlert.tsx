@@ -1,6 +1,7 @@
 import { Button } from "~/components/ui/Button";
 import { Dialog } from "~/components/ui/Dialog";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/settingsIcons";
 
 export type AlertType = "success" | "error" | "warning";
 

@@ -15,6 +15,7 @@ import { SyncStatus } from "~/features/comic-workflow/agent/SyncStatus";
 import { RunTimingBar } from "~/features/comic-workflow/agent/RunTimingBar";
 import { resyncRunState } from "~/query/resyncRunState";
 import { projectsApi } from "~/services/api";
+import "~/components/ui/icons/workbenchIcons";
 
 /** Stable empty array so the query's fallback does not churn identity. */
 const EMPTY_MESSAGES: AgentMessage[] = [];

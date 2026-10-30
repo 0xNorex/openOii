@@ -1,5 +1,6 @@
 import { SvgIcon, type IconName } from "~/components/ui/SvgIcon";
 import type { WorkflowNodeStatus } from "../graph/types";
+import "~/components/ui/icons/workbenchIcons";
 
 /**
  * 卡片状态徽标：颜色 + 形状两路信号。

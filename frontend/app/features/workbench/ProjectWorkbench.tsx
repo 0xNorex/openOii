@@ -50,6 +50,7 @@ import { AGENT_NAME_MAP, type VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 // 本模块一求值就拉当前视口的子 chunk，和项目数据请求并行；数据到时通常已就绪，首帧直接同步渲染。
 // 不用顶层 await：它会让 rollup 把共享模块拆成一堆小 chunk

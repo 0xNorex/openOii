@@ -9,6 +9,7 @@ import { MonoRuns } from "~/components/ui/MonoRuns";
 import type { LiveStream } from "./liveStream";
 import { LiveCharCount, LiveStreamBody, LiveStreamRow, liveStatusLabel } from "./LiveStreamRow";
 import { FeedbackReceiptCard } from "./FeedbackReceiptCard";
+import "~/components/ui/icons/workbenchIcons";
 
 /** 距底部小于这个值就算“在底部”，继续跟随。 */
 const FOLLOW_SLACK = 24;

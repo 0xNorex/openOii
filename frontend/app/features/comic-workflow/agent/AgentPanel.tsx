@@ -5,6 +5,7 @@ import { PlainButton } from "~/components/ui/PlainButton";
 import { InboxPanel, type InboxActions } from "./InboxPanel";
 import type { InboxItem } from "./inboxItems";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 export type AgentPanelTab = "activity" | "inbox";
 

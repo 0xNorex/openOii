@@ -2,6 +2,7 @@ import { useRunNotify, useRunTiming } from "~/hooks/useRunTiming";
 import { PlainButton } from "~/components/ui/PlainButton";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { formatElapsed, formatRemaining } from "~/utils/runTiming";
+import "~/components/ui/icons/workbenchIcons";
 
 /**
  * 运行中的时间条（P1-8）：本步已用 · 共已用 · 剩余约 N 分钟，外加「完成后通知我」。

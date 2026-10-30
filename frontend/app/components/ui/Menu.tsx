@@ -15,6 +15,7 @@ import {
 import { IconButton } from "./IconButton";
 import { PlainButton } from "./PlainButton";
 import { SvgIcon, type IconName } from "./SvgIcon";
+import "~/components/ui/icons/workbenchIcons";
 
 /**
  * 唯一的「···」溢出菜单：顶栏工作台工具、画布工具条共用。
