@@ -26,7 +26,7 @@ class ConfigUpdateResponse(BaseModel):
 
 
 class TestConnectionRequest(BaseModel):
-    service: Literal["llm", "image", "video", "vision", "tts"]
+    service: Literal["llm", "image", "video", "vision", "tts", "bgm"]
     # 可选：传递当前表单中的配置值（用于测试未保存的配置）
     config_overrides: dict[str, str | None] | None = None
 

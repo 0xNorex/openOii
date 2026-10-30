@@ -10,10 +10,11 @@
 
 export const PRESETS_VERIFIED_AT = "2026-10-30";
 
-export type PresetService = "text" | "image" | "video" | "vision" | "tts";
+export type PresetService = "text" | "image" | "video" | "vision" | "tts" | "bgm";
 export type VideoVendor = "kling" | "vidu" | "zhipu" | "minimax" | "dashscope" | "veo";
 export type TtsVendor = "edge" | "elevenlabs" | "azure" | "cosyvoice";
-export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor | TtsVendor;
+export type BgmVendor = "library" | "stability" | "suno";
+export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor | TtsVendor | BgmVendor;
 export type PresetGroup = "domestic" | "global" | "local";
 
 export const PRESET_GROUP_LABEL: Record<PresetGroup, string> = {
@@ -1141,7 +1142,7 @@ const TTS_PRESETS: ProviderPreset[] = [
 		models: ["speech-2.8-hd", "speech-2.8-turbo", "speech-2.6-hd"],
 		defaultVoice: "Chinese (Mandarin)_Lyrical_Voice",
 		voices: ["Chinese (Mandarin)_Lyrical_Voice", "Chinese (Mandarin)_News_Anchor", "Chinese (Mandarin)_Gentle_Youth", "Chinese (Mandarin)_Cute_Spirit"],
-		keyHint: "MiniMax 开放平台 API Key；国内和海外的密钥不通用",
+		keyHint: "国内和海外的密钥不通用",
 		keyUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
 		docsUrl: "https://platform.minimaxi.com/docs/api-reference/speech-t2a-http",
 		sources: [
@@ -1261,12 +1262,92 @@ const TTS_PRESETS: ProviderPreset[] = [
 	},
 ];
 
+/** 背景音乐（BGM）：请求形状见 backend/app/services/bgm_providers.py */
+const BGM_PRESETS: ProviderPreset[] = [
+	{
+		id: "minimax-music",
+		service: "bgm",
+		provider: "minimax",
+		group: "domestic",
+		name: "MiniMax 音乐",
+		mark: "M",
+		logo: "minimax",
+		tagline: "纯音乐生成",
+		regions: [
+			{ id: "cn", label: "国内", baseUrl: "https://api.minimaxi.com/v1" },
+			{ id: "global", label: "海外", baseUrl: "https://api.minimax.io/v1" },
+		],
+		defaultModel: "music-2.6",
+		models: ["music-2.6", "music-3.0"],
+		keyHint: "MiniMax 开放平台 API Key；国内和海外的密钥不通用",
+		keyUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+		docsUrl: "https://platform.minimaxi.com/docs/api-reference/music-generation",
+		sources: ["https://platform.minimaxi.com/docs/api-reference/music-generation"],
+		notes: ["2026-08-20 起不再对新用户开放"],
+	},
+	{
+		id: "stable-audio",
+		service: "bgm",
+		provider: "stability",
+		group: "global",
+		name: "Stable Audio",
+		mark: "SA",
+		logo: "stability",
+		tagline: "Stability AI",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://api.stability.ai" }],
+		defaultModel: "stable-audio-2.5",
+		models: ["stable-audio-2.5", "stable-audio-2"],
+		keyHint: "sk- 开头",
+		keyUrl: "https://platform.stability.ai/account/keys",
+		docsUrl: "https://docs.stability.ai/api-reference/stable-audio-2/text-to-audio",
+		sources: ["https://docs.stability.ai/api-reference/stable-audio-2/text-to-audio"],
+		notes: ["最长 190 秒"],
+	},
+	{
+		id: "bgm-library",
+		service: "bgm",
+		provider: "library",
+		group: "local",
+		name: "内置曲库",
+		mark: "♪",
+		logo: "library",
+		tagline: "默认 · 免费",
+		regions: [],
+		defaultModel: "",
+		models: [],
+		keyHint: "",
+		keyOptional: true,
+		sources: [],
+		notes: ["本机合成，按剧情情绪挑选"],
+	},
+	{
+		id: "custom-bgm",
+		service: "bgm",
+		provider: "suno",
+		group: "local",
+		name: "自定义 · Suno 兼容",
+		mark: "…",
+		logo: "suno",
+		tagline: "自建网关",
+		regions: [],
+		defaultModel: "",
+		models: [],
+		keyHint: "可留空",
+		keyOptional: true,
+		docsUrl: "https://github.com/gcui-art/suno-api",
+		sources: ["https://github.com/gcui-art/suno-api"],
+		notes: ["Suno 没有公开的官方 API"],
+		custom: true,
+	},
+];
+
 export const PROVIDER_PRESETS: Record<PresetService, ProviderPreset[]> = {
 	text: TEXT_PRESETS,
 	image: IMAGE_PRESETS,
 	video: VIDEO_PRESETS,
 	vision: VISION_PRESETS,
 	tts: TTS_PRESETS,
+	bgm: BGM_PRESETS,
 };
 
 /** 每个服务的接口协议键和后端默认值 */
@@ -1276,6 +1357,7 @@ const SERVICE_PROVIDER: Record<PresetService, { key: string; fallback: string }>
 	video: { key: "VIDEO_PROVIDER", fallback: "openai" },
 	vision: { key: "CRITIQUE_VISION_PROVIDER", fallback: "openai" },
 	tts: { key: "TTS_PROVIDER", fallback: "edge" },
+	bgm: { key: "BGM_PROVIDER", fallback: "library" },
 };
 
 export function isPresetService(tab: string): tab is PresetService {
@@ -1303,7 +1385,7 @@ export function isTestMode(preset: ProviderPreset) {
  * 自定义入口显示和编辑的是 ANTHROPIC_* 键。
  */
 export function effectiveKeys(preset: ProviderPreset, form: Record<string, unknown>): PresetKeys {
-	if (!preset.custom) return presetKeys(preset);
+	if (!preset.custom || preset.service === "bgm") return presetKeys(preset);
 	const current = formProvider(preset.service, form);
 	if (current === "fake") return presetKeys(preset);
 	return presetKeys({ ...preset, provider: current as PresetProvider });
@@ -1330,6 +1412,11 @@ export function presetKeys(preset: ProviderPreset): PresetKeys {
 		if (preset.provider === "edge") return { provider: "TTS_PROVIDER", voice };
 		if (preset.provider === "azure") return { provider: "TTS_PROVIDER", baseUrl: "TTS_BASE_URL", apiKey: "TTS_API_KEY", voice };
 		return { provider: "TTS_PROVIDER", baseUrl: "TTS_BASE_URL", model: "TTS_MODEL", apiKey: "TTS_API_KEY", voice };
+	}
+	if (preset.service === "bgm") {
+		if (preset.provider === "library") return { provider: "BGM_PROVIDER" };
+		if (preset.provider === "suno") return { provider: "BGM_PROVIDER", baseUrl: "BGM_BASE_URL", apiKey: "BGM_API_KEY" };
+		return { provider: "BGM_PROVIDER", baseUrl: "BGM_BASE_URL", model: "BGM_MODEL", apiKey: "BGM_API_KEY" };
 	}
 	if (preset.service === "vision") {
 		return {

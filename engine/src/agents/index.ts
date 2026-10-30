@@ -1415,7 +1415,10 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
   const byId = new Map(characters.map((character) => [character.id, character]));
   const videoUrls: string[] = [];
   const subtitles = ctx.mediaSettings.subtitleMode ?? "off";
+  const bgm = ctx.mediaSettings.bgmEnabled;
   const segments: SubtitleSegment[] = [];
+  const voices: Array<{ url: string; offset: number }> = [];
+  const moodTexts: string[] = [];
   let filmOffset = 0;
   const worker = new BackendWorker(ctx.signal);
   try {
@@ -1428,7 +1431,8 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         .map((id) => byId.get(id))
         .filter((character): character is CharacterRow => character !== undefined);
       const line = splitDialogueSpeaker(live.dialogue, shotCast, characters);
-      if (ctx.media.audioEnabled && !live.tts_url && !live.bgm_type) {
+      // 背景音乐整部片一条（拼接后再铺），这里只处理每个镜头的配音
+      if (ctx.mediaSettings.ttsEnabled && !live.tts_url && !live.bgm_type) {
         const speaker = line.speaker;
         let audio: Awaited<ReturnType<BackendWorker["processAudio"]>> | null = null;
         try {
@@ -1451,7 +1455,7 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
               tts_model: ctx.mediaSettings.ttsModel ?? null,
               tts_default_voice: ctx.mediaSettings.ttsDefaultVoice,
               tts_volume: ctx.mediaSettings.ttsVolume,
-              bgm_enabled: ctx.mediaSettings.bgmEnabled,
+              bgm_enabled: false,
               bgm_volume: ctx.mediaSettings.bgmVolume,
               bgm_directory: ctx.mediaSettings.bgmDirectory,
             },
@@ -1509,11 +1513,13 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         }
       }
       videoUrls.push(videoUrl);
-      if (subtitles !== "off") {
+      moodTexts.push(live.scene ?? "", live.expression ?? "");
+      if (subtitles !== "off" || bgm) {
         // 字幕跟着配音走：配音从镜头开头开始，时长取配音本身（被镜头截断的部分不算）
         const clip = (await ctx.media.mediaDuration(videoUrl)) ?? live.duration ?? 5;
         const spoken = line.text?.trim() ?? "";
-        if (spoken) {
+        if (ctx.mediaSettings.ttsEnabled && ttsUrl) voices.push({ url: ttsUrl, offset: filmOffset });
+        if (spoken && subtitles !== "off") {
           const voice = ctx.mediaSettings.ttsEnabled ? await ctx.media.mediaDuration(ttsUrl) : null;
           const window = Math.min(clip, voice ?? estimatedSpeechSeconds(spoken));
           segments.push({ offset: filmOffset, window, text: spoken });
@@ -1525,6 +1531,49 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
     await worker.close();
   }
   let mergedUrl = await ctx.media.mergeVideos(videoUrls);
+  if (bgm) {
+    const bgmWorker = new BackendWorker(ctx.signal);
+    try {
+      const track = await bgmWorker.bgmTrack({
+        texts: moodTexts.filter(Boolean),
+        genre: project?.style ?? null,
+        duration: filmOffset || 30,
+        settings: {
+          bgm_provider: ctx.mediaSettings.bgmProvider ?? "library",
+          bgm_base_url: ctx.mediaSettings.bgmBaseUrl ?? null,
+          bgm_api_key: ctx.mediaSettings.bgmApiKey ?? null,
+          bgm_model: ctx.mediaSettings.bgmModel ?? null,
+          bgm_directory: ctx.mediaSettings.bgmDirectory,
+        },
+      });
+      if (track.error) {
+        await ctx.emitter.sendMessage(
+          "compose",
+          `⚠️ 背景音乐服务没生成出来（${track.error.slice(0, 120)}），先用本地曲库。`,
+        );
+      }
+      if (track.track_url) {
+        mergedUrl = await ctx.media.addBackgroundMusic(
+          mergedUrl,
+          track.track_url,
+          voices,
+          ctx.mediaSettings.bgmVolume,
+          ctx.mediaSettings.bgmDucking ?? true,
+        );
+        const where = track.source === "library" ? "本地曲库" : track.source;
+        await ctx.emitter.sendMessage(
+          "compose",
+          `已铺上背景音乐（${where}，${track.mood ?? "ambient"}）${ctx.mediaSettings.bgmDucking === false ? "" : "，台词处自动压低"}。`,
+        );
+      }
+    } catch (error) {
+      if (ctx.signal.aborted) throw error;
+      const reason = error instanceof Error ? error.message : String(error);
+      await ctx.emitter.sendMessage("compose", `⚠️ 背景音乐没加上（${reason.slice(0, 120)}），成片先不带配乐。`);
+    } finally {
+      await bgmWorker.close();
+    }
+  }
   if (subtitles !== "off") {
     try {
       const subtitled = await ctx.media.addSubtitles(

@@ -251,8 +251,19 @@ class Settings(BaseSettings):
     )
     bgm_enabled: bool = Field(
         default=True,
-        description="是否启用 BGM 背景音乐",
+        description="是否启用背景音乐（整部片一条，项目里可单独开关）",
     )
+    bgm_provider: str = Field(
+        default="library",
+        description=(
+            "背景音乐服务商：library（内置免版权曲库，本地合成）、minimax（MiniMax 音乐）、"
+            "stability（Stable Audio）、suno（Suno 兼容网关）"
+        ),
+    )
+    bgm_base_url: str | None = Field(default=None, description="背景音乐服务地址（留空用服务商默认）")
+    bgm_api_key: str | None = Field(default=None, description="背景音乐服务 API Key（本地曲库不需要）")
+    bgm_model: str | None = Field(default=None, description="背景音乐模型（如 music-2.6、stable-audio-2.5）")
+    bgm_ducking: bool = Field(default=True, description="有台词时自动压低背景音乐（ducking）")
     bgm_volume: float = Field(
         default=0.3,
         description="BGM 音量（0-1）",

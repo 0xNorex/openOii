@@ -121,6 +121,21 @@ async def handle(request: object) -> object:
             "tts_error": tts_error,
         }
 
+    if action == "bgm_track":
+        policy = request.get("settings")
+        allowed = {"bgm_provider", "bgm_base_url", "bgm_api_key", "bgm_model", "bgm_directory"}
+        updates = {key: value for key, value in policy.items() if key in allowed} if isinstance(policy, dict) else {}
+        settings = get_settings().model_copy(update=updates)
+        audio = AudioService(settings)
+        texts = request.get("texts")
+        genre = request.get("genre")
+        genre = genre if isinstance(genre, str) else None
+        mood = audio.pick_mood([t for t in texts if isinstance(t, str)] if isinstance(texts, list) else [], genre)
+        duration = request.get("duration")
+        return await audio.film_bgm_track(
+            mood, genre, float(duration) if isinstance(duration, (int, float)) and duration > 0 else 30.0
+        )
+
     raise ValueError(f"unknown action: {action}")
 
 

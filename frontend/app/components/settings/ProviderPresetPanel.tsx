@@ -59,7 +59,7 @@ function pendingStillApplies(
 }
 
 /** 只有单色标的品牌：logo 文件自带整块品牌底色（见 scripts/build-provider-logos.py） */
-const BAKED_TILE = new Set(["openai", "xai", "groq", "ollama", "lmstudio", "elevenlabs"]);
+const BAKED_TILE = new Set(["openai", "xai", "groq", "ollama", "lmstudio", "elevenlabs", "suno"]);
 
 /** 服务商标记：品牌彩色 logo 放在固定的浅色方块里（深浅色主题都清楚）；没有 logo 用文字标记 */
 export function ProviderMark({ preset, selected }: { preset: ProviderPreset; selected: boolean }) {
@@ -243,6 +243,8 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 							? `当前接口协议：${PROTOCOL_LABEL[protocol]}，沿用原有配置；要换协议或改接口路径请到「高级设置」。`
 							: service === "tts"
 								? "任意兼容 OpenAI /audio/speech 的服务：填好地址、密钥、模型和音色即可。"
+								: service === "bgm"
+									? "填好 suno-api 网关地址即可。"
 								: "任意 OpenAI 兼容的网关、中转或自建服务：填好地址、密钥和模型即可；接口路径在「高级设置」里。"}
 					</p>
 				) : null}

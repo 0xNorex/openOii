@@ -286,6 +286,53 @@ class AudioService:
         # 默认 ambient
         return self._resolve_bgm_path(_DEFAULT_BGM)
 
+    def pick_mood(self, texts: list[str], genre: str | None = None) -> str:
+        """整部片的情绪：关键词命中最多的一类，平手按出现先后，都没命中用 ambient。"""
+        combined = " ".join([*(t for t in texts if t), genre or ""])
+        best, best_hits = _DEFAULT_BGM, 0
+        for bgm_type, keywords in _BGM_KEYWORD_MAP.items():
+            hits = sum(combined.count(kw) for kw in keywords)
+            if hits > best_hits:
+                best, best_hits = bgm_type, hits
+        return best
+
+    async def film_bgm_track(self, mood: str, genre: str | None, duration: float) -> dict[str, str | None]:
+        """整部片用的一条背景音乐。
+
+        BGM_PROVIDER=library 用本地曲库（缺的情绪用 numpy 现场合成）；云端服务商
+        生成失败时退回本地曲库，并把原因放进 error。返回 track_url / source / error。
+        """
+        from app.services import bgm_library
+        from app.services.bgm_providers import BGMConfig, BGMProviderError, generate, music_prompt
+
+        config = BGMConfig.build(
+            getattr(self.settings, "bgm_provider", "library"),
+            getattr(self.settings, "bgm_base_url", None),
+            getattr(self.settings, "bgm_api_key", None),
+            getattr(self.settings, "bgm_model", None),
+        )
+        error: str | None = None
+        if config.provider != "library":
+            try:
+                data = await generate(config, music_prompt(mood, genre), duration)
+                if len(data) < 1000:
+                    raise BGMProviderError("返回的音频太短")
+                _ensure_output_dir()
+                filename = f"bgm_{uuid.uuid4().hex[:8]}.mp3"
+                (AUDIO_OUTPUT_DIR / filename).write_bytes(data)
+                return {"track_url": f"/static/audio/{filename}", "source": config.provider, "mood": mood, "error": None}
+            except BGMProviderError as exc:
+                error = str(exc)
+            except Exception as exc:  # noqa: BLE001
+                error = f"{type(exc).__name__}"
+            logger.warning("Cloud BGM failed (%s), falling back to the local library", config.provider)
+        bgm_dir = BGM_BASE_DIR / self.settings.bgm_directory
+        track = await asyncio.to_thread(bgm_library.ensure_track, bgm_dir, mood)
+        if track is None:
+            return {"track_url": None, "source": None, "mood": mood, "error": error or "本地曲库合成失败"}
+        relative = track.resolve().relative_to((BGM_BASE_DIR / "static").resolve())
+        return {"track_url": f"/static/{relative.as_posix()}", "source": "library", "mood": mood, "error": error}
+
     def _resolve_bgm_path(self, bgm_type: str) -> str | None:
         """解析 BGM 文件路径
 

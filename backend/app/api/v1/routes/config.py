@@ -117,6 +117,11 @@ _ALLOWED_OVERRIDE_FIELDS = {
     "tts_api_key",
     "tts_model",
     "tts_default_voice",
+    # 背景音乐
+    "bgm_provider",
+    "bgm_base_url",
+    "bgm_api_key",
+    "bgm_model",
 }
 
 
@@ -216,6 +221,8 @@ async def test_connection(
         return await _test_vision_connection(settings)
     elif payload.service == "tts":
         return await _test_tts_connection(settings)
+    elif payload.service == "bgm":
+        return await _test_bgm_connection(settings)
 
     return TestConnectionResponse(success=False, message="未知服务类型")  # type: ignore[unreachable]
 
@@ -302,6 +309,18 @@ async def _test_tts_connection(settings) -> TestConnectionResponse:
     voice = settings.tts_default_voice or default_voice(config.provider)
     outcome = await probe(config, voice)
     return _probe_response(outcome, config.provider, config.model or voice)
+
+
+async def _test_bgm_connection(settings) -> TestConnectionResponse:
+    """背景音乐：只读探测（余额 / 额度 / 密钥），不生成音乐。"""
+    from app.services.audio_service import BGM_BASE_DIR
+    from app.services.bgm_library import library_tracks
+    from app.services.bgm_providers import BGMConfig, probe
+
+    config = BGMConfig.build(settings.bgm_provider, settings.bgm_base_url, settings.bgm_api_key, settings.bgm_model)
+    count = len(library_tracks(BGM_BASE_DIR / settings.bgm_directory))
+    outcome = await probe(config, count)
+    return _probe_response(outcome, config.provider, config.model or "曲库")
 
 
 async def _test_image_connection(settings) -> TestConnectionResponse:

@@ -15,6 +15,15 @@ export interface AudioResult {
   tts_error: string | null;
 }
 
+export interface BgmTrackResult {
+  track_url: string | null;
+  /** library / minimax / stability / suno */
+  source: string | null;
+  mood: string | null;
+  /** 云端服务商失败的原因（已退回本地曲库）；不含密钥 */
+  error: string | null;
+}
+
 /** Reuse the backend's existing image, face, and audio helpers from Engine. */
 export class BackendWorker {
   private child: ChildProcessWithoutNullStreams | null = null;
@@ -87,6 +96,30 @@ export class BackendWorker {
       tts_url: typeof result.tts_url === "string" ? result.tts_url : null,
       bgm_type: typeof result.bgm_type === "string" ? result.bgm_type : null,
       tts_error: typeof result.tts_error === "string" ? result.tts_error : null,
+    };
+  }
+
+  /** One background track for the whole film (local library or a cloud music provider). */
+  async bgmTrack(args: {
+    texts: string[];
+    genre: string | null;
+    duration: number;
+    settings: {
+      bgm_provider: string;
+      bgm_base_url: string | null;
+      bgm_api_key: string | null;
+      bgm_model: string | null;
+      bgm_directory: string;
+    };
+  }): Promise<BgmTrackResult> {
+    const value = await this.request({ action: "bgm_track", ...args });
+    if (!value || typeof value !== "object") throw new Error("invalid bgm result");
+    const result = value as Partial<BgmTrackResult>;
+    return {
+      track_url: typeof result.track_url === "string" ? result.track_url : null,
+      source: typeof result.source === "string" ? result.source : null,
+      mood: typeof result.mood === "string" ? result.mood : null,
+      error: typeof result.error === "string" ? result.error : null,
     };
   }
 

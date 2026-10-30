@@ -98,6 +98,13 @@ export interface MediaSettings {
   ttsVolume: number;
   bgmVolume: number;
   bgmDirectory: string;
+  /** 背景音乐服务商（BGM_PROVIDER）：library / minimax / stability / suno，默认 library */
+  bgmProvider?: string;
+  bgmBaseUrl?: string | null;
+  bgmModel?: string | null;
+  bgmApiKey?: string | null;
+  /** 有台词时压低背景音乐，默认开 */
+  bgmDucking?: boolean;
   /** 字幕：off / soft / burn（项目可覆盖），默认 off */
   subtitleMode?: SubtitleMode;
   subtitleFont?: string;
@@ -319,6 +326,23 @@ export function resolveMediaSettings(
     bgmDirectory: policy && "bgm_directory" in policy
       ? String(policy.bgm_directory ?? "static/bgm")
       : pick("BGM_DIRECTORY", "BGM_DIRECTORY", "static/bgm"),
+    bgmProvider: policy && "bgm_provider" in policy
+      ? String(policy.bgm_provider ?? "library") || "library"
+      : pick("BGM_PROVIDER", "BGM_PROVIDER", "library"),
+    bgmBaseUrl: policy && "bgm_base_url" in policy
+      ? (policy.bgm_base_url ? String(policy.bgm_base_url) : null)
+      : optional("BGM_BASE_URL", "BGM_BASE_URL"),
+    bgmModel: policy && "bgm_model" in policy
+      ? (policy.bgm_model ? String(policy.bgm_model) : null)
+      : optional("BGM_MODEL", "BGM_MODEL"),
+    bgmApiKey: secret(
+      Array.isArray(policy?.bgm_credential_keys)
+        ? (policy.bgm_credential_keys as unknown[]).map(String)
+        : ["BGM_API_KEY"],
+    ),
+    bgmDucking: policy && "bgm_ducking" in policy
+      ? asBoolean(policy.bgm_ducking, true)
+      : pick("BGM_DUCKING", "BGM_DUCKING", "true") !== "false",
     subtitleMode: subtitleMode(
       policy && "subtitle_mode" in policy ? policy.subtitle_mode : pick("SUBTITLE_MODE", "SUBTITLE_MODE", "off"),
     ),
@@ -1347,6 +1371,101 @@ export class MediaService {
       if (this.abortSignal?.aborted) throw new Error("run cancelled");
       const srtUrl = this.writeManagedFile(srt, ".srt");
       return { videoUrl: this.publishManagedFile(out, ".mp4"), srtUrl, cues: cues.length };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  /**
+   * Lay one background track under the whole film: loop or trim to length, fade in
+   * and out, and (ducking) compress it whenever a voice line plays. The sidechain is
+   * the voice tracks placed at their offsets; without them, the film's own audio.
+   */
+  async addBackgroundMusic(
+    videoUrl: string,
+    trackUrl: string,
+    voices: Array<{ url: string; offset: number }>,
+    volume: number,
+    ducking: boolean,
+  ): Promise<string> {
+    const source = this.localPathFor(videoUrl);
+    if (!source || !existsSync(source)) throw new Error("背景音乐：找不到本地成片文件");
+    const track = this.localPathFor(trackUrl);
+    if (!track || !existsSync(track)) throw new Error("背景音乐：找不到曲目文件");
+    const signal = this.abortSignal ?? undefined;
+    const probe = await execFileAsync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "stream=codec_type:format=duration", "-of", "json", source],
+      { signal },
+    );
+    const info = JSON.parse(String(probe.stdout)) as {
+      streams?: Array<{ codec_type?: string }>;
+      format?: { duration?: string };
+    };
+    const duration = Number(info.format?.duration);
+    if (!Number.isFinite(duration) || duration <= 0) throw new Error("背景音乐：读不到成片时长");
+    const hasAudio = (info.streams ?? []).some((stream) => stream.codec_type === "audio");
+    const voiceFiles = voices
+      .map((voice) => ({ path: this.localPathFor(voice.url), offset: voice.offset }))
+      .filter((voice): voice is { path: string; offset: number } => Boolean(voice.path && existsSync(voice.path)));
+    const d = duration.toFixed(3);
+    const fadeOut = Math.max(0, duration - 2).toFixed(3);
+    const gain = Math.max(0, Math.min(1, volume)).toFixed(3);
+    const fmt = "aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo";
+    const inputs = ["-i", source, "-stream_loop", "-1", "-i", track];
+    const graph: string[] = [
+      `[1:a]${fmt},atrim=0:${d},asetpts=N/SR/TB,afade=t=in:d=1.5,afade=t=out:st=${fadeOut}:d=2,volume=${gain}[bg]`,
+    ];
+    let sidechain: string | null = null;
+    if (ducking && voiceFiles.length > 0) {
+      const labels: string[] = [];
+      voiceFiles.forEach((voice, i) => {
+        inputs.push("-i", voice.path);
+        const ms = Math.max(0, Math.round(voice.offset * 1000));
+        graph.push(`[${i + 2}:a]${fmt},adelay=${ms}|${ms}[v${i}]`);
+        labels.push(`[v${i}]`);
+      });
+      graph.push(
+        `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0,apad,atrim=0:${d}[sc]`,
+      );
+      sidechain = "[sc]";
+    }
+    if (hasAudio) {
+      if (ducking && !sidechain) {
+        graph.push(`[0:a]${fmt},apad,atrim=0:${d},asplit=2[main][sc]`);
+        sidechain = "[sc]";
+      } else {
+        graph.push(`[0:a]${fmt},apad,atrim=0:${d}[main]`);
+      }
+    }
+    let bed = "[bg]";
+    if (sidechain) {
+      graph.push(`[bg]${sidechain}sidechaincompress=threshold=0.02:ratio=10:attack=20:release=450[duck]`);
+      bed = "[duck]";
+    }
+    if (hasAudio) {
+      graph.push(`[main]${bed}amix=inputs=2:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95[aout]`);
+    } else {
+      graph.push(`${bed}anull[aout]`);
+    }
+    const outputDir = join(this.settings.staticDir, "videos");
+    mkdirSync(outputDir, { recursive: true });
+    const dir = mkdtempSync(join(outputDir, ".bgm-"));
+    try {
+      const out = join(dir, "output.mp4");
+      await execFileAsync(
+        "ffmpeg",
+        [
+          "-v", "error", "-y", ...inputs,
+          "-filter_complex", graph.join(";"),
+          "-map", "0:v:0", "-map", "[aout]",
+          "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", d,
+          "-movflags", "+faststart", out,
+        ],
+        { signal, maxBuffer: 8 * 1024 * 1024 },
+      );
+      if (this.abortSignal?.aborted) throw new Error("run cancelled");
+      return this.publishManagedFile(out, ".mp4");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

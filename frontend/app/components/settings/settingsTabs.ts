@@ -31,6 +31,11 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 		title: "配音与字幕",
 		desc: "成片里的台词配音（默认 Edge 免费配音，也可以换成云端服务商）和字幕；每个项目可以在属性面板里单独开关",
 	},
+	bgm: {
+		icon: "music-double-note",
+		title: "背景音乐",
+		desc: "整部片一条背景音乐，台词处自动压低",
+	},
 };
 
 export interface ProviderGroup {
@@ -204,6 +209,29 @@ PROVIDER_TABS.tts = {
 			match: (k) => k.startsWith("subtitle_"),
 			note: "字幕按剧本台词生成，时间跟着配音走；soft 是播放器里可以关的字幕轨，burn 直接画进画面。",
 		},
+	],
+};
+
+const BGM_LINK = ["bgm_base_url", "bgm_api_key", "bgm_model"];
+
+PROVIDER_TABS.bgm = {
+	providerKey: "bgm_provider",
+	defaultProvider: "library",
+	icon: "music-double-note",
+	layout: "row",
+	options: [
+		{ value: "library", title: "内置曲库", desc: "免费，本机合成" },
+		{ value: "suno", title: "Suno 兼容网关", desc: "suno-api 网关" },
+		...Object.entries({ minimax: "MiniMax 音乐", stability: "Stable Audio" }).map(([value, title]) => ({
+			value,
+			title,
+			desc: "服务商原生接口，由上方预设选择",
+			native: true,
+		})),
+	],
+	groups: [
+		{ title: "音乐接口", providers: ["minimax", "stability", "suno"], match: (k) => BGM_LINK.includes(k) },
+		{ title: "背景音乐选项", match: (k) => k.startsWith("bgm_") && k !== "bgm_provider" && !BGM_LINK.includes(k) },
 	],
 };
 

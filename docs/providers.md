@@ -25,6 +25,7 @@
 | 视频（Veo，实验性） | `POST {base}/publishers/google/models/{model}:fetchPredictOperation`（不存在的 operation），只看鉴权 |
 | 视觉审查 | `GET {Base URL}/models`（Bearer，本地服务不带密钥时用占位值）；没填地址时直接提示「还没有配置视觉审查模型」 |
 | 配音 | 见下面「配音」一节：每家各用一个只读接口，不合成语音、不扣费 |
+| 背景音乐 | 见下面「背景音乐」一节：内置曲库直接成功；云端各用一个只读接口，不生成音乐 |
 | Fake | 直接成功 |
 
 错误统一翻译成中文：
@@ -163,6 +164,27 @@
 
 版式：字号是画面短边的 5.5%，底边和左右各留 7% 的安全区，一行最多 8–16 个字（1920×1080 是 16 个字，竖屏 1080×1920 是 15 个字），白字加深色描边。同时会生成一份 `.srt`，放在成片旁边。
 
+## 背景音乐（写入 `BGM_*`）
+
+整部片铺一条背景音乐（以前是每个镜头各混一段，而且内置的 6 个文件其实是静音占位）。拼接完成后按全片的场景和表情关键词挑一种情绪（warm / happy / sad / suspense / action / ambient），取一条曲子，循环或截到片长，开头 1.5 秒淡入、结尾 2 秒淡出，再和片子原声、配音混在一起。
+
+- `BGM_ENABLED`：开关；每个项目可以在「成片选项」里单独选（跟随设置 / 开 / 关）。
+- `BGM_VOLUME`：压低之前的音量（0–1，默认 0.3）。
+- `BGM_DUCKING`：闪避，默认开。用 ffmpeg `sidechaincompress`，触发信号是按时间摆好的配音轨（没有配音时用片子自己的声音），每句台词响起时音乐压低约 8 dB，说完 0.45 秒内回来。
+- 云端服务商失败时自动退回内置曲库，对话里会说明原因（不含密钥）。
+
+| 分组 | 预设 | `BGM_PROVIDER` | 地址 | 请求 | 推荐模型 | 测试连接（只读） |
+| --- | --- | --- | --- | --- | --- | --- |
+| 国内 | [MiniMax 音乐](https://platform.minimaxi.com/docs/api-reference/music-generation) | `minimax` | 国内 `https://api.minimaxi.com/v1`；海外 `https://api.minimax.io/v1`（[海外文档](https://platform.minimax.io/docs/api-reference/music-generation)） | `POST /music_generation`（`is_instrumental: true`，`output_format: hex`），按 `base_resp.status_code` 判断 | `music-2.6`、`music-3.0` | 音乐接口没有只读查询，用同一把密钥 `POST /get_voice` 验证，结果标为「部分可用」 |
+| 海外 | [Stable Audio](https://docs.stability.ai/api-reference/stable-audio-2/text-to-audio) | `stability` | `https://api.stability.ai` | `POST /v2beta/audio/stable-audio-2/text-to-audio`（multipart，`accept: audio/*`，`duration` 取片长，最长 190 秒） | `stable-audio-2.5`、`stable-audio-2` | `GET /v1/user/balance` |
+| 本地与自定义 | 内置曲库 | `library` | — | 本机用 numpy 合成（铺底和弦 + 拨弦琶音 + 低音，32 秒可循环，约 -15 LUFS），没有采样、没有第三方素材 | — | 直接成功，显示曲库数量 |
+| 本地与自定义 | [自定义 · Suno 兼容](https://github.com/gcui-art/suno-api) | `suno` | 自填 | `POST /api/generate`（`make_instrumental: true`，`wait_audio: true`），下载返回的 `audio_url` | — | `GET /api/get_limit` |
+
+- MiniMax 官方说明：2026-08-20 起付费音乐接口（音乐生成、歌词生成）不再对新用户开放，老用户可继续使用；限免模型已下线。
+- Suno 目前没有公开的官方 API（开发者平台仍是邀请制测试），所以这里只对接社区 suno-api 兼容网关，地址自己填。
+- 内置曲库放在 `BGM_DIRECTORY`（默认 `static/bgm`）。自己的 `情绪名.mp3` 放进去会优先使用；缺失、太小或整首静音（旧版本的占位文件）的才会重新合成。
+- 只有内置曲库真实跑过。MiniMax、Stable Audio 用假密钥打过测试连接和生成接口，返回 1004 / 401「密钥无效」；Suno 兼容接口只对本机模拟网关跑通过；**都没有用真实密钥生成过音乐**（未验）。
+
 ## 处理过的特殊配置
 
 - **地域绑定密钥**：阿里云百炼（北京、新加坡，以及北京 / 弗吉尼亚 / 东京专属域名）、Kimi（国内 / 海外）、MiniMax（国内 / 海外）、腾讯混元 TokenHub（国内 / 国际）、Bedrock（us-east-1 / us-west-2）都用地域切换。401 的中文提示会提醒检查地域。
@@ -198,11 +220,11 @@
 
 ## 服务商 logo
 
-卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 30 个，约 37 KB，浏览器按需加载，不进 JS 包）。
+卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 33 个，约 39 KB，浏览器按需加载，不进 JS 包；其中 `library.svg` 是 openOii 自己画的曲库标，图形取自 Iconoir 的 music-double-note，MIT）。
 
 - 有彩色变体（`*-color.svg`）的品牌直接用彩色版，只去掉 `<title>`、宽高和内联样式。
-- 只有单色标的 6 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio、ElevenLabs）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标、ElevenLabs 白底黑标。
-- 界面统一放在 28px 的浅色方块里（4px 内边距、1px 细边），方块颜色不随主题变，深色模式下深色和浅色的标都看得清；烘焙底色的 6 个铺满方块。
+- 只有单色标的 7 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio、ElevenLabs、Suno）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标、ElevenLabs 白底黑标、Suno 黑底白标。
+- 界面统一放在 28px 的浅色方块里（4px 内边距、1px 细边），方块颜色不随主题变，深色模式下深色和浅色的标都看得清；烘焙底色的 7 个铺满方块。
 
 许可全文见 `frontend/public/provider-logos/LICENSE.txt`，汇总在仓库根目录 `NOTICE`。
 
@@ -237,6 +259,8 @@ logo 是各公司的商标，这里只用来标明服务商，openOii 与它们�
 | 通义千问 VL（视觉审查）| bailian.svg | Bailian |
 | 可灵 / Vidu / MiniMax 海螺 / Google Veo（视频）| kling.svg、vidu.svg、hailuo.svg、deepmind.svg | Kling、Vidu、Hailuo、DeepMind |
 | 智谱 CogVideoX / 通义万相（视频）| zhipu.svg、bailian.svg | Zhipu、Bailian |
+| Stable Audio（背景音乐）| stability.svg | Stability |
+| 自定义 · Suno 兼容（背景音乐）| suno.svg | Suno（单色，烘焙头像配色） |
 
 自定义和测试模式没有品牌，继续用文字标记。新增预设时在 `providerPresets.ts` 里填 `logo` 并重跑生成脚本；单元测试会检查文件存在、是彩色、无脚本和外链、小于 4 KB，且目录里没有用不到的文件。
 

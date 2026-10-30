@@ -591,7 +591,7 @@ export const configApi = {
 		);
 	},
 	testConnection: (
-		service: "llm" | "image" | "video" | "vision" | "tts",
+		service: "llm" | "image" | "video" | "vision" | "tts" | "bgm",
 		configOverrides?: Record<string, string | null>,
 	) =>
 		fetchApi<{
