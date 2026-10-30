@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
 	PRESETS_VERIFIED_AT,
@@ -47,6 +49,38 @@ describe("providerPresets 数据", () => {
 			expect(PROVIDER_PRESETS[service].some((p) => p.custom)).toBe(true);
 			expect(PROVIDER_PRESETS[service].some((p) => p.provider === "fake")).toBe(true);
 		}
+	});
+});
+
+describe("服务商 logo", () => {
+	const logoDir = resolve(__dirname, "../../../public/provider-logos");
+	const ALL = Object.values(PROVIDER_PRESETS).flat();
+
+	it("真实服务商都有 logo，只有自定义和 Fake 用文字标记", () => {
+		const missing = ALL.filter((p) => !p.custom && p.provider !== "fake" && !p.logo).map((p) => p.id);
+		expect(missing).toEqual([]);
+		for (const p of ALL) expect(p.mark.length).toBeGreaterThan(0);
+	});
+
+	it("每个 logo 文件都存在、单色、不带脚本或外链", () => {
+		const used = new Set(ALL.flatMap((p) => (p.logo ? [p.logo] : [])));
+		for (const name of used) {
+			const svg = readFileSync(resolve(logoDir, `${name}.svg`), "utf-8");
+			expect(svg.startsWith("<svg"), name).toBe(true);
+			expect(svg, name).toMatch(/viewBox="0 0 24 24"/);
+			expect(svg, name).not.toMatch(/<script|<image|href=|url\(|Gradient/i);
+			const fills = [...svg.matchAll(/fill="([^"]+)"/g)].map((m) => m[1]).filter((f) => f !== "none");
+			expect(new Set(fills), name).toEqual(new Set(["#000"]));
+			expect(svg.length, name).toBeLessThan(4096);
+		}
+	});
+
+	it("logo 目录里每个文件都有来源许可", () => {
+		const license = readFileSync(resolve(logoDir, "LICENSE.txt"), "utf-8");
+		expect(license).toMatch(/lobe-icons/);
+		expect(license).toMatch(/MIT License/);
+		const files = readdirSync(logoDir).filter((f) => f.endsWith(".svg"));
+		expect(files.length).toBeGreaterThanOrEqual(new Set(ALL.map((p) => p.logo).filter(Boolean)).size);
 	});
 });
 

@@ -123,6 +123,32 @@ test("当前本机网关配置识别为「自定义」，高级设置默认展�
 	await expect(baseField.getByText("TEXT_BASE_URL", { exact: true })).toBeVisible();
 });
 
+test("服务商卡片显示单色 logo，logo 文件能加载；高级设置的单选卡用主色", async ({ page }) => {
+	const logoResponses: number[] = [];
+	page.on("response", (res) => {
+		if (res.url().includes("/provider-logos/")) logoResponses.push(res.status());
+	});
+	await mockConfig(page);
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	const presets = dialog.getByTestId("provider-presets");
+	const deepseekMark = presets.locator('[data-preset="deepseek"] [data-logo="deepseek"] .provider-logo');
+	await expect(deepseekMark).toBeVisible();
+	// 遮罩拿到 logo，颜色跟随文字色
+	const mask = await deepseekMark.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
+	expect(mask).toContain("/provider-logos/deepseek.svg");
+	// 自定义没有 logo，退回文字标记
+	await expect(presets.locator('[data-preset="custom-openai"] .provider-logo')).toHaveCount(0);
+	await expect.poll(() => logoResponses.length).toBeGreaterThan(5);
+	expect(logoResponses.every((s) => s === 200)).toBe(true);
+	// 高级设置里选中的单选卡不再是青色
+	const advanced = dialog.getByTestId("advanced-settings");
+	const checked = advanced.locator('label:has(input[type="radio"]:checked)').first();
+	await expect(checked).toBeVisible();
+	const border = await checked.evaluate((el) => getComputedStyle(el).borderColor);
+	expect(border).not.toMatch(/rgb\(11, 110, 127\)/);
+});
+
 test("选 DeepSeek 预设自动填好地址、路径和模型，保存时不改密钥", async ({ page }) => {
 	const saves: Record<string, string>[] = [];
 	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });

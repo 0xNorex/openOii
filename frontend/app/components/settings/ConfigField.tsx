@@ -31,7 +31,7 @@ export function ConfigField({
 					<span className="badge-doodle bg-warning/15 text-warning-fg border-warning/30 text-xs px-1.5 py-0.5">敏感</span>
 				)}
 				{item.source === "env" && (
-					<span className="badge-doodle bg-info/15 text-info-fg border-info/30 text-xs px-1.5 py-0.5">仅 .env</span>
+					<span className="badge-doodle bg-paper-300 text-ink-muted border-line-strong text-xs px-1.5 py-0.5">仅 .env</span>
 				)}
 				<span className="ml-auto font-mono text-xs text-ink-muted" title="对应的环境变量">
 					{envName}

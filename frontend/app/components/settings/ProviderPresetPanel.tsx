@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ConfigItem, ConfigValue } from "~/types";
 import { SvgIcon } from "~/components/ui/SvgIcon";
 import { PlainButton } from "~/components/ui/PlainButton";
@@ -52,6 +52,28 @@ function pendingStillApplies(
 	const expected = region ? fillBaseUrl(region, fields) : null;
 	if (expected === null) return true;
 	return readForm(form, keys.baseUrl).replace(/\/+$/, "") === expected.replace(/\/+$/, "");
+}
+
+/** 卡片上的服务商标记：有 logo 用单色 logo，没有就用文字标记 */
+export function ProviderMark({ preset, selected }: { preset: ProviderPreset; selected: boolean }) {
+	return (
+		<span
+			aria-hidden
+			data-logo={preset.logo ?? undefined}
+			className={`inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 text-xs font-bold ${
+				selected ? "bg-primary text-primary-content" : "bg-paper-300 text-ink"
+			}`}
+		>
+			{preset.logo ? (
+				<span
+					className="provider-logo h-4 w-4"
+					style={{ "--provider-logo": `url(/provider-logos/${preset.logo}.svg)` } as CSSProperties}
+				/>
+			) : (
+				preset.mark
+			)}
+		</span>
+	);
 }
 
 /** 选服务商 → 自动填好地址、接口路径和推荐模型；地域和专属字段单独给输入。 */
@@ -134,14 +156,7 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 												selected ? "border-primary bg-primary/10" : "border-line-strong bg-paper-100 hover:bg-paper-300"
 											}`}
 										>
-											<span
-												aria-hidden
-												className={`inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md px-1 text-xs font-bold ${
-													selected ? "bg-primary text-primary-content" : "bg-paper-300 text-ink"
-												}`}
-											>
-												{p.mark}
-											</span>
+											<ProviderMark preset={p} selected={selected} />
 											<span className="min-w-0">
 												<span className="block text-sm font-semibold leading-snug">{p.name}</span>
 												<span className="hidden truncate text-xs text-ink-muted sm:block">{p.tagline}</span>
@@ -168,13 +183,13 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 					) : null}
 					<span className="flex-1" />
 					{preset.docsUrl ? (
-						<a href={preset.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-info-fg underline-offset-2 hover:underline">
+						<a href={preset.docsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline">
 							<SvgIcon name="book-open" size={12} />
 							官方文档
 						</a>
 					) : null}
 					{preset.keyUrl ? (
-						<a href={preset.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-info-fg underline-offset-2 hover:underline">
+						<a href={preset.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline">
 							<SvgIcon name="globe" size={12} />
 							获取 API Key
 						</a>
@@ -297,7 +312,7 @@ export function ProviderPresetPanel({ service, items, formState, onChange, onApp
 					<ul className="m-0 list-none space-y-1 p-0">
 						{preset.notes.map((note) => (
 							<li key={note} className="flex items-start gap-1.5 text-xs text-ink-muted">
-								<SvgIcon name="info" size={12} className="mt-0.5 shrink-0 text-info-fg" />
+								<SvgIcon name="info" size={12} className="mt-0.5 shrink-0 text-primary" />
 								<span>{note}</span>
 							</li>
 						))}

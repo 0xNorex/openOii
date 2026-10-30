@@ -168,6 +168,14 @@
 }
 
 @layer components {
+  /* 服务商 logo：public/provider-logos 里的单色 SVG 当遮罩，颜色跟随 currentColor（深浅色都合适） */
+  .provider-logo {
+    display: inline-block;
+    background-color: currentColor;
+    -webkit-mask: var(--provider-logo) center / contain no-repeat;
+    mask: var(--provider-logo) center / contain no-repeat;
+  }
+
   .card-doodle {
     @apply bg-paper-100 border border-paper-300 rounded-lg transition-colors duration-normal;
   }

@@ -38,7 +38,7 @@ export function ActionStack({ children }: { children: ReactNode }) {
  */
 export function LockNotice({ atGate, what = "结构写入操作" }: { atGate: boolean; what?: string }) {
 	return (
-		<div className="rounded-md border border-info/30 bg-info-bg px-2 py-1.5 text-xs leading-relaxed text-info-fg" role="note">
+		<div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs leading-relaxed text-ink" role="note">
 			{atGate
 				? "正在等你确认这一步：要改结果，选中卡片后在下方输入框提修改意见；属性可以直接改，单格重做在确认后可用。"
 				: `生成运行中，${what}已锁定。`}

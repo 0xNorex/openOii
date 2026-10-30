@@ -117,6 +117,42 @@
 
 这些服务以后接入时需要在引擎里加专门的适配，不能只靠预设。
 
+## 服务商 logo
+
+卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载。用的是单色版，去掉了 `<title>`、宽高和内联样式，坐标保留 3 位小数，放在 `frontend/public/provider-logos/`（共 29 个，约 32 KB，按需由浏览器加载，不进 JS 包）。界面用 CSS 遮罩显示，颜色跟随文字色，深浅色主题都一致。许可全文见 `frontend/public/provider-logos/LICENSE.txt`，汇总在仓库根目录 `NOTICE`。
+
+logo 是各公司的商标，这里只用来标明服务商，openOii 与它们没有关联，也未获其背书。
+
+| 预设 | logo 文件 | Lobe Icons 名称 |
+|---|---|---|
+| DeepSeek | deepseek.svg | DeepSeek |
+| 阿里云百炼（文本）| bailian.svg | Bailian |
+| 智谱 GLM / CogView | zhipu.svg | Zhipu |
+| Kimi | kimi.svg | Kimi |
+| MiniMax | minimax.svg | Minimax |
+| 火山方舟（文本）| volcengine.svg | Volcengine |
+| Seedream / Seedance | doubao.svg | Doubao |
+| 百度千帆 | baiducloud.svg | BaiduCloud |
+| 腾讯混元 | hunyuan.svg | Hunyuan |
+| 硅基流动 | siliconcloud.svg | SiliconCloud |
+| OpenAI / OpenAI 图像 | openai.svg | OpenAI |
+| Claude（OpenAI 兼容层）| claude.svg | Claude |
+| Anthropic 原生 | anthropic.svg | Anthropic |
+| Google Gemini | gemini.svg | Gemini |
+| xAI Grok（文本、视频）| xai.svg | XAI |
+| Mistral | mistral.svg | Mistral |
+| OpenRouter | openrouter.svg | OpenRouter |
+| Groq | groq.svg | Groq |
+| Together AI | together.svg | Together |
+| Azure OpenAI | azure.svg | Azure |
+| Amazon Bedrock | bedrock.svg | Bedrock |
+| Ollama | ollama.svg | Ollama |
+| LM Studio | lmstudio.svg | LMStudio |
+| ModelScope | modelscope.svg | ModelScope |
+| 可灵 / Vidu / 海螺 / Sora / Veo（视频适配预留）| kling.svg、vidu.svg、hailuo.svg、sora.svg、deepmind.svg | Kling、Vidu、Hailuo、Sora、DeepMind |
+
+自定义和 Fake 选项没有品牌，继续用文字标记。新增预设时在 `providerPresets.ts` 里填 `logo`，单元测试会检查文件存在、单色、无脚本和外链、小于 4 KB。
+
 ## 维护
 
 1. 改 `providerPresets.ts`：更新地址、模型和 `sources`，并把 `PRESETS_VERIFIED_AT` 改成核对日期。

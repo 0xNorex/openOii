@@ -198,8 +198,8 @@ export function GenerationSection({
 		<ActionStack>
 			{structureLocked ? <LockNotice atGate={atGate} /> : null}
 			{shotCellLabel && !compact && !structureLocked ? (
-				<div className="rounded-md border border-info/30 bg-info/10 px-2 py-1.5 text-xs leading-relaxed text-ink-muted">
-					<strong className="text-info-fg">{shotCellLabel}</strong>
+				<div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs leading-relaxed text-ink-muted">
+					<strong className="text-primary">{shotCellLabel}</strong>
 					{" · "}
 					重做只刷新这一格，不影响其他分镜与角色资产。也可在对话里绑定本格发反馈；可多选多格批量重做。
 				</div>

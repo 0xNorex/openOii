@@ -22,8 +22,8 @@ export function SettingsSection({ tab, items, formState, onChange }: SectionProp
 	);
 	return (
 		<div className="space-y-3">
-			<div className="flex items-start gap-1.5 rounded-md border border-info/30 bg-info/10 px-2.5 py-1.5 text-xs text-info-fg">
-				<SvgIcon name="info" size={14} className="mt-0.5 shrink-0" />
+			<div className="flex items-start gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs text-ink">
+				<SvgIcon name="info" size={14} className="mt-0.5 shrink-0 text-primary" />
 				<span>{TAB_CONFIG[tab]?.desc}</span>
 			</div>
 			{provider && isPresetService(tab) ? (
@@ -133,7 +133,7 @@ function ProviderBody({
 							<label
 								key={option.value}
 								className={`flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast ${
-									provider === option.value ? "border-info bg-info/10" : "border-line-strong hover:bg-paper-300"
+									provider === option.value ? "border-primary bg-primary/10" : "border-line-strong hover:bg-paper-300"
 								}`}
 							>
 								<input
@@ -161,11 +161,11 @@ function ProviderBody({
 				const groupIcon = common ? "tools" : tab.icon;
 				return (
 					<div key={index} className="space-y-2">
-						<h4 className={`m-0 flex items-center gap-1.5 text-xs font-bold ${common ? "text-ink-muted" : "text-info-fg"}`}>
+						<h4 className={`m-0 flex items-center gap-1.5 text-xs font-bold ${common ? "text-ink-muted" : "text-primary"}`}>
 							<SvgIcon name={groupIcon} size={14} />
 							{typeof group.title === "function" ? group.title(provider) : group.title}
 						</h4>
-						<div className={`space-y-2 border-l-2 pl-2.5 ${common ? "border-line" : "border-info/30"}`}>
+						<div className={`space-y-2 border-l-2 pl-2.5 ${common ? "border-line" : "border-primary/30"}`}>
 							{groupItems.map(field)}
 							{group.note ? <p className="m-0 px-1 text-xs text-ink-muted">{group.note}</p> : null}
 						</div>

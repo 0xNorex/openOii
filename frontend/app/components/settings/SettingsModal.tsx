@@ -227,7 +227,7 @@ export function SettingsModal() {
 						id="settings-modal-title"
 						className="flex items-center gap-1.5 text-md font-bold"
 					>
-						<SvgIcon name="settings" size={20} className="text-info-fg" />
+						<SvgIcon name="settings" size={20} className="text-primary" />
 						<span>系统设置</span>
 						<span className="hidden text-xs font-normal text-ink-muted sm:inline">模型 · 存储 · 运行</span>
 					</h3>
@@ -327,7 +327,7 @@ export function SettingsModal() {
 						</div>
 
 						<div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-paper-200 px-3 py-2 sm:px-4">
-							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-info-fg">
+							<div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-ink-muted">
 								<SvgIcon name="info" size={16} className="shrink-0" />
 								<span className="truncate" id="settings-footer-hint">
 									{testServiceFor(activeTab)

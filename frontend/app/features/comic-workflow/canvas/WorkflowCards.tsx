@@ -27,7 +27,7 @@ const SECTION_STYLE = {
 		surface: "bg-primary/5",
 	},
 	shotline: {
-		surface: "bg-info/5",
+		surface: "bg-primary/5",
 	},
 	output: {
 		surface: "bg-paper-200/45",
