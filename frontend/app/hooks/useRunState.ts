@@ -31,8 +31,17 @@ export function runStateRefetchInterval(state: RunState | undefined): number | f
 	return state?.awaitingConfirm ? GATE_POLL_MS : false;
 }
 
-function runStateQueryOptions(projectId: number) {
+/**
+ * 只有工作台根（ProjectWorkbench）是“挂载即校准”的 owner；其余订阅者（画布、
+ * 聊天、计时）晚一拍挂载时直接读缓存，不再各自重发一次 runs/current。
+ * 没有缓存时 React Query 仍会取数；WS / 操作后的 invalidate 照常刷新所有订阅者。
+ * 不用 staleTime：失效后的重取必须立即发生（e2e workflow-stage-sync 依赖这一点）。
+ */
+export type RunStateObserverOptions = { owner?: boolean };
+
+function runStateQueryOptions(projectId: number, { owner = false }: RunStateObserverOptions = {}) {
 	return {
+		refetchOnMount: owner,
 		queryKey: projectQueryKeys.runState(projectId),
 		enabled: projectId > 0,
 		retry: 1,
@@ -50,8 +59,8 @@ function runStateQueryOptions(projectId: number) {
 	};
 }
 
-export function useRunState(projectId: number): RunState {
-	const { data } = useQuery(runStateQueryOptions(projectId));
+export function useRunState(projectId: number, options?: RunStateObserverOptions): RunState {
+	const { data } = useQuery(runStateQueryOptions(projectId, options));
 	return data ?? readRunState(projectId);
 }
 
@@ -60,7 +69,11 @@ export function useRunState(projectId: number): RunState {
  * shared by React Query, so a component only re-renders when its slice changes
  * — not on every `llm_stream` frame. Pass a module-level (stable) selector.
  */
-export function useRunStateSelect<T>(projectId: number, select: (state: RunState) => T): T {
-	const { data } = useQuery({ ...runStateQueryOptions(projectId), select });
+export function useRunStateSelect<T>(
+	projectId: number,
+	select: (state: RunState) => T,
+	options?: RunStateObserverOptions,
+): T {
+	const { data } = useQuery({ ...runStateQueryOptions(projectId, options), select });
 	return data ?? select(readRunState(projectId));
 }

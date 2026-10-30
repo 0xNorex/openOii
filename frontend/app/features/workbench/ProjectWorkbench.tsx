@@ -81,7 +81,7 @@ function selectWorkbenchRun(state: RunState) {
 
 export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	const queryClient = useQueryClient();
-	const runState = useRunStateSelect(projectId, selectWorkbenchRun);
+	const runState = useRunStateSelect(projectId, selectWorkbenchRun, { owner: true });
 	const {
 		isGenerating: runIsGenerating,
 		currentRunId: runCurrentRunId,
