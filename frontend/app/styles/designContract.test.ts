@@ -47,6 +47,8 @@ const BANNED: Array<[RegExp, string]> = [
 	[/\bfont-(?:heading|comic|sketch|brand)\b/, "字体只有 font-sans / font-mono；字标是对位标 + 系统无衬线"],
 	[/\bhalftone/, "网点只用于 spec §7.6 的位置"],
 	[/className="[^"]*\b(?:label-caps|font-mono|uppercase|tracking-wid[a-z]*)\b[^"]*"[^>]*(?<!=)>[^<{]*[\u4e00-\u9fff]/, "中文标签不用等宽、不转大写、不加字距：用 .label，数字部分再包 font-mono"],
+	[/\beyebrow="[^"]*[A-Za-z]/, "页眉 eyebrow 用中文栏目名（如「作品库 · 项目」），不写英文路径"],
+	[/\blabel-caps\b/, "英文大写栏目名已退役：栏目名用中文 .label，编号再包 font-mono"],
 	[/@heroicons\//, "图标只走 SvgIcon（Iconoir + 自绘领域图标），不再引 Heroicons"],
 	[/[\u4e00-\u9fff]\.\.\.|"\.\.\."/, "三个点：文案里的省略用 …（Vercel guidelines）"],
 	// polish pass（docs/research/polish-pass.md）

@@ -37,7 +37,9 @@ describe("UniverseCard", () => {
 	it("无封面时显示宇宙编号和更新时间，不渲染旧装饰标签", () => {
 		renderCard(buildUniverse());
 
-		expect(screen.getByText(/universe\s*\/\s*1/i)).toBeInTheDocument();
+		expect(screen.getByText("#1")).toHaveClass("font-mono");
+		expect(screen.getByText("#1").parentElement).toHaveTextContent("宇宙 #1");
+		expect(screen.queryByText(/universe/i)).toBeNull();
 		expect(screen.queryByText(/ip cosmos/i)).toBeNull();
 		expect(screen.getByText(mixed(/^更新 /))).toBeInTheDocument();
 	});

@@ -125,15 +125,6 @@
     letter-spacing: var(--tracking-display);
   }
 
-  /* 小号大写标签：等宽 + 放开字距，像分镜表上的栏目名 */
-  .label-caps {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    letter-spacing: var(--tracking-label);
-    text-transform: uppercase;
-  }
-
   /* 标题字体：得意黑（openOii Display，中+拉丁同一族）。只用于固定文案、字号 ≥ text-lg；
      单字重、自带斜势：不加字距，不合成粗体/斜体 */
   .display {

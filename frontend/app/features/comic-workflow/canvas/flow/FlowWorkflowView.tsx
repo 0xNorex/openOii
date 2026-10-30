@@ -467,8 +467,8 @@ function FlowInner({
 				deleteKeyCode={null}
 				multiSelectionKeyCode={["Shift", "Meta", "Control"]}
 				aria-label="漫画工作流画布"
-				// 底边中间是浮动的提示栏，署名放到画布这一栏的右上角
-				attributionPosition="top-right"
+				// 右上角是检查器 / 收起后的「项目」按钮，底边中间是提示栏和工具条：署名放右下角空位
+				attributionPosition="bottom-right"
 			>
 				<Background gap={24} size={1} />
 			</ReactFlow>

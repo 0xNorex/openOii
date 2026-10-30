@@ -129,7 +129,7 @@ export function HomePage() {
 				<PageBody className="workbench-surface">
 					<PageContent className="min-h-full gap-4 sm:py-5">
 						<PageHeader
-							eyebrow="openoii / create"
+							eyebrow="创作台"
 							title="把一句想法，变成一部漫剧。"
 							description="写下故事、选择创作模式，进入画布后 AI 按阶段生成。"
 							actionsAlign="title"

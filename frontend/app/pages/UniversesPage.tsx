@@ -85,7 +85,7 @@ export function UniversesPage() {
 			<PageBody className="workbench-surface">
 				<PageContent className="gap-4 sm:gap-5 sm:py-5">
 				<PageHeader
-					eyebrow="openoii / library / universes"
+					eyebrow="作品库 · 宇宙"
 					title="故事宇宙"
 					description="把章节、角色和世界观放在同一条创作脉络里。"
 					meta={isLoading ? "…" : `${universes.length} 个`}

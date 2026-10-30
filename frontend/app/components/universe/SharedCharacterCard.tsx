@@ -45,8 +45,8 @@ export function SharedCharacterCard({
 					</div>
 				)}
 				<div className="min-w-0 flex-1">
-					<p className="m-0 label-caps text-ink-muted">
-						cast
+					<p className="m-0 label text-ink-muted">
+						共享角色
 					</p>
 					<h3 className="m-0 truncate text-sm font-bold">
 						{character.name}

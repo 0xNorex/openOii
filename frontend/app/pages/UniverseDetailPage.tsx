@@ -222,7 +222,7 @@ export function UniverseDetailPage() {
 			<PageBody className="workbench-surface">
 				<PageContent>
 				<PageHeader
-					eyebrow="universe detail"
+					eyebrow="宇宙详情"
 					title={u.name}
 					plainTitle
 					description={
@@ -355,7 +355,7 @@ export function UniverseDetailPage() {
 						meta={`${u.shared_characters.length} 个`}
 						actions={
 							<>
-								<label className="flex items-center gap-1 text-xs text-ink-muted">
+								<label className="flex items-center gap-1 whitespace-nowrap text-xs text-ink-muted">
 									导入到
 									<Select
 										density="compact"

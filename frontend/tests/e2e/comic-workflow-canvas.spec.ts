@@ -557,3 +557,29 @@ test("opening or closing the activity panel after a pan leaves the board where i
 	await page.waitForTimeout(400);
 	expect(await at()).toEqual(panned);
 });
+
+test("React Flow attribution never sits under the collapsed 项目 button", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/project/7");
+	await page.waitForSelector('.react-flow__node[data-id="shot:1"]');
+	await page.getByRole("button", { name: "收起检查器" }).click();
+	await page.getByRole("button", { name: "收起活动面板" }).click();
+	const pill = page.getByRole("button", { name: "展开检查器" });
+	await expect(pill).toBeVisible();
+	const attribution = page.locator(".react-flow__attribution");
+	await expect(attribution).toBeVisible();
+	const overlap = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+		a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+	const a = (await attribution.boundingBox())!;
+	for (const other of [pill, page.getByRole("toolbar", { name: "画布工具栏" }), page.locator('[data-shell="prompt-bar"]').first()]) {
+		if (!(await other.count())) continue;
+		expect(overlap(a, (await other.boundingBox())!)).toBe(false);
+	}
+	// 署名本身可点（没有被别的浮层盖住）
+	const hit = await attribution.evaluate((el) => {
+		const r = el.getBoundingClientRect();
+		const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+		return el.contains(top);
+	});
+	expect(hit).toBe(true);
+});

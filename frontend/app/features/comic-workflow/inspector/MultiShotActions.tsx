@@ -43,8 +43,8 @@ export function MultiShotActions({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col bg-paper-100 p-2" data-shell="inspector-multi">
-			<p className="m-0 label-caps text-ink-muted">
-				multi-shot
+			<p className="m-0 label text-ink-muted">
+				批量操作
 			</p>
 			<h2 className="m-0 text-sm font-bold">
 				已选 {shotIds.length} 格

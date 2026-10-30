@@ -80,8 +80,8 @@ export function UniverseTimelinePanel({
 	return (
 		<div className="flex h-full min-h-0 flex-col" data-shell="universe-timeline">
 			<div className="shrink-0 border-b border-line px-2 py-1.5">
-				<p className="m-0 label-caps text-ink-muted">
-					universe
+				<p className="m-0 label text-ink-muted">
+					所属宇宙
 				</p>
 				<div className="mt-0.5 flex items-center gap-1.5">
 					<SvgIcon name="globe" size={14} className="text-primary" />

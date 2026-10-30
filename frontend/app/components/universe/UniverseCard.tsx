@@ -43,7 +43,7 @@ export function UniverseCard({ universe, onDelete }: UniverseCardProps) {
 					) : (
 						<div className="-mx-1 -mt-1 mb-3 flex h-24 items-end justify-between border border-line bg-paper-200 p-2">
 							<SvgIcon name="sparks" size={24} className="text-primary" />
-							<span className="label-caps text-ink-muted">universe / {universe.id}</span>
+							<span className="label text-ink-muted">宇宙 <span className="font-mono tabular-nums">#{universe.id}</span></span>
 						</div>
 					)}
 

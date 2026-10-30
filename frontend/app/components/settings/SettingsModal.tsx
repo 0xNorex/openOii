@@ -229,7 +229,7 @@ export function SettingsModal() {
 					>
 						<SvgIcon name="settings" size={20} className="text-info-fg" />
 						<span>系统设置</span>
-						<span className="hidden font-mono text-xs font-normal uppercase text-ink-muted sm:inline">providers / storage / runtime</span>
+						<span className="hidden text-xs font-normal text-ink-muted sm:inline">模型 · 存储 · 运行</span>
 					</h3>
 					<IconButton
 						onClick={handleCancel}

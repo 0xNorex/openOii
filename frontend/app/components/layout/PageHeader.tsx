@@ -44,7 +44,7 @@ export function PageHeader({
 		>
 			<div className="min-w-0">
 				{eyebrow ? (
-					<p className="m-0 label-caps text-ink-muted">
+					<p className="m-0 label text-ink-muted">
 						{eyebrow}
 					</p>
 				) : null}
