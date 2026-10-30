@@ -20,6 +20,11 @@ function getSnapshot(): boolean {
 	return window.matchMedia(MOBILE_QUERY).matches;
 }
 
+/** 非 hook 版本：模块求值时决定预取哪一侧的 chunk；无法判断视口时返回 null */
+export function isMobileWorkbenchViewport(): boolean | null {
+	return canMatchMedia() ? getSnapshot() : null;
+}
+
 export function useIsMobileWorkbench(): boolean {
 	return useSyncExternalStore(subscribe, getSnapshot, () => false);
 }

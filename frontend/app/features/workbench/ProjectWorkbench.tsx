@@ -23,15 +23,20 @@ import { deriveInboxItems } from "~/features/comic-workflow/agent/inboxItems";
 import { InspectorPanel } from "~/features/comic-workflow/inspector/InspectorPanel";
 import { PromptBar, type PromptChip } from "~/features/workbench/PromptBar";
 import { stepForStage } from "~/utils/workflowSteps";
-import { KeyboardLayer } from "~/features/workbench/KeyboardLayer";
 import {
 	deriveStudioStatus,
 	studioStatusText,
 } from "~/features/comic-workflow/state/deriveStudioStatus";
 import { RunTimingBar } from "~/features/comic-workflow/agent/RunTimingBar";
 import { subscribeTitleBadge, titleBadge, withTitleBadge } from "~/utils/runNotifications";
-import { MobileWorkbenchPreview } from "~/features/comic-workflow/mobile/MobileWorkbenchPreview";
 import { useIsMobileWorkbench } from "~/features/comic-workflow/mobile/useIsMobileWorkbench";
+import { usePreloadedComponent } from "~/utils/preloadComponent";
+import {
+	keyboardLayerChunk,
+	loadViewportWorkbenchChunks,
+	mobilePreviewChunk,
+	prefetchOtherWorkbenchChunk,
+} from "~/features/workbench/workbenchChunks";
 import { useRunController } from "~/features/run/useRunController";
 import { RegenerateDialog } from "~/features/run/RegenerateDialog";
 import { ConfirmModal } from "~/components/ui/ConfirmModal";
@@ -45,6 +50,11 @@ import { AGENT_NAME_MAP, type VersionEntityType } from "~/types";
 import { ApiError } from "~/types/errors";
 import { toast } from "~/utils/toast";
 import { SvgIcon } from "~/components/ui/SvgIcon";
+
+// 本模块一求值就拉当前视口的子 chunk，和项目数据请求并行；数据到时通常已就绪，首帧直接同步渲染。
+// 不用顶层 await：它会让 rollup 把共享模块拆成一堆小 chunk
+void loadViewportWorkbenchChunks().catch(() => {});
+prefetchOtherWorkbenchChunk();
 
 const WorkflowCanvas = lazy(() =>
 	import("~/features/comic-workflow/canvas/ComicWorkflowCanvas").then((m) => ({
@@ -284,6 +294,8 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 	// 只等项目主数据；角色/分镜/消息让各区域自行渐进加载（canvas graph 是响应式构建的）
 	const workspaceLoading = projectLoading;
 	const isMobileWorkbench = useIsMobileWorkbench();
+	const MobileWorkbenchPreview = usePreloadedComponent(mobilePreviewChunk, isMobileWorkbench);
+	const KeyboardLayer = usePreloadedComponent(keyboardLayerChunk, !isMobileWorkbench);
 
 	const inboxItems = useMemo(
 		() =>
@@ -521,7 +533,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 			>
 				跳到输入栏
 			</a>
-			{!isMobileWorkbench ? <KeyboardLayer projectId={projectId} shots={shots} characters={characters} /> : null}
+			{!isMobileWorkbench && KeyboardLayer ? <KeyboardLayer projectId={projectId} shots={shots} characters={characters} /> : null}
 			<TopBar
 				projectId={projectId}
 				center={
@@ -558,7 +570,7 @@ export function ProjectWorkbench({ projectId }: { projectId: number }) {
 				}
 				aria-label="漫剧工作台"
 			>
-				{isMobileWorkbench ? (
+				{isMobileWorkbench && MobileWorkbenchPreview ? (
 					<MobileWorkbenchPreview
 						projectId={projectId}
 						studioStatus={studioStatus}
