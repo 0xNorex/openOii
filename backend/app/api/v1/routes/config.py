@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ipaddress
-from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, status
@@ -19,7 +18,9 @@ from app.schemas.config import (
     TestConnectionRequest,
     TestConnectionResponse,
 )
+from app.services import connection_probe
 from app.services.config_service import ConfigService
+from app.services.connection_probe import ProbeOutcome, describe_error_text, describe_exception
 from app.services.provider_resolution import probe_text_provider
 
 router = APIRouter()
@@ -57,6 +58,10 @@ def _is_safe_url(url: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def _same_url(a: str, b: str) -> bool:
+    return bool(a.strip()) and a.strip().rstrip("/") == (b or "").strip().rstrip("/")
 
 
 # 允许在 test_connection 中覆盖的配置字段白名单
@@ -173,10 +178,14 @@ async def test_connection(
                 if value is not None:
                     # 如果是 URL 字段，检查安全性
                     if field_name.endswith("_base_url") and isinstance(value, str):
-                        if not _is_safe_url(value):
+                        # 已保存的本地地址（例如本机网关）可以原样再测；
+                        # 新填的私网 / 本地地址要先保存，防止借测试接口探测内网。
+                        current = settings_dict.get(field_name)
+                        unchanged = _same_url(value, current if isinstance(current, str) else "")
+                        if not unchanged and not _is_safe_url(value):
                             raise HTTPException(
                                 status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"不安全的 URL: {key}（不允许私网/本地地址）",
+                                detail=f"不安全的 URL: {key}（本地 / 内网地址请先保存配置，再测试连接）",
                             )
                     settings_dict[field_name] = value
 
@@ -195,140 +204,89 @@ async def test_connection(
 
 
 async def _test_llm_connection(settings) -> TestConnectionResponse:
-    """测试 LLM 服务连接（使用实际服务类）"""
+    """测试 LLM 服务连接：一次极短的真实调用（结果有缓存），失败原因映射成中文。"""
+    model_name = (
+        settings.anthropic_model if settings.text_provider == "anthropic" else settings.text_model
+    )
+    base = f"提供商: {settings.text_provider}, 模型: {model_name}"
     try:
         probe = await probe_text_provider(settings)
-        model_name = (
-            settings.anthropic_model
-            if settings.text_provider == "anthropic"
-            else settings.text_model
-        )
-        details = f"提供商: {settings.text_provider}, 模型: {model_name}"
-        if probe.reason_message:
-            details = f"{details}\n{probe.reason_message}"
-
-        return TestConnectionResponse(
-            success=probe.generate,
-            message=(
-                "LLM 服务连接成功"
-                if probe.status == "valid"
-                else "LLM 服务部分可用"
-                if probe.status == "degraded"
-                else "连接失败"
-            ),
-            details=details,
-            status=probe.status,
-            capabilities=ConnectionCapabilities(generate=probe.generate, stream=probe.stream),
-        )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        failure = describe_exception(e)
         return TestConnectionResponse(
             success=False,
-            message="连接失败",
-            details=str(e)[:200],
+            message=failure.message,
+            details=f"{failure.hint}\n{base}",
             status="invalid",
             capabilities=ConnectionCapabilities(generate=False, stream=False),
         )
 
+    if probe.status == "valid":
+        message = "LLM 服务连接成功"
+        details = base
+    elif probe.status == "degraded":
+        message = "LLM 服务部分可用"
+        details = f"{base}\n{probe.reason_message}" if probe.reason_message else base
+    else:
+        mapped = describe_error_text(probe.reason_message)
+        message = mapped.message if mapped else "连接失败"
+        lines = [mapped.hint] if mapped else []
+        lines.append(base)
+        if probe.reason_message:
+            lines.append(f"原始信息：{probe.reason_message[:200]}")
+        details = "\n".join(lines)
+
+    return TestConnectionResponse(
+        success=probe.generate,
+        message=message,
+        details=details,
+        status=probe.status,
+        capabilities=ConnectionCapabilities(generate=probe.generate, stream=probe.stream),
+    )
+
+
+def _probe_response(outcome: ProbeOutcome, provider: str, model: str | None) -> TestConnectionResponse:
+    details = f"{outcome.details}\n提供商: {provider}, 模型: {model or '-'}"
+    return TestConnectionResponse(
+        success=outcome.success,
+        message=outcome.message,
+        details=details,
+        status=outcome.status,
+    )
+
 
 async def _test_image_connection(settings) -> TestConnectionResponse:
-    """测试图像生成服务连接（使用实际服务类）"""
-    try:
-        from app.services.image_factory import create_image_service
-
-        # 实例化服务
-        service = create_image_service(settings)
-
-        # 尝试发送最小请求
-        try:
-            # 使用完整参数避免 400 错误
-            await service.generate(prompt="test", size="1024x1024", n=1)
-            # 成功
-            return TestConnectionResponse(
-                success=True,
-                message="图像服务连接成功",
-                details=f"提供商: {settings.image_provider}, 模型: {settings.image_model}",
-            )
-        except Exception as e:
-            # 检查是否是认证错误
-            error_str = str(e).lower()
-            if "401" in error_str or "unauthorized" in error_str or "authentication" in error_str:
-                return TestConnectionResponse(
-                    success=False,
-                    message="认证失败",
-                    details=f"API Key 无效或已过期: {str(e)[:200]}",
-                )
-            elif "403" in error_str or "forbidden" in error_str:
-                return TestConnectionResponse(
-                    success=False, message="认证失败", details=f"权限不足: {str(e)[:200]}"
-                )
-            elif "404" in error_str or "not found" in error_str:
-                return TestConnectionResponse(
-                    success=False,
-                    message="API 端点不存在",
-                    details=f"请检查 IMAGE_BASE_URL 和 IMAGE_ENDPOINT 配置: {str(e)[:200]}",
-                )
-            else:
-                # 其他错误也返回失败
-                return TestConnectionResponse(
-                    success=False, message="连接失败", details=str(e)[:200]
-                )
-    except Exception as e:
-        return TestConnectionResponse(success=False, message="连接失败", details=str(e)[:200])
+    """测试图像服务：只读 GET /models，不再真的生成一张图。"""
+    if settings.image_provider == "fake":
+        return TestConnectionResponse(
+            success=True, message="图像服务连接成功", details="Fake 图像 Provider，无需联网。", status="valid"
+        )
+    outcome = await connection_probe.probe_openai_compatible(
+        label="图像",
+        base_url=settings.image_base_url,
+        endpoint=settings.image_endpoint,
+        api_key=settings.image_api_key,
+        model=settings.image_model,
+    )
+    return _probe_response(outcome, settings.image_provider, settings.image_model)
 
 
 async def _test_video_connection(settings) -> TestConnectionResponse:
-    """测试视频生成服务连接（使用实际服务类）"""
-    try:
-        from app.services.video_factory import create_video_service
-
-        # 获取实际使用的视频服务
-        service = create_video_service(settings)
-
-        # 尝试发送最小请求
-        try:
-            # 根据服务类型调用不同的方法
-            if settings.video_provider == "doubao":
-                # 豆包服务使用 generate_url 方法
-                await service.generate_url(prompt="test", duration=5, ratio="16:9")
-            else:
-                # OpenAI 兼容服务优先走 generate 方法。
-                # 这里只做连通性探测，依赖服务默认最小时长即可，避免把
-                # 具体 provider 参数约束耦合进测试连接逻辑。
-                service_any: Any = service
-                if callable(getattr(service_any, "generate", None)):
-                    await service_any.generate(prompt="test")
-                else:
-                    await service.generate_url(prompt="test")
-
-            # 成功
-            return TestConnectionResponse(
-                success=True,
-                message="视频服务连接成功",
-                details=f"提供商: {settings.video_provider}, 模型: {settings.doubao_video_model if settings.video_provider == 'doubao' else settings.video_model}",
-            )
-        except Exception as e:
-            # 检查是否是认证错误
-            error_str = str(e).lower()
-            if "401" in error_str or "unauthorized" in error_str or "authentication" in error_str:
-                return TestConnectionResponse(
-                    success=False,
-                    message="认证失败",
-                    details=f"API Key 无效或已过期: {str(e)[:200]}",
-                )
-            elif "403" in error_str or "forbidden" in error_str:
-                return TestConnectionResponse(
-                    success=False, message="认证失败", details=f"权限不足: {str(e)[:200]}"
-                )
-            elif "404" in error_str or "not found" in error_str:
-                return TestConnectionResponse(
-                    success=False,
-                    message="API 端点不存在",
-                    details=f"请检查视频服务配置: {str(e)[:200]}",
-                )
-            else:
-                # 其他错误也返回失败
-                return TestConnectionResponse(
-                    success=False, message="连接失败", details=str(e)[:200]
-                )
-    except Exception as e:
-        return TestConnectionResponse(success=False, message="连接失败", details=str(e)[:200])
+    """测试视频服务：豆包查任务列表，OpenAI 兼容 GET /models，不再真的生成视频。"""
+    if settings.video_provider == "fake":
+        return TestConnectionResponse(
+            success=True, message="视频服务连接成功", details="Fake 视频 Provider，无需联网。", status="valid"
+        )
+    if settings.video_provider == "doubao":
+        outcome = await connection_probe.probe_doubao_video(
+            api_key=settings.doubao_api_key, model=settings.doubao_video_model
+        )
+        return _probe_response(outcome, "doubao", settings.doubao_video_model)
+    outcome = await connection_probe.probe_openai_compatible(
+        label="视频",
+        base_url=settings.video_base_url,
+        endpoint=settings.video_endpoint,
+        api_key=settings.video_api_key,
+        model=settings.video_model,
+    )
+    return _probe_response(outcome, settings.video_provider, settings.video_model)

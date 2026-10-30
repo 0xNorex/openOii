@@ -683,17 +683,28 @@ export class MediaService {
       const mime = sniffImageMime(args.imageBytes) ?? "image/png";
       payload.image = `data:${mime};base64,${args.imageBytes.toString("base64")}`;
     }
+    const modelscope = this.settings.imageProvider === "modelscope";
+    if (modelscope && payload.image) {
+      // ModelScope 的图生图参数叫 image_url
+      payload.image_url = payload.image;
+      delete payload.image;
+    }
     const response = await this.postProvider(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.settings.imageApiKey}`,
+        // ModelScope API-Inference 只支持异步出图：提交返回 task_id，再轮询 /v1/tasks/{id}
+        ...(modelscope ? { "X-ModelScope-Async-Mode": "true" } : {}),
         ...this.idempotencyHeaders(),
       },
       body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error(`image provider failed: ${response.status}`);
-    const body = (await response.json()) as Record<string, unknown>;
+    let body = (await response.json()) as Record<string, unknown>;
+    if (modelscope && typeof body.task_id === "string" && body.task_id && !Array.isArray(body.data)) {
+      body = { data: [{ url: await this.pollModelScopeImage(body.task_id) }] };
+    }
     const data = Array.isArray(body.data) ? body.data[0] : null;
     const item = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
     if (item && typeof item.b64_json === "string" && item.b64_json) {
@@ -939,6 +950,59 @@ export class MediaService {
     );
   }
 
+  /**
+   * ModelScope async image task: GET {base}/v1/tasks/{id} with the
+   * image_generation task-type header until task_status is SUCCEED / FAILED
+   * (same contract as the Python backend's _modelscope_generate).
+   */
+  private async pollModelScopeImage(taskId: string): Promise<string> {
+    const pollUrl = modelScopeTaskUrl(this.settings.imageBaseUrl, taskId);
+    const deadline = Date.now() + IMAGE_TASK_MAX_WAIT_MS;
+    let failures = 0;
+    while (Date.now() < deadline) {
+      await this.wait(imageTaskPollMs());
+      this.throwIfAborted();
+      let poll: Response;
+      try {
+        poll = await fetch(
+          pollUrl,
+          this.requestInit({
+            headers: {
+              Authorization: `Bearer ${this.settings.imageApiKey}`,
+              "X-ModelScope-Task-Type": "image_generation",
+            },
+          }),
+        );
+      } catch (error) {
+        if (this.abortSignal?.aborted) throw error;
+        if (++failures >= 5) throw error;
+        continue;
+      }
+      if (!poll.ok) {
+        if (poll.status >= 500 && ++failures < 5) continue;
+        throw new Error(`image task poll failed: ${poll.status}`);
+      }
+      failures = 0;
+      const state = (await poll.json()) as Record<string, unknown>;
+      const status = String(state.task_status ?? "").toUpperCase();
+      if (status === "SUCCEED") {
+        const images = Array.isArray(state.output_images) ? state.output_images : [];
+        const first = images[0];
+        if (typeof first === "string" && first) return first;
+        throw new Error("image task succeeded without output_images");
+      }
+      if (status === "FAILED") {
+        const errors = state.errors;
+        const detail =
+          errors && typeof errors === "object"
+            ? String((errors as Record<string, unknown>).message ?? JSON.stringify(errors))
+            : String(errors ?? "unknown");
+        throw new Error(`image task failed: ${detail.slice(0, 200)}`);
+      }
+    }
+    throw new Error("image task timed out");
+  }
+
   /** Poll an async OpenAI-compatible video task until it finishes. */
   private async pollVideoTask(taskId: string): Promise<Record<string, unknown>> {
     const candidates = videoTaskPollUrls(this.settings.videoBaseUrl, this.settings.videoEndpoint, taskId);
@@ -1127,6 +1191,18 @@ function videoTaskPollMs(): number {
   return Number.isFinite(raw) && raw >= 0 ? raw : 5_000;
 }
 const VIDEO_TASK_MAX_WAIT_MS = 15 * 60_000;
+/** ModelScope image task poll interval; OPENOII_IMAGE_POLL_MS overrides it (tests). */
+function imageTaskPollMs(): number {
+  const raw = Number(process.env.OPENOII_IMAGE_POLL_MS ?? 5_000);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 5_000;
+}
+const IMAGE_TASK_MAX_WAIT_MS = 5 * 60_000;
+
+/** `{base}/v1/tasks/{id}` whether or not the configured base already ends in /v1. */
+export function modelScopeTaskUrl(baseUrl: string, taskId: string): string {
+  const base = baseUrl.replace(/\/+$/, "").replace(/\/v1$/, "");
+  return `${base}/v1/tasks/${encodeURIComponent(taskId)}`;
+}
 
 function sameOrigin(url: string, baseUrl: string): boolean {
   try {

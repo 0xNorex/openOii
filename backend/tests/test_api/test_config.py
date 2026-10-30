@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -15,6 +16,7 @@ from app.schemas.config import (
     ConnectionCapabilities,
     TestConnectionResponse as ConfigTestConnectionResponse,
 )
+from app.services import connection_probe
 from app.services.text_capabilities import TextProviderCapability
 from tests.factories import create_config_item
 
@@ -331,252 +333,189 @@ async def test_test_connection_applies_masked_overrides_without_clobbering(
     assert captured["api_key"] is None
 
 
+def _models_transport(status_code: int, payload=None, seen=None):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if seen is not None:
+            seen.append(request)
+        return httpx.Response(status_code, json=payload if payload is not None else {})
+
+    return httpx.MockTransport(handler)
+
+
+def _patch_probe_transport(monkeypatch, transport):
+    original = httpx.AsyncClient
+
+    def factory(*args, **kwargs):
+        kwargs["transport"] = transport
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(connection_probe.httpx, "AsyncClient", factory)
+
+
 @pytest.mark.asyncio
-async def test_test_image_connection_success(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            self.settings = settings
-            self.max_retries = max_retries
-
-        async def generate(self, prompt, size, n):
-            assert prompt == "test"
-            assert size == "1024x1024"
-            assert n == 1
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
+async def test_image_connection_lists_models_instead_of_generating(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "image_provider", "openai")
+    monkeypatch.setattr(test_settings, "image_base_url", "https://api.example.com")
+    monkeypatch.setattr(test_settings, "image_endpoint", "/v1/images/generations")
+    monkeypatch.setattr(test_settings, "image_model", "img-1")
+    monkeypatch.setattr(test_settings, "image_api_key", "sk-test-secret")
+    seen: list[httpx.Request] = []
+    _patch_probe_transport(
+        monkeypatch, _models_transport(200, {"data": [{"id": "img-1"}]}, seen)
+    )
 
     result = await config_routes._test_image_connection(test_settings)
 
     assert result.success is True
+    assert result.status == "valid"
     assert result.message == "图像服务连接成功"
+    assert [r.method for r in seen] == ["GET"]
+    assert str(seen[0].url) == "https://api.example.com/v1/models"
+    assert "sk-test-secret" not in (result.details or "")
 
 
 @pytest.mark.asyncio
-async def test_test_image_connection_reports_auth_failure(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            pass
-
-        async def generate(self, prompt, size, n):
-            raise RuntimeError("401 unauthorized")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
+async def test_image_connection_maps_401_to_chinese(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "image_provider", "openai")
+    monkeypatch.setattr(test_settings, "image_base_url", "https://api.example.com/v1")
+    monkeypatch.setattr(test_settings, "image_endpoint", "/images/generations")
+    monkeypatch.setattr(test_settings, "image_api_key", "sk-wrong")
+    _patch_probe_transport(monkeypatch, _models_transport(401))
 
     result = await config_routes._test_image_connection(test_settings)
 
     assert result.success is False
-    assert result.message == "认证失败"
+    assert result.message == "API Key 无效"
+    assert "地域" in (result.details or "")
+    assert "sk-wrong" not in (result.details or "")
 
 
 @pytest.mark.asyncio
-async def test_test_image_connection_reports_forbidden(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            pass
-
-        async def generate(self, prompt, size, n):
-            raise RuntimeError("403 forbidden")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
+async def test_image_connection_without_models_endpoint_is_degraded(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "image_provider", "openai")
+    monkeypatch.setattr(test_settings, "image_base_url", "https://api.example.com/v1")
+    monkeypatch.setattr(test_settings, "image_endpoint", "/images/generations")
+    monkeypatch.setattr(test_settings, "image_api_key", "k")
+    _patch_probe_transport(monkeypatch, _models_transport(404))
 
     result = await config_routes._test_image_connection(test_settings)
 
-    assert result.success is False
-    assert result.message == "认证失败"
+    assert result.success is True
+    assert result.status == "degraded"
+    assert "无法免费验证" in result.message
 
 
 @pytest.mark.asyncio
-async def test_test_image_connection_reports_not_found(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            pass
-
-        async def generate(self, prompt, size, n):
-            raise RuntimeError("404 not found")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
-
-    result = await config_routes._test_image_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "API 端点不存在"
-
-
-@pytest.mark.asyncio
-async def test_test_image_connection_reports_generic_error(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            pass
-
-        async def generate(self, prompt, size, n):
-            raise RuntimeError("bad gateway")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
-
-    result = await config_routes._test_image_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "连接失败"
-
-
-@pytest.mark.asyncio
-async def test_test_image_connection_reports_outer_exception(monkeypatch, test_settings):
-    def _boom(*args, **kwargs):
-        raise RuntimeError("init failed")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", _boom)
-
-    result = await config_routes._test_image_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "连接失败"
-
-
-@pytest.mark.asyncio
-async def test_test_image_connection_success_through_route(monkeypatch, test_settings):
-    class FakeImageService:
-        def __init__(self, settings, max_retries=0):
-            self.settings = settings
-
-        async def generate(self, prompt, size, n):
-            return None
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", lambda settings: FakeImageService(settings))
+async def test_image_connection_fake_needs_no_network(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "image_provider", "fake")
     result = await config_routes._test_image_connection(test_settings)
     assert result.success is True
 
 
 @pytest.mark.asyncio
-async def test_test_image_connection_reports_exception_in_factory(monkeypatch, test_settings):
-    def _boom(*args, **kwargs):
-        raise RuntimeError("factory failed")
-
-    monkeypatch.setattr("app.services.image_factory.create_image_service", _boom)
-
-    result = await config_routes._test_image_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "连接失败"
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_success_for_doubao(monkeypatch, test_settings):
-    test_settings.video_provider = "doubao"
-
-    class FakeVideoService:
-        async def generate_url(self, prompt, duration, ratio):
-            assert prompt == "test"
-            assert duration == 5
-            assert ratio == "16:9"
-
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
-    )
+async def test_video_connection_doubao_lists_tasks(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "video_provider", "doubao")
+    monkeypatch.setattr(test_settings, "doubao_api_key", "ark-key")
+    monkeypatch.setattr(test_settings, "doubao_video_model", "doubao-seedance-2-5-260628")
+    seen: list[httpx.Request] = []
+    _patch_probe_transport(monkeypatch, _models_transport(200, {"items": []}, seen))
 
     result = await config_routes._test_video_connection(test_settings)
 
     assert result.success is True
-    assert result.message == "视频服务连接成功"
+    assert seen[0].method == "GET"
+    assert seen[0].url.path == "/api/v3/contents/generations/tasks"
+    assert seen[0].url.params["page_size"] == "1"
 
 
 @pytest.mark.asyncio
-async def test_test_video_connection_reports_exception_in_factory(monkeypatch, test_settings):
-    def _boom(*args, **kwargs):
-        raise RuntimeError("factory failed")
-
-    monkeypatch.setattr("app.services.video_factory.create_video_service", _boom)
+async def test_video_connection_openai_maps_429(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "video_provider", "openai")
+    monkeypatch.setattr(test_settings, "video_base_url", "https://api.x.ai/v1")
+    monkeypatch.setattr(test_settings, "video_endpoint", "/videos/generations")
+    monkeypatch.setattr(test_settings, "video_api_key", "xai-key")
+    _patch_probe_transport(monkeypatch, _models_transport(429))
 
     result = await config_routes._test_video_connection(test_settings)
 
     assert result.success is False
-    assert result.message == "连接失败"
+    assert result.message == "请求太频繁或额度不足"
 
 
 @pytest.mark.asyncio
-async def test_test_video_connection_reports_not_found(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
+async def test_video_connection_reports_missing_key(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "video_provider", "openai")
+    monkeypatch.setattr(test_settings, "video_base_url", "https://api.example.com/v1")
+    monkeypatch.setattr(test_settings, "video_api_key", None)
+    result = await config_routes._test_video_connection(test_settings)
+    assert result.success is False
+    assert result.message == "缺少 API Key"
 
-    class FakeVideoService:
-        async def generate(self, prompt):
-            raise RuntimeError("404 not found")
 
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
+@pytest.mark.asyncio
+async def test_llm_connection_maps_probe_error_text(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "text_provider", "openai")
+
+    async def fake_probe(_settings):
+        return TextProviderCapability(
+            status="invalid",
+            generate=False,
+            stream=False,
+            reason_code="provider_probe_failed",
+            reason_message="文本 Provider 连通性预检失败：Error code: 401 - invalid_api_key",
+        )
+
+    monkeypatch.setattr(config_routes, "probe_text_provider", fake_probe)
+
+    result = await config_routes._test_llm_connection(test_settings)
+
+    assert result.success is False
+    assert result.message == "API Key 无效"
+    assert "原始信息" in (result.details or "")
+
+
+@pytest.mark.asyncio
+async def test_llm_connection_maps_raised_timeout(monkeypatch, test_settings):
+    async def boom(_settings):
+        raise httpx.ReadTimeout("read timed out")
+
+    monkeypatch.setattr(config_routes, "probe_text_provider", boom)
+
+    result = await config_routes._test_llm_connection(test_settings)
+
+    assert result.success is False
+    assert result.message == "连接超时"
+
+
+@pytest.mark.asyncio
+async def test_test_connection_allows_saved_loopback_url(monkeypatch, async_client, test_settings):
+    """已保存的本机网关地址原样回传时可以测试；新填的本地地址仍被拒绝。"""
+    monkeypatch.setattr(test_settings, "text_base_url", "http://127.0.0.1:18790/v1")
+    monkeypatch.setattr(config_routes, "get_settings", lambda: test_settings)
+    captured = {}
+
+    async def fake_probe(settings):
+        captured["base"] = settings.text_base_url
+        return TextProviderCapability(
+            status="valid", generate=True, stream=True, reason_code=None, reason_message=None
+        )
+
+    monkeypatch.setattr(config_routes, "probe_text_provider", fake_probe)
+
+    ok = await async_client.post(
+        "/api/v1/config/test-connection",
+        json={"service": "llm", "config_overrides": {"TEXT_BASE_URL": "http://127.0.0.1:18790/v1/"}},
     )
+    assert ok.status_code == 200
+    assert captured["base"] == "http://127.0.0.1:18790/v1/"
 
-    result = await config_routes._test_video_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "API 端点不存在"
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_reports_auth_failure(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
-
-    class FakeVideoService:
-        async def generate(self, prompt):
-            raise RuntimeError("401 unauthorized")
-
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
+    rejected = await async_client.post(
+        "/api/v1/config/test-connection",
+        json={"service": "llm", "config_overrides": {"TEXT_BASE_URL": "http://127.0.0.1:11434/v1"}},
     )
+    assert rejected.status_code == 400
+    assert "请先保存配置" in rejected.json()["error"]["message"]
 
-    result = await config_routes._test_video_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "认证失败"
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_reports_forbidden(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
-
-    class FakeVideoService:
-        async def generate(self, prompt):
-            raise RuntimeError("403 forbidden")
-
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
-    )
-
-    result = await config_routes._test_video_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "认证失败"
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_reports_generic_error(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
-
-    class FakeVideoService:
-        async def generate(self, prompt):
-            raise RuntimeError("bad gateway")
-
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
-    )
-
-    result = await config_routes._test_video_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "连接失败"
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_reports_outer_exception(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
-
-    def _boom(_settings):
-        raise RuntimeError("init failed")
-
-    monkeypatch.setattr("app.services.video_factory.create_video_service", _boom)
-
-    result = await config_routes._test_video_connection(test_settings)
-
-    assert result.success is False
-    assert result.message == "连接失败"
 
 
 @pytest.mark.asyncio
@@ -593,22 +532,7 @@ async def test_video_connection_allows_fake_fixture_override(async_client):
     )
 
     assert res.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_test_video_connection_success_through_route(monkeypatch, test_settings):
-    test_settings.video_provider = "openai"
-
-    class FakeVideoService:
-        async def generate(self, prompt):
-            return None
-
-    monkeypatch.setattr(
-        "app.services.video_factory.create_video_service", lambda settings: FakeVideoService()
-    )
-
-    result = await config_routes._test_video_connection(test_settings)
-    assert result.success is True
+    assert res.json()["success"] is True
 
 
 @pytest.mark.asyncio
