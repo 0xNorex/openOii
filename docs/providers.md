@@ -1,6 +1,6 @@
 # 模型服务商预设
 
-设置页的「文本生成 / 图像服务 / 视频服务」三个页签顶部是服务商卡片。选一个预设，Base URL、接口路径和推荐模型会自动写进配置，只剩 API Key 需要自己填。地域和专属字段（如百炼业务空间 ID、Azure 资源名）在预设详情里单独填写，填完自动拼出地址。
+设置页的「文本生成 / 图像服务 / 视频服务 / 视觉审查」页签顶部是服务商卡片。选一个预设，Base URL、接口路径和推荐模型会自动写进配置，只剩 API Key 需要自己填。地域和专属字段（如百炼业务空间 ID、Azure 资源名）在预设详情里单独填写，填完自动拼出地址。
 
 - 预设数据：`frontend/app/components/settings/providerPresets.ts`，每个预设都带官方文档来源（`sources`），核对日期 **2026-10-30**（`PRESETS_VERIFIED_AT`）。
 - 预设只是把值写进现有的配置键，后端和引擎没有新增 provider 类型。所有预设都落在已有的 `openai` / `anthropic` / `modelscope` / `doubao` / `fake` 五种类型上。
@@ -23,6 +23,7 @@
 | 视频（CogVideoX / 通义万相） | `GET` 一个不存在的任务 ID，只看鉴权：401/403 为密钥无效，404 或 UNKNOWN 视为已通过 |
 | 视频（MiniMax） | `GET {base}/query/video_generation?task_id=<不存在>`，按 `base_resp.status_code`（1004 / 2049 为密钥无效） |
 | 视频（Veo，实验性） | `POST {base}/publishers/google/models/{model}:fetchPredictOperation`（不存在的 operation），只看鉴权 |
+| 视觉审查 | `GET {Base URL}/models`（Bearer，本地服务不带密钥时用占位值）；没填地址时直接提示「还没有配置视觉审查模型」 |
 | Fake | 直接成功 |
 
 错误统一翻译成中文：
@@ -101,6 +102,30 @@
 | 本地与自定义 | 自定义 · OpenAI 兼容 | `openai` | — | — | — | 只切换类型，保留已有地址和模型 |
 | 测试模式（小选项） | 测试模式（Fake） | `fake` | — | — | — | — |
 
+## 视觉审查（写入 `CRITIQUE_VISION_*`）
+
+质量审查（Critic）要看首帧图和视频帧，所以带图片的审查请求走单独的视觉模型：`CRITIQUE_VISION_PROVIDER`（目前只有 `openai`，即 OpenAI 兼容 `chat/completions`，图片以 `image_url` 的 data URL 传入）、`CRITIQUE_VISION_BASE_URL`、`CRITIQUE_VISION_API_KEY`、`CRITIQUE_VISION_MODEL`。
+
+审查开始前引擎先 `GET {Base URL}/models`（5 秒超时，缓存 1 分钟）确认视觉服务在线。下面几种情况都**不再当作通过**，而是把分镜标为「未检查」（`shot.review_status = unchecked`，原因写在 `review_note`，画布上的分镜卡显示「未检查」，悬停看原因），并在对话里说明，画面保留、流程继续：
+
+- 没配置视觉模型（以前会把图片发给文本模型；看不到图的文本模型给不出分数，结果等于默认通过）。只有文本服务是测试模式（Fake）时才允许不配视觉模型。
+- 视觉服务连不上、超时，或返回 5xx（例如本地 llama-server 被系统因内存不足结束）。
+- 密钥被拒（401 / 403）。
+- 单个镜头调用失败或没给出有效评分。
+
+审查过的镜头显示「已检查」或「未通过」；重新生成首帧会清掉旧结果，重新生成视频后按视频检查的结果更新。
+
+| 分组 | 预设 | 地址 | 推荐模型 | 说明 |
+| --- | --- | --- | --- | --- |
+| 国内 | [通义千问 VL（百炼）](https://help.aliyun.com/zh/model-studio/qwen-vl-compatible-with-openai) | 北京 `https://dashscope.aliyuncs.com/compatible-mode/v1`；新加坡 `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`；专属域名 `https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1` 等 | `qwen3-vl-plus` | 密钥按地域区分。模型列表见 [视觉理解模型](https://docs.bailian.console.aliyun.com/zh/model-studio/model-list-visual-understanding) |
+| 国内 | [智谱 GLM-V](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-4.6v) | `https://open.bigmodel.cn/api/paas/v4` | `glm-4.6v-flash`（[免费](https://docs.bigmodel.cn/cn/guide/models/free/glm-4.6v-flash)）、`glm-4.6v`、`glm-5v-turbo` | — |
+| 海外 | [OpenAI](https://developers.openai.com/api/docs/guides/images-vision) | `https://api.openai.com/v1` | `gpt-6-astra`、`gpt-6.1-terra` | 支持 PNG / JPEG / WEBP / 非动图 GIF |
+| 海外 | [Google Gemini](https://ai.google.dev/gemini-api/docs/openai) | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.8-flash` | OpenAI 兼容层 |
+| 本地 | [Qwen3-VL 本地（llama.cpp）](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md) | `http://127.0.0.1:{端口}/v1` | 模型名填 llama-server 的 `--alias` | 需要 `--mmproj`（[多模态说明](https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md)）。内存吃紧时用 `-np 1 --cache-ram 0` 并限制 `--image-max-tokens` |
+| 本地与自定义 | 自定义 · OpenAI 兼容 | — | — | 任意支持图片输入的兼容服务 |
+
+视觉审查没有测试模式卡片：不配置就是「未检查」。只有 Qwen3-VL 本地（llama.cpp）用真实服务测过，云端预设都按官方文档整理，**没有用真实密钥调用过**（未验）。
+
 ## 处理过的特殊配置
 
 - **地域绑定密钥**：阿里云百炼（北京、新加坡，以及北京 / 弗吉尼亚 / 东京专属域名）、Kimi（国内 / 海外）、MiniMax（国内 / 海外）、腾讯混元 TokenHub（国内 / 国际）、Bedrock（us-east-1 / us-west-2）都用地域切换。401 的中文提示会提醒检查地域。
@@ -136,7 +161,7 @@
 
 ## 服务商 logo
 
-卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 27 个，约 36 KB，浏览器按需加载，不进 JS 包）。
+卡片上的 logo 取自 [Lobe Icons](https://github.com/lobehub/lobe-icons)（`@lobehub/icons-static-svg` 1.101.0，MIT License，Copyright (c) 2023 LobeHub），2026-10-30 下载，用 `frontend/scripts/build-provider-logos.py` 生成到 `frontend/public/provider-logos/`（共 28 个，约 37 KB，浏览器按需加载，不进 JS 包）。
 
 - 有彩色变体（`*-color.svg`）的品牌直接用彩色版，只去掉 `<title>`、宽高和内联样式。
 - 只有单色标的 5 个品牌（OpenAI、xAI、Groq、Ollama、LM Studio）按 Lobe Icons 源码 `src/<Brand>/style.ts` 里的头像配色（`AVATAR_BACKGROUND` / `AVATAR_COLOR`）烘焙成整块品牌底色：OpenAI 黑底白标、xAI 和 Ollama 白底黑标、Groq `#F55036` 底白标、LM Studio `#6C78EF→#4F14BE` 渐变底白标。
@@ -171,6 +196,8 @@ logo 是各公司的商标，这里只用来标明服务商，openOii 与它们�
 | Ollama | ollama.svg | Ollama（单色，烘焙头像配色） |
 | LM Studio | lmstudio.svg | LMStudio（单色，烘焙头像配色） |
 | ModelScope | modelscope.svg | ModelScope |
+| Qwen3-VL 本地（视觉审查）| qwen.svg | Qwen |
+| 通义千问 VL（视觉审查）| bailian.svg | Bailian |
 | 可灵 / Vidu / MiniMax 海螺 / Google Veo（视频）| kling.svg、vidu.svg、hailuo.svg、deepmind.svg | Kling、Vidu、Hailuo、DeepMind |
 | 智谱 CogVideoX / 通义万相（视频）| zhipu.svg、bailian.svg | Zhipu、Bailian |
 

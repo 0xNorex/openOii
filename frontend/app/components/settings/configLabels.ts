@@ -58,6 +58,7 @@ const LABELS: Record<string, string> = {
 	CRITIQUE_ENABLED: "质量审查",
 	CRITIQUE_SCORE_THRESHOLD: "审查及格分",
 	CRITIQUE_MAX_ROUNDS: "审查最多轮数",
+	CRITIQUE_VISION_PROVIDER: "视觉审查接口协议",
 	CRITIQUE_VISION_BASE_URL: "审查视觉模型地址",
 	CRITIQUE_VISION_API_KEY: "审查视觉模型密钥",
 	CRITIQUE_VISION_MODEL: "审查视觉模型",

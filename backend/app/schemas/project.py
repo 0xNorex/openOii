@@ -231,6 +231,8 @@ class ShotRead(BaseModel):
     sfx: str | None = None
     tts_url: str | None = None
     bgm_type: str | None = None
+    review_status: Literal["passed", "failed", "unchecked"] | None = None
+    review_note: str | None = None
     seed: int | None = None
     character_ids: list[int]
     approval_state: Literal["draft", "approved", "superseded"]

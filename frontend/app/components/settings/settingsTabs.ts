@@ -21,6 +21,11 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 		title: "视频服务",
 		desc: "选一个视频服务商自动填好配置；豆包、可灵、Vidu、CogVideoX、海螺、万相、Veo 走各自的原生接口，其它兼容服务选「自定义」",
 	},
+	vision: {
+		icon: "eye",
+		title: "视觉审查",
+		desc: "质量审查要看图：选一个支持图片输入的模型。没配置或服务挂掉时，分镜会标为「未检查」，不会当作通过",
+	},
 };
 
 export interface ProviderGroup {
@@ -141,6 +146,22 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 			{ title: "通用配置", match: (k) => VIDEO_COMMON.includes(k) },
 		],
 	},
+};
+
+PROVIDER_TABS.vision = {
+	providerKey: "critique_vision_provider",
+	defaultProvider: "openai",
+	icon: "eye",
+	layout: "row",
+	options: [{ value: "openai", title: "OpenAI 兼容", desc: "chat/completions，图片作为 image_url 传入" }],
+	groups: [
+		{
+			title: "视觉模型接口",
+			providers: ["openai"],
+			match: (k) => k.startsWith("critique_vision_") && k !== "critique_vision_provider",
+		},
+		{ title: "审查规则", match: (k) => k.startsWith("critique_") && !k.startsWith("critique_vision_") },
+	],
 };
 
 export function itemsFor(items: ConfigItem[], match: (key: string) => boolean) {

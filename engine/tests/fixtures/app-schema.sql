@@ -87,7 +87,7 @@ CREATE TABLE shot (
 	image_prompt VARCHAR, 
 	image_url VARCHAR, 
 	video_url VARCHAR, 
-	duration FLOAT, camera VARCHAR, motion_note VARCHAR, character_ids JSON DEFAULT '[]' NOT NULL, approved_description VARCHAR, approved_prompt VARCHAR, approved_image_prompt VARCHAR, approved_duration FLOAT, approved_camera VARCHAR, approved_motion_note VARCHAR, approved_character_ids JSON DEFAULT '[]' NOT NULL, approved_at DATETIME, approval_version INTEGER DEFAULT 0 NOT NULL, scene VARCHAR, action VARCHAR, expression VARCHAR, lighting VARCHAR, dialogue VARCHAR, sfx VARCHAR, approved_scene VARCHAR, approved_action VARCHAR, approved_expression VARCHAR, approved_lighting VARCHAR, approved_dialogue VARCHAR, approved_sfx VARCHAR, seed INTEGER, tts_url VARCHAR, bgm_type VARCHAR, 
+	duration FLOAT, camera VARCHAR, motion_note VARCHAR, character_ids JSON DEFAULT '[]' NOT NULL, approved_description VARCHAR, approved_prompt VARCHAR, approved_image_prompt VARCHAR, approved_duration FLOAT, approved_camera VARCHAR, approved_motion_note VARCHAR, approved_character_ids JSON DEFAULT '[]' NOT NULL, approved_at DATETIME, approval_version INTEGER DEFAULT 0 NOT NULL, scene VARCHAR, action VARCHAR, expression VARCHAR, lighting VARCHAR, dialogue VARCHAR, sfx VARCHAR, approved_scene VARCHAR, approved_action VARCHAR, approved_expression VARCHAR, approved_lighting VARCHAR, approved_dialogue VARCHAR, approved_sfx VARCHAR, seed INTEGER, tts_url VARCHAR, bgm_type VARCHAR, review_status VARCHAR, review_note VARCHAR, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(project_id) REFERENCES project (id)
 );

@@ -136,6 +136,9 @@ export interface ShotRow {
   sfx: string | null;
   tts_url: string | null;
   bgm_type: string | null;
+  /** passed / failed / unchecked (vision critic could not run); null = not reviewed */
+  review_status?: string | null;
+  review_note?: string | null;
   seed: number | null;
   character_ids: string | null; // JSON
   approved_description: string | null;
@@ -218,6 +221,8 @@ export function shotReadPayload(s: ShotRow): Record<string, unknown> {
     sfx: s.sfx,
     tts_url: s.tts_url,
     bgm_type: s.bgm_type,
+    review_status: s.review_status ?? null,
+    review_note: s.review_note ?? null,
     seed: s.seed,
     character_ids: parseJsonColumn(s.character_ids, [] as number[]),
     approval_state:

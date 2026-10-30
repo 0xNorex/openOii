@@ -50,7 +50,8 @@ export function getConfigDescription(key: string): string {
 		CRITIQUE_MAX_ROUNDS:
 			"Critic 最多重试轮数；达到上限后为避免卡死会继续后续流程。",
 		CRITIQUE_VISION_BASE_URL:
-			"能看图片的 OpenAI 兼容视觉模型地址；审查时带图片的请求走这里。文本模型看不到图片时必须填写，否则审查给不出分数。",
+			"能看图片的 OpenAI 兼容视觉模型地址；审查时带图片的请求走这里。不填或服务连不上时，分镜标为「未检查」，不会当作通过。",
+		CRITIQUE_VISION_PROVIDER: "视觉审查走的接口协议；目前都是 OpenAI 兼容 chat/completions。",
 		CRITIQUE_VISION_API_KEY: "审查视觉模型的 API 密钥（本地模型可留空）",
 		CRITIQUE_VISION_MODEL: "审查视觉模型名称，需支持图片输入，如 qwen3-vl",
 		OUTLINE_ENABLED:

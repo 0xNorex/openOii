@@ -106,6 +106,11 @@ _ALLOWED_OVERRIDE_FIELDS = {
     "doubao_video_duration",
     "doubao_video_ratio",
     "doubao_generate_audio",
+    # 视觉审查
+    "critique_vision_provider",
+    "critique_vision_base_url",
+    "critique_vision_api_key",
+    "critique_vision_model",
 }
 
 
@@ -201,6 +206,8 @@ async def test_connection(
         return await _test_image_connection(settings)
     elif payload.service == "video":
         return await _test_video_connection(settings)
+    elif payload.service == "vision":
+        return await _test_vision_connection(settings)
 
     return TestConnectionResponse(success=False, message="未知服务类型")  # type: ignore[unreachable]
 
@@ -255,6 +262,26 @@ def _probe_response(outcome: ProbeOutcome, provider: str, model: str | None) -> 
         details=details,
         status=outcome.status,
     )
+
+
+async def _test_vision_connection(settings) -> TestConnectionResponse:
+    """视觉审查：GET /models 只读探测；本地 llama-server 不要密钥。"""
+    base_url = settings.critique_vision_base_url or ""
+    if not base_url.strip():
+        return TestConnectionResponse(
+            success=False,
+            message="还没有配置视觉审查模型",
+            details="选一个预设或填写地址；不配置时分镜会标为「未检查」。",
+            status="invalid",
+        )
+    outcome = await connection_probe.probe_openai_compatible(
+        label="视觉审查",
+        base_url=base_url,
+        endpoint="/chat/completions",
+        api_key=settings.critique_vision_api_key or "local",
+        model=settings.critique_vision_model,
+    )
+    return _probe_response(outcome, "openai", settings.critique_vision_model)
 
 
 async def _test_image_connection(settings) -> TestConnectionResponse:

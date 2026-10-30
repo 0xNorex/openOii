@@ -329,6 +329,43 @@ export class TextLlmService {
     };
   }
 
+  private visionProbe: { at: number; status: { ok: boolean; reason: string } } | null = null;
+
+  /**
+   * Can the critic look at images right now? A blind text model used to get
+   * the images when no vision model was set, and its non-answers passed every
+   * shot; a vision server that was down or OOM-killed did the same. The
+   * caller marks shots 「未检查」 instead when this says no. Only the fake
+   * text provider (tests, demos) may review without a vision endpoint.
+   * GET {base}/models, 5 s timeout, cached for a minute.
+   */
+  async visionStatus(): Promise<{ ok: boolean; reason: string }> {
+    const vision = this.resolveVisionProvider();
+    if (!vision) {
+      return this.resolveProvider().key === "fake"
+        ? { ok: true, reason: "" }
+        : { ok: false, reason: "未配置视觉审查模型（设置 → 视觉审查）" };
+    }
+    if (this.visionProbe && Date.now() - this.visionProbe.at < 60_000) return this.visionProbe.status;
+    let status: { ok: boolean; reason: string };
+    try {
+      const response = await fetch(`${vision.baseUrl.replace(/\/+$/, "")}/models`, {
+        headers: { Authorization: `Bearer ${vision.apiKey}` },
+        signal: AbortSignal.timeout(5_000),
+      });
+      status =
+        response.status === 401 || response.status === 403
+          ? { ok: false, reason: `视觉审查服务拒绝了密钥（HTTP ${response.status}）` }
+          : response.status >= 500
+            ? { ok: false, reason: `视觉审查服务出错（HTTP ${response.status}）` }
+            : { ok: true, reason: "" };
+    } catch {
+      status = { ok: false, reason: "视觉审查服务连不上（未启动、已崩溃或内存不足被系统结束）" };
+    }
+    this.visionProbe = { at: Date.now(), status };
+    return status;
+  }
+
   /**
    * Build the pi-ai model descriptor for a provider/model pair.
    *

@@ -10,7 +10,7 @@
 
 export const PRESETS_VERIFIED_AT = "2026-10-30";
 
-export type PresetService = "text" | "image" | "video";
+export type PresetService = "text" | "image" | "video" | "vision";
 export type VideoVendor = "kling" | "vidu" | "zhipu" | "minimax" | "dashscope" | "veo";
 export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor;
 export type PresetGroup = "domestic" | "global" | "local";
@@ -910,20 +910,175 @@ const VIDEO_PRESETS: ProviderPreset[] = [
 	},
 ];
 
+/** 视觉审查：OpenAI 兼容 chat/completions，图片作为 image_url 内容传入 */
+const VISION_PRESETS: ProviderPreset[] = [
+	{
+		id: "qwen-vl",
+		service: "vision",
+		provider: "openai",
+		group: "domestic",
+		name: "通义千问 VL",
+		mark: "百",
+		logo: "bailian",
+		tagline: "阿里云百炼 · Qwen3-VL",
+		regions: [
+			{ id: "cn-beijing", label: "北京", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+			{ id: "ap-southeast-1", label: "新加坡", baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" },
+			{
+				id: "ws-cn-beijing",
+				label: "北京 · 专属域名",
+				baseUrl: "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+			},
+			{
+				id: "ws-us-east-1",
+				label: "美国（弗吉尼亚）",
+				baseUrl: "https://{workspaceId}.us-east-1.maas.aliyuncs.com/compatible-mode/v1",
+			},
+		],
+		defaultModel: "qwen3-vl-plus",
+		models: ["qwen3-vl-plus"],
+		keyHint: "sk- 开头；密钥绑定地域",
+		keyUrl: "https://help.aliyun.com/zh/model-studio/get-api-key",
+		docsUrl: "https://help.aliyun.com/zh/model-studio/qwen-vl-compatible-with-openai",
+		sources: [
+			"https://help.aliyun.com/zh/model-studio/qwen-vl-compatible-with-openai",
+			"https://docs.bailian.console.aliyun.com/zh/model-studio/model-list-visual-understanding",
+		],
+		fields: [
+			{
+				id: "workspaceId",
+				label: "业务空间 ID",
+				placeholder: "llm-xxxxxxxx",
+				help: "百炼控制台 → 业务空间详情；只有专属域名需要。",
+				pattern: "[A-Za-z0-9-]+",
+			},
+		],
+	},
+	{
+		id: "glm-v",
+		service: "vision",
+		provider: "openai",
+		group: "domestic",
+		name: "智谱 GLM-V",
+		mark: "智",
+		logo: "zhipu",
+		tagline: "GLM-4.6V，有免费 Flash 版",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://open.bigmodel.cn/api/paas/v4" }],
+		defaultModel: "glm-4.6v-flash",
+		models: ["glm-4.6v-flash", "glm-4.6v", "glm-5v-turbo"],
+		keyHint: "智谱开放平台 API Key",
+		keyUrl: "https://open.bigmodel.cn/usercenter/apikeys",
+		docsUrl: "https://docs.bigmodel.cn/cn/guide/models/vlm/glm-4.6v",
+		sources: [
+			"https://docs.bigmodel.cn/cn/guide/models/vlm/glm-4.6v",
+			"https://docs.bigmodel.cn/cn/guide/models/free/glm-4.6v-flash",
+		],
+		notes: ["glm-4.6v-flash 免费，适合审查这种短输出任务。"],
+	},
+	{
+		id: "openai-vision",
+		service: "vision",
+		provider: "openai",
+		group: "global",
+		name: "OpenAI",
+		mark: "AI",
+		logo: "openai",
+		tagline: "GPT 多模态模型",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://api.openai.com/v1" }],
+		defaultModel: "gpt-6-astra",
+		models: ["gpt-6-astra", "gpt-6.1-terra"],
+		keyHint: "sk- 开头",
+		keyUrl: "https://platform.openai.com/api-keys",
+		docsUrl: "https://developers.openai.com/api/docs/guides/images-vision",
+		sources: ["https://developers.openai.com/api/docs/guides/images-vision"],
+	},
+	{
+		id: "gemini-vision",
+		service: "vision",
+		provider: "openai",
+		group: "global",
+		name: "Google Gemini",
+		mark: "G",
+		logo: "gemini",
+		tagline: "OpenAI 兼容接口",
+		regions: [{ id: "default", label: "官方", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" }],
+		defaultModel: "gemini-3.8-flash",
+		models: ["gemini-3.8-flash"],
+		keyHint: "AI Studio API Key",
+		keyUrl: "https://aistudio.google.com/apikey",
+		docsUrl: "https://ai.google.dev/gemini-api/docs/openai",
+		sources: ["https://ai.google.dev/gemini-api/docs/openai"],
+	},
+	{
+		id: "llamacpp-vision",
+		service: "vision",
+		provider: "openai",
+		group: "local",
+		name: "Qwen3-VL 本地",
+		mark: "L",
+		logo: "qwen",
+		tagline: "llama.cpp 跑 GGUF + mmproj",
+		regions: [{ id: "local", label: "本机", baseUrl: "http://127.0.0.1:{port}/v1" }],
+		defaultModel: "local-vision",
+		models: [],
+		modelLabel: "模型（llama-server 的 --alias）",
+		keyHint: "默认不需要；用了 --api-key 才填",
+		keyOptional: true,
+		docsUrl: "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+		sources: [
+			"https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+			"https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md",
+		],
+		fields: [
+			{
+				id: "port",
+				label: "端口",
+				placeholder: "8080",
+				help: "llama-server 的 --port；本地地址需先保存再测试连接。",
+				pattern: "[0-9]+",
+			},
+		],
+		notes: ["内存吃紧时加 -np 1 --cache-ram 0，并限制 --image-max-tokens；服务挂掉时分镜会标为「未检查」。"],
+	},
+	{
+		id: "custom-vision",
+		service: "vision",
+		provider: "openai",
+		group: "local",
+		name: "自定义 · OpenAI 兼容",
+		mark: "…",
+		tagline: "任意支持图片输入的兼容服务",
+		regions: [],
+		defaultModel: "",
+		models: [],
+		keyHint: "按服务要求填写",
+		sources: [],
+		custom: true,
+	},
+];
+
 export const PROVIDER_PRESETS: Record<PresetService, ProviderPreset[]> = {
 	text: TEXT_PRESETS,
 	image: IMAGE_PRESETS,
 	video: VIDEO_PRESETS,
+	vision: VISION_PRESETS,
+};
+
+/** 每个服务的接口协议键和后端默认值 */
+const SERVICE_PROVIDER: Record<PresetService, { key: string; fallback: string }> = {
+	text: { key: "TEXT_PROVIDER", fallback: "anthropic" },
+	image: { key: "IMAGE_PROVIDER", fallback: "modelscope" },
+	video: { key: "VIDEO_PROVIDER", fallback: "openai" },
+	vision: { key: "CRITIQUE_VISION_PROVIDER", fallback: "openai" },
 };
 
 export function isPresetService(tab: string): tab is PresetService {
-	return tab === "text" || tab === "image" || tab === "video";
+	return tab in SERVICE_PROVIDER;
 }
 
 /** 配置里的 provider；没填时按后端默认值（文本 anthropic、图像 modelscope、视频 openai） */
 export function formProvider(service: PresetService, form: Record<string, unknown>): string {
-	const key = `${service.toUpperCase()}_PROVIDER`;
-	const fallback = service === "text" ? "anthropic" : service === "image" ? "modelscope" : "openai";
+	const { key, fallback } = SERVICE_PROVIDER[service];
 	return (String(form[key] ?? form[key.toLowerCase()] ?? "") || fallback).toLowerCase();
 }
 
@@ -962,6 +1117,14 @@ export interface PresetKeys {
 }
 
 export function presetKeys(preset: ProviderPreset): PresetKeys {
+	if (preset.service === "vision") {
+		return {
+			provider: "CRITIQUE_VISION_PROVIDER",
+			baseUrl: "CRITIQUE_VISION_BASE_URL",
+			model: "CRITIQUE_VISION_MODEL",
+			apiKey: "CRITIQUE_VISION_API_KEY",
+		};
+	}
 	if (preset.service === "text") {
 		if (preset.provider === "anthropic") {
 			return { provider: "TEXT_PROVIDER", baseUrl: "ANTHROPIC_BASE_URL", model: "ANTHROPIC_MODEL", apiKey: "ANTHROPIC_AUTH_TOKEN" };

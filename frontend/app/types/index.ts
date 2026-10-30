@@ -165,6 +165,9 @@ export interface Shot {
 	sfx: string | null;
 	tts_url?: string | null;
 	bgm_type?: string | null;
+	/** 视觉审查结果；unchecked = 审查模型不可用，没看过这一镜 */
+	review_status?: "passed" | "failed" | "unchecked" | null;
+	review_note?: string | null;
 	seed: number | null;
 	character_ids: number[];
 	approval_state: ReviewState;

@@ -807,7 +807,14 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
         ctx.emitter.versionCreated("shot", shot.id, version, "generation");
         ctx.shared.updateShot(
           shot.id,
-          { image_url: imageUrl, video_url: null, tts_url: null, bgm_type: null },
+          {
+            image_url: imageUrl,
+            video_url: null,
+            tts_url: null,
+            bgm_type: null,
+            review_status: null,
+            review_note: null,
+          },
           shot.revision,
         );
         ctx.checkpointTarget("shot_image", shot.id);
@@ -823,6 +830,8 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             video_url: null,
             tts_url: null,
             bgm_type: null,
+            review_status: null,
+            review_note: null,
             revision: shot.revision + 1,
           }),
         };
@@ -995,6 +1004,31 @@ function shotLabel(shot: ShotRow): string {
   return `S${String(shot.order).padStart(2, "0")}`;
 }
 
+type ReviewStatus = "passed" | "failed" | "unchecked";
+
+/**
+ * Keep the critic's outcome on the shot so a shot nobody looked at shows
+ * 「未检查」 on the canvas instead of passing silently.
+ */
+function markReview(ctx: StageContext, shotId: number, status: ReviewStatus | null, note = ""): void {
+  const live = ctx.shared.getLiveShot(shotId);
+  if (!live) return;
+  const reviewNote = status === "passed" || status === null ? null : note.slice(0, 300) || null;
+  if ((live.review_status ?? null) === status && (live.review_note ?? null) === reviewNote) return;
+  ctx.emitter.commit("shot_updated", () => {
+    ctx.shared.updateShot(shotId, { review_status: status, review_note: reviewNote }, live.revision);
+    return {
+      shot: shotReadPayload({ ...live, review_status: status, review_note: reviewNote, revision: live.revision + 1 }),
+    };
+  });
+}
+
+/** Null when the critic can look at images; otherwise why it cannot. */
+async function visionUnavailable(ctx: StageContext): Promise<string | null> {
+  const status = await ctx.llm.visionStatus?.();
+  return status && !status.ok ? status.reason : null;
+}
+
 export async function runCritique(
   ctx: StageContext,
   entityType: "character" | "shot",
@@ -1005,6 +1039,16 @@ export async function runCritique(
       : ctx.shared.shotsForProject(ctx.projectId);
   const allShots = entityType === "shot" ? (entities as ShotRow[]) : [];
   const rounds = entityType === "character" ? ctx.critiqueRounds.characters : ctx.critiqueRounds.shots;
+  const down = entities.length > 0 ? await visionUnavailable(ctx) : null;
+  if (down) {
+    // Nothing looked at these images: say so on every shot rather than pass them.
+    if (entityType === "shot") for (const entity of entities) markReview(ctx, entity.id, "unchecked", down);
+    await ctx.emitter.sendMessage(
+      "critic",
+      `⚠️ ${down}，${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}标为「未检查」，保留当前画面继续。`,
+    );
+    return { willRegenerate: false, minScore: 10, regenerateEntityIds: [] };
+  }
   await ctx.emitter.sendMessage("critic", `开始审查 ${entities.length} 张${entityType === "character" ? "角色形象图" : "分镜图"}…`);
 
   let minScore = 10;
@@ -1047,9 +1091,10 @@ export async function runCritique(
             ? "审查模型没有给出有效评分"
             : "当前文本模型看不到图片，请在设置里配置审查视觉模型";
       console.warn(`critic: no verdict for ${entityType} ${entity.id}: ${failure || reason}`);
+      if (entityType === "shot") markReview(ctx, entity.id, "unchecked", reason);
       await ctx.emitter.sendMessage(
         "critic",
-        `⚠️ ${label} 未能完成审查（${reason}），保留当前画面，不重新生成。`,
+        `⚠️ ${label} 未能完成审查（${reason}），标为「未检查」，保留当前画面，不重新生成。`,
       );
       continue;
     }
@@ -1058,6 +1103,9 @@ export async function runCritique(
     if (score < minScore) minScore = score;
     const willRegen = !verdict.passed && rounds < ctx.critiqueMaxRounds;
     const note = critiqueNote(verdict);
+    if (entityType === "shot" && !willRegen) {
+      markReview(ctx, entity.id, verdict.passed ? "passed" : "failed", note || "低于分数线");
+    }
     if (willRegen) {
       willRegenerate = true;
       regenerateEntityIds.push(entity.id);
@@ -1089,17 +1137,26 @@ export async function runCritique(
   return { willRegenerate, minScore, regenerateEntityIds };
 }
 
+interface ClipReview {
+  verdict: CriticVerdict | null;
+  /** null when review is off; "unchecked" when the critic could not look */
+  status: ReviewStatus | null;
+  note: string;
+}
+
 /**
  * Checks a fresh clip's first, middle and last frames against the shot's story
- * state. Null means pass or "could not check" (never block on a missing verdict).
+ * state. A missing verdict never blocks the clip; it is kept as 「未检查」.
  */
 async function reviewClip(
   ctx: StageContext,
   shot: ShotRow,
   allShots: ShotRow[],
   videoUrl: string,
-): Promise<CriticVerdict | null> {
-  if (!ctx.critiqueEnabled || !ctx.llm.resolveVisionProvider?.()) return null;
+): Promise<ClipReview> {
+  if (!ctx.critiqueEnabled) return { verdict: null, status: null, note: "" };
+  const down = await visionUnavailable(ctx);
+  if (down) return { verdict: null, status: "unchecked", note: down };
   let strip: Buffer | null = null;
   try {
     strip = await ctx.media.videoFrameStrip(videoUrl);
@@ -1107,7 +1164,7 @@ async function reviewClip(
     if (ctx.signal.aborted) throw error;
     console.warn(`clip check: frames unavailable (shot ${shot.id})`);
   }
-  if (!strip) return null;
+  if (!strip) return { verdict: null, status: "unchecked", note: "取不到视频帧" };
   const prompt = `审查分镜 ${shotLabel(shot)} 的视频片段。\n${shotChecklist(ctx, shot, allShots, "clip")}`;
   const { verdict, failure } = await askCritic(
     ctx,
@@ -1117,7 +1174,7 @@ async function reviewClip(
   );
   if (!verdict) {
     console.warn(`clip check: no verdict for shot ${shot.id}: ${failure || "no score"}`);
-    return null;
+    return { verdict: null, status: "unchecked", note: failure ? "审查模型调用失败" : "审查模型没有给出有效评分" };
   }
   ctx.emitter.critiqueResult({
     score: verdict.score,
@@ -1128,7 +1185,7 @@ async function reviewClip(
     entity_id: shot.id,
     will_regenerate: false,
   });
-  return verdict;
+  return { verdict, status: verdict.passed ? "passed" : "failed", note: critiqueNote(verdict) || "低于分数线" };
 }
 
 // ---------------------------------------------------------------------------
@@ -1218,13 +1275,18 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       // critique round limit, then the user is told what is still wrong.
       let note = "";
       let videoUrl = "";
+      let review: ClipReview = { verdict: null, status: null, note: "" };
       for (let attempt = 0; ; attempt += 1) {
         videoUrl = await ctx.media.generateVideoUrl({
           prompt: videoPrompt(basePrompt(note)),
           imageUrl,
           duration,
         });
-        const verdict = await reviewClip(ctx, shot, allShots, videoUrl);
+        review = await reviewClip(ctx, shot, allShots, videoUrl);
+        const verdict = review.verdict;
+        if (review.status === "unchecked") {
+          await ctx.emitter.sendMessage("critic", `⚠️ ${shotLabel(shot)} 视频未检查（${review.note}），保留这段视频。`);
+        }
         if (!verdict || verdict.passed) break;
         note = critiqueNote(verdict) || "低于分数线";
         if (attempt >= ctx.critiqueMaxRounds) {
@@ -1255,7 +1317,14 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
         // runs audio processing again instead of keeping a stale track.
         ctx.shared.updateShot(
           shot.id,
-          { video_url: videoUrl, duration, tts_url: null, bgm_type: null },
+          {
+            video_url: videoUrl,
+            duration,
+            tts_url: null,
+            bgm_type: null,
+            review_status: review.status,
+            review_note: review.status === "passed" ? null : review.note || null,
+          },
           before.revision,
         );
         ctx.checkpointTarget("shot_video", shot.id);
@@ -1270,6 +1339,8 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
           duration,
           tts_url: null,
           bgm_type: null,
+          review_status: review.status,
+          review_note: review.status === "passed" ? null : review.note || null,
           revision: before.revision + 1,
         };
         return { shot: shotReadPayload(updated) };

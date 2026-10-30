@@ -435,10 +435,33 @@ function ShotCard({ node }: { node: Extract<ComicWorkflowNode, { kind: "shot" }>
 							{node.shot.camera}
 						</span>
 					) : null}
+					<ReviewPill status={node.shot.review_status} note={node.shot.review_note} />
 				</div>
 			</div>
 		</div>
 	);
+}
+
+/** 视觉审查结果：没看过的镜头明说「未检查」，不和通过的混在一起 */
+function ReviewPill({ status, note }: { status?: string | null; note?: string | null }) {
+	if (status === "unchecked") {
+		return (
+			<span className={`${TAG_PILL} border-transparent bg-warning-bg text-warning-fg`} title={note || "视觉审查没有运行"}>
+				未检查
+			</span>
+		);
+	}
+	if (status === "failed") {
+		return (
+			<span className={`${TAG_PILL} border-transparent bg-error-bg text-error-fg`} title={note || "未通过检查"}>
+				未通过
+			</span>
+		);
+	}
+	if (status === "passed") {
+		return <span className={`${TAG_PILL} border-transparent bg-success-bg text-success-fg`}>已检查</span>;
+	}
+	return null;
 }
 
 function OutputCard({

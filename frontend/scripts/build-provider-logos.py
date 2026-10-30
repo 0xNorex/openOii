@@ -14,7 +14,7 @@ from pathlib import Path
 COLOR = [
     "azure", "baiducloud", "bailian", "bedrock", "claude", "deepmind", "deepseek", "doubao",
     "gemini", "hailuo", "hunyuan", "kimi", "kling", "minimax", "mistral", "modelscope",
-    "openrouter", "siliconcloud", "together", "vidu", "volcengine", "zhipu",
+    "openrouter", "qwen", "siliconcloud", "together", "vidu", "volcengine", "zhipu",
 ]
 # 品牌: (底色, 标志色, 标志占比) —— 取自 lobe-icons src/<Brand>/style.ts 的 AVATAR_* 常量
 AVATAR = {

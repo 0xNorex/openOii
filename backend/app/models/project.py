@@ -141,6 +141,8 @@ class Shot(SQLModel, table=True):
     sfx: Optional[str] = None
     tts_url: Optional[str] = None  # TTS 音频文件 URL
     bgm_type: Optional[str] = None  # 使用的 BGM 类型（suspense/warm/action/sad/happy/ambient）
+    review_status: Optional[str] = None  # 视觉审查结果：passed / failed / unchecked
+    review_note: Optional[str] = None  # 未通过或未检查的原因
     seed: Optional[int] = None
     character_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     approved_description: Optional[str] = None

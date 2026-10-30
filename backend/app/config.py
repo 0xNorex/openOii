@@ -129,9 +129,13 @@ class Settings(BaseSettings):
         default=2,
         description="最大审查重试轮数（超过后强制继续）",
     )
+    critique_vision_provider: str = Field(
+        default="openai",
+        description="审查用视觉模型的接口协议（目前只有 openai：OpenAI 兼容 chat/completions）",
+    )
     critique_vision_base_url: str | None = Field(
         default=None,
-        description="审查用视觉模型的 OpenAI 兼容地址；带图片的审查请求改走这里（文本模型看不到图片时必填）",
+        description="审查用视觉模型的 OpenAI 兼容地址；不填或连不上时分镜标为「未检查」",
     )
     critique_vision_api_key: str | None = None
     critique_vision_model: str | None = Field(
