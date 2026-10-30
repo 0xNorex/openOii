@@ -48,6 +48,39 @@ export interface AiOperationContext {
 /** Default wall-clock budget for one provider operation. */
 export const DEFAULT_OPERATION_TIMEOUT_MS = 10 * 60 * 1000;
 
+/**
+ * Per-item budget for stages that call a provider once per character or shot,
+ * done one after another. A fixed 10-minute budget breaks a 12-shot video stage
+ * (~100 s per clip), so the budget grows with the work instead.
+ */
+const STAGE_ITEM_TIMEOUT_MS: Record<string, number> = {
+  render_characters: 3 * 60 * 1000,
+  render_shots: 3 * 60 * 1000,
+  critique_character_images: 60 * 1000,
+  critique_shot_images: 60 * 1000,
+  compose_videos: 6 * 60 * 1000,
+  compose_merge: 2 * 60 * 1000,
+};
+
+function envMs(name: string): number | null {
+  const raw = Number(process.env[name]);
+  return Number.isFinite(raw) && raw > 0 ? raw : null;
+}
+
+/**
+ * Wall-clock budget for one stage attempt: the base budget
+ * (`OPENOII_STAGE_TIMEOUT_MS`, default 10 min) or, for per-item stages,
+ * items × per-item budget (`OPENOII_STAGE_ITEM_TIMEOUT_MS` overrides the
+ * per-stage default), whichever is larger.
+ */
+export function stageOperationTimeoutMs(stage: string, itemCount: number): number {
+  const base = envMs("OPENOII_STAGE_TIMEOUT_MS") ?? DEFAULT_OPERATION_TIMEOUT_MS;
+  const perItem = STAGE_ITEM_TIMEOUT_MS[stage];
+  if (perItem === undefined) return base;
+  const items = Math.max(0, Math.floor(itemCount));
+  return Math.max(base, items * (envMs("OPENOII_STAGE_ITEM_TIMEOUT_MS") ?? perItem));
+}
+
 export function beginAiOperation(context: AiOperationContext): AiOperation {
   const timeoutMs = context.timeoutMs ?? DEFAULT_OPERATION_TIMEOUT_MS;
   return {
@@ -98,7 +131,9 @@ export function assertOperationInFlight(operation: AiOperation): void {
     throw new Error(`operation ${operation.operationId} aborted: run cancelled`);
   }
   if (Date.now() >= operation.deadline) {
-    throw new Error(`operation ${operation.operationId} exceeded its deadline`);
+    throw new Error(
+      `这一步生成超时，已完成的部分已保存，点继续即可接着生成（operation ${operation.operationId} exceeded its deadline）`,
+    );
   }
 }
 

@@ -47,7 +47,7 @@ import {
 } from "../agents/index.js";
 import { PipelineEmitter } from "./emitter.js";
 import { resolveStageStyleContext } from "../style.js";
-import { AiOperationError, beginAiOperation } from "../ai-operation.js";
+import { AiOperationError, beginAiOperation, stageOperationTimeoutMs } from "../ai-operation.js";
 import { withRunSpan, withStageSpan } from "../observability.js";
 
 export interface PipelineRequest {
@@ -231,6 +231,13 @@ export class PipelineRunner {
    * Authoritative inputs a stage is allowed to see, captured once at attempt
    * start and persisted with the operation identity.
    */
+  /** How many provider items a stage works through, for its deadline. */
+  private stageItemCount(stage: StageId, projectId: number): number {
+    return stage === "render_characters" || stage === "critique_character_images"
+      ? this.shared.charactersForProject(projectId).length
+      : this.shared.shotsForProject(projectId).length;
+  }
+
   private stageInputSnapshot(stage: StageId, request: PipelineRequest): unknown {
     return {
       workflow_version: this.runContext?.workflow_version ?? null,
@@ -288,6 +295,7 @@ export class PipelineRunner {
         projectId: request.projectId,
         stage,
         signal: this.abortController.signal,
+        timeoutMs: stageOperationTimeoutMs(stage, this.stageItemCount(stage, request.projectId)),
         reportActivity: (name, status, durationMs) => {
           if (status === "running") {
             emitter.activity(agent, "tool_call", name, "调用中");
