@@ -3,6 +3,7 @@ import { applyServerEvent } from "~/query/applyServerEvent";
 import { appQueryClient } from "~/query/client";
 import { noteServerActivity, setConnectionState } from "~/query/connectionStatus";
 import { resyncRunState } from "~/query/resyncRunState";
+import { readRunState } from "~/query/runState";
 import { noteRunLifecycleEvent } from "./useRunState";
 import { useEditorStore } from "~/stores/editorStore";
 import type { WsEvent } from "~/types";
@@ -148,7 +149,11 @@ export function useProjectWebSocket(projectId: number | null) {
 				}
 
 				noteServerActivity(projectId);
-				const lifecycle = RUN_LIFECYCLE_EVENTS.has(data.type);
+				// 停在闸门时又来了 run_progress：闸门已在别处放行（或确认事件丢了），
+				// 也当生命周期事件处理，用 runs/current 校准，而不是等别的组件挂载时顺手重取。
+				const lifecycle =
+					RUN_LIFECYCLE_EVENTS.has(data.type) ||
+					(data.type === "run_progress" && readRunState(projectId).awaitingConfirm);
 				if (lifecycle) noteRunLifecycleEvent(projectId);
 				applyServerEvent(appQueryClient, projectId, data);
 				applyWsEvent(projectId, data, useEditorStore.getState().runMode, scheduleAutoConfirm);
