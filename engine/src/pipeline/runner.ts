@@ -1288,12 +1288,18 @@ export class PipelineRunner {
   private async waitForGateDecision(runId: number): Promise<GateDecision> {
     const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
     while (Date.now() < deadline) {
-      this.shared.assertExecutionFence();
-      if (this.shouldCancel(runId)) return { kind: "timeout" };
+      // One read per poll; the exact readers run only when a signal is set.
+      const signals = this.shared.gateSignals(runId);
+      if (!signals.leaseOwned) this.shared.assertExecutionFence();
+      if (signals.cancelRequested && !this.cancelRequested) this.requestCancel();
+      if (this.abortController.signal.aborted) this.cancelRequested = true;
+      if (this.cancelRequested) return { kind: "timeout" };
       // Feedback first: "request changes" must never be read as an approval.
-      const feedback = this.shared.peekGateFeedback(runId);
-      if (feedback) return { kind: "changes", feedback };
-      if (this.shared.consumeConfirmSignal(runId)) return { kind: "approve" };
+      if (signals.feedbackPending) {
+        const feedback = this.shared.peekGateFeedback(runId);
+        if (feedback) return { kind: "changes", feedback };
+      }
+      if (signals.confirmRequested && this.shared.consumeConfirmSignal(runId)) return { kind: "approve" };
       await sleep(CONFIRM_POLL_MS);
     }
     return { kind: "timeout" };

@@ -40,11 +40,19 @@ export class PipelineEmitter {
   llmStream(agent: string, progressFor?: (chars: number) => number): LlmStreamSink {
     return new LlmStreamSink(
       {
+        // A frame replaces the previous one: append + compact share one
+        // transaction (one commit per frame instead of two, no window where
+        // the log holds both frames).
         publish: (event) => {
           this.shared.assertExecutionFence();
-          return this.db.appendEvent(this.runId, this.projectId, "llm_stream", event);
+          return this.db.transaction(() => {
+            const seq = this.db.appendEvent(this.runId, this.projectId, "llm_stream", event);
+            this.db.compactStreamEvents(this.runId, seq);
+            return seq;
+          });
         },
-        compact: (keepSeq) => this.db.compactStreamEvents(this.runId, keepSeq),
+        // Already compacted inside publish.
+        compact: () => {},
       },
       agent,
       Date.now,

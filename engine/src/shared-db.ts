@@ -666,6 +666,43 @@ export class SharedDb {
     return parsed;
   }
 
+  /**
+   * Everything a parked gate waits on, in one read: lease, cancel, approval and
+   * "request changes". The wait loop polls this instead of four separate
+   * SELECTs, and only calls the exact readers above when something is set.
+   */
+  gateSignals(runId: number): {
+    leaseOwned: boolean;
+    cancelRequested: boolean;
+    confirmRequested: boolean;
+    feedbackPending: boolean;
+  } {
+    const feedback = this.hasRunColumn("gate_feedback") ? "gate_feedback" : "NULL";
+    const row = this.db
+      .prepare(
+        `SELECT status, cancel_requested_at, confirm_requested, ${feedback} AS gate_feedback,
+                (lease_token = ? AND lease_expires_at IS NOT NULL AND lease_expires_at > datetime('now')) AS owned
+         FROM agentrun WHERE id = ?`,
+      )
+      .get(this.fence?.token ?? null, runId) as
+      | {
+          status: string;
+          cancel_requested_at: string | null;
+          confirm_requested: 0 | 1 | null;
+          gate_feedback: string | null;
+          owned: 0 | 1 | null;
+        }
+      | undefined;
+    return {
+      leaseOwned: !this.fence || (this.fence.runId === runId && row?.owned === 1),
+      cancelRequested: Boolean(
+        row?.cancel_requested_at || row?.status === "cancelling" || row?.status === "cancelled",
+      ),
+      confirmRequested: Boolean(row?.confirm_requested),
+      feedbackPending: Boolean(row?.gate_feedback && row.gate_feedback !== "null"),
+    };
+  }
+
   clearGateFeedback(runId: number): void {
     if (!this.hasRunColumn("gate_feedback")) return;
     this.updateRun(runId, { gate_feedback: null });
