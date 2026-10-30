@@ -781,7 +781,7 @@ export class MediaService {
       const destination = join(tempDir, "download");
       const sameHost = sameOrigin(url, providerBaseUrl);
       const maxBytes = kind === "video" ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
-      if (sameHost) {
+      if (sameHost || (await resolvesOnlyToFakeIp(url))) {
         await this.downloadTrusted(url, destination, maxBytes);
       } else {
         await downloadPublicMedia(url, destination, Date.now() + MAX_DOWNLOAD_MS, 0, this.abortSignal ?? undefined, maxBytes);
@@ -1290,6 +1290,30 @@ function publicAddress(address: string): boolean {
   const value = words.reduce((result, word) => (result << 16n) | BigInt(`0x${word || "0"}`), 0n);
   const inRange = (network: bigint, bits: number) => value >> BigInt(128 - bits) === network >> BigInt(128 - bits);
   return inRange(0x2000n << 112n, 3) && !inRange(0x2001n << 112n, 23) && !inRange(0x2001_0db8n << 96n, 32) && !inRange(0x2002n << 112n, 16) && !inRange(0x3fffn << 112n, 20);
+}
+
+/**
+ * Whether a host resolves only into 198.18.0.0/15, the range fake-IP DNS
+ * proxies (Clash, Surge, sandbox egress) hand out for public hosts. Such a
+ * host fails the public-address guard although it is public, so generated
+ * media was left on expiring provider URLs; it is fetched through the proxy
+ * instead (images are still checked to be images before they are kept).
+ */
+async function resolvesOnlyToFakeIp(url: string): Promise<boolean> {
+  try {
+    const host = new URL(url).hostname;
+    if (!host || isIP(host)) return false;
+    const addresses = await lookup(host, { all: true, verbatim: true });
+    return (
+      addresses.length > 0 &&
+      addresses.every(({ address }) => {
+        const [a, b] = address.split(".").map(Number);
+        return isIP(address) === 4 && a === 198 && (b === 18 || b === 19);
+      })
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function downloadPublicVideo(url: string, destination: string, deadline: number, previouslyDownloaded: number, signal?: AbortSignal): Promise<number> {
