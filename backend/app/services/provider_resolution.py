@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 
 TEXT_PROVIDER_KEYS = ("anthropic", "openai", "fake")
 IMAGE_PROVIDER_KEYS = ("modelscope", "openai", "fake")
-VIDEO_PROVIDER_KEYS = ("openai", "doubao", "fake")
+VIDEO_VENDOR_KEYS = ("kling", "vidu", "zhipu", "minimax", "dashscope", "veo")
+VIDEO_PROVIDER_KEYS = ("openai", "doubao", *VIDEO_VENDOR_KEYS, "fake")
 TEXT_PROBE_TTL_S = 300.0
 TEXT_PROBE_GENERATE_FAILURE_TTL_S = 15.0
 TEXT_PROBE_TIMEOUT_S = 60.0
@@ -292,6 +293,7 @@ def resolve_project_provider_settings(
         credential_ok={
             "openai": bool(settings.video_api_key),
             "doubao": bool(settings.doubao_api_key),
+            **{key: bool(settings.video_api_key) for key in VIDEO_VENDOR_KEYS},
             "fake": True,
         },
         modality_label="视频",

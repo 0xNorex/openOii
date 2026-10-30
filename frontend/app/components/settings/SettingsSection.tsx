@@ -129,7 +129,7 @@ function ProviderBody({
 						<span className="ml-auto font-mono text-xs text-ink-muted" title="对应的环境变量">{name}</span>
 					</div>
 					<div className={tab.layout === "grid" ? "grid grid-cols-1 gap-2 lg:grid-cols-3" : "flex flex-col gap-2 lg:flex-row"}>
-						{tab.options.map((option) => (
+						{tab.options.filter((o) => !o.native || o.value === provider).map((option) => (
 							<label
 								key={option.value}
 								className={`flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2.5 transition-colors duration-fast ${

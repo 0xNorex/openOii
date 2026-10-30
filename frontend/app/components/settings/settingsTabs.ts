@@ -18,7 +18,7 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 	video: {
 		icon: "video-camera",
 		title: "视频服务",
-		desc: "选一个视频服务商自动填好配置；豆包 Seedance 走方舟原生接口，其它兼容服务选「自定义」",
+		desc: "选一个视频服务商自动填好配置；豆包、可灵、Vidu、CogVideoX、海螺、万相、Veo 走各自的原生接口，其它兼容服务选「自定义」",
 	},
 };
 
@@ -35,11 +35,15 @@ export interface ProviderTab {
 	defaultProvider: string;
 	icon: IconName;
 	layout: "row" | "grid";
-	options: { value: string; title: string; desc: string }[];
+	/** native：服务商原生接口，只在选中时显示（通过上方预设选择） */
+	options: { value: string; title: string; desc: string; native?: boolean }[];
 	groups: ProviderGroup[];
 }
 
 const VIDEO_COMMON = ["video_image_mode", "enable_image_to_video", "video_inline_local_images"];
+const VIDEO_VENDORS = ["kling", "vidu", "zhipu", "minimax", "dashscope", "veo"];
+const VIDEO_VENDOR_NAMES = ["可灵", "Vidu", "智谱 CogVideoX", "MiniMax 海螺", "通义万相", "Google Veo"];
+const isVideoKey = (k: string) => k.startsWith("video_") && k !== "video_provider" && !VIDEO_COMMON.includes(k);
 
 /** 文本 / 图像 / 视频三个 provider 页签的声明：选 provider，再显示对应分组 */
 export const PROVIDER_TABS: Record<string, ProviderTab> = {
@@ -102,13 +106,24 @@ export const PROVIDER_TABS: Record<string, ProviderTab> = {
 			{ value: "doubao", title: "豆包视频", desc: "火山引擎 Ark API，国内推荐" },
 			{ value: "openai", title: "OpenAI 兼容", desc: "支持任何 OpenAI 兼容接口" },
 			{ value: "fake", title: "Fake 本地测试", desc: "使用本地视频素材，不调用外部视频 API" },
+			...VIDEO_VENDORS.map((value, i) => ({
+				value,
+				title: VIDEO_VENDOR_NAMES[i]!,
+				desc: "服务商原生异步接口，由上方预设选择",
+				native: true,
+			})),
 		],
 		groups: [
 			{ title: "豆包视频配置", providers: ["doubao"], match: (k) => k.startsWith("doubao_") },
 			{
 				title: "OpenAI 兼容接口配置",
 				providers: ["openai"],
-				match: (k) => k.startsWith("video_") && k !== "video_provider" && !VIDEO_COMMON.includes(k),
+				match: (k) => isVideoKey(k) && k !== "video_ratio",
+			},
+			{
+				title: "服务商原生接口配置",
+				providers: VIDEO_VENDORS,
+				match: (k) => isVideoKey(k) && k !== "video_endpoint",
 			},
 			{ title: "Fake 本地测试配置", providers: ["fake"], match: (k) => k.startsWith("fake_video_") },
 			{ title: "通用配置", match: (k) => VIDEO_COMMON.includes(k) },

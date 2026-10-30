@@ -36,6 +36,7 @@ export const LOCAL_GATEWAY_CONFIG: Item[] = [
 	item("VIDEO_ENDPOINT", "/v1/videos/generations"),
 	item("VIDEO_MODEL", "muse-video"),
 	item("VIDEO_API_KEY", "sk-****", true),
+	item("VIDEO_RATIO", "16:9"),
 	item("DOUBAO_API_KEY", "****", true),
 	item("DOUBAO_VIDEO_MODEL", "doubao-seedance-1-5-pro-251215"),
 	item("DOUBAO_VIDEO_DURATION", "5"),
@@ -218,4 +219,35 @@ test("视频：选火山方舟 Seedance 切到豆包原生配置", async ({ page
 	await dialog.getByRole("button", { name: "保存配置" }).click();
 	await expect.poll(() => saves.length).toBe(1);
 	expect(saves[0]).toMatchObject({ VIDEO_PROVIDER: "doubao", DOUBAO_VIDEO_MODEL: "doubao-seedance-2-5-260628" });
+});
+
+test("视频：选可灵 / Veo 切到服务商原生接口，地域和项目 ID 拼出地址", async ({ page }) => {
+	const saves: Record<string, string>[] = [];
+	await mockConfig(page, { onSave: (req) => saves.push(savedValues(req)) });
+	await openSettings(page);
+	const dialog = page.getByRole("dialog", { name: /系统设置/ });
+	await dialog.getByRole("tab", { name: /视频服务/ }).click();
+	const presets = dialog.getByTestId("provider-presets");
+	for (const [id, logo] of [["kling", "kling"], ["vidu", "vidu"], ["zhipu-video", "zhipu"], ["minimax-video", "hailuo"], ["wan", "bailian"], ["veo", "deepmind"]]) {
+		await expect(presets.locator(`[data-preset="${id}"] [data-logo="${logo}"]`)).toHaveCount(1);
+	}
+
+	await dialog.getByRole("radio", { name: /可灵 Kling/ }).click();
+	const detail = dialog.getByTestId("preset-detail");
+	await detail.getByRole("radio", { name: "新加坡" }).click();
+	await expect(dialog.locator("#VIDEO_BASE_URL")).toHaveValue("https://api-singapore.klingai.com");
+	await expect(dialog.getByText("服务商原生接口配置")).toBeVisible();
+	await expect(dialog.locator("#VIDEO_RATIO")).toBeVisible();
+	await expect(dialog.locator("#VIDEO_ENDPOINT")).toHaveCount(0);
+
+	await dialog.getByRole("radio", { name: /Google Veo/ }).click();
+	await detail.getByRole("radio", { name: /项目/ }).click();
+	await detail.getByLabel("项目 ID").fill("demo-proj");
+	await expect(dialog.locator("#VIDEO_BASE_URL")).toHaveValue(
+		"https://us-central1-aiplatform.googleapis.com/v1/projects/demo-proj/locations/us-central1",
+	);
+	await dialog.getByRole("button", { name: "保存配置" }).click();
+	await expect.poll(() => saves.length).toBe(1);
+	expect(saves[0]).toMatchObject({ VIDEO_PROVIDER: "veo", VIDEO_MODEL: "veo-3.1-fast-generate-001" });
+	expect(Object.keys(saves[0]!)).not.toContain("VIDEO_API_KEY");
 });

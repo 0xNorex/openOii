@@ -43,6 +43,7 @@ const LABELS: Record<string, string> = {
 	VIDEO_MODEL: "模型",
 	VIDEO_API_KEY: "API Key",
 	VIDEO_MODE: "生成模式",
+	VIDEO_RATIO: "画幅",
 	VIDEO_IMAGE_MODE: "图生视频方式",
 	VIDEO_INLINE_LOCAL_IMAGES: "内联本地图片",
 	ENABLE_IMAGE_TO_VIDEO: "图生视频",

@@ -8,7 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 TextProviderKey = Literal["anthropic", "openai", "fake"]
 ImageProviderKey = Literal["modelscope", "openai", "fake"]
-VideoProviderKey = Literal["openai", "doubao", "fake"]
+VideoProviderKey = Literal[
+    "openai", "doubao", "kling", "vidu", "zhipu", "minimax", "dashscope", "veo", "fake"
+]
 RunStatus = Literal[
     "queued",
     "running",

@@ -20,7 +20,7 @@ export interface ProjectProviderSettings {
 
 export type TextProviderKey = "anthropic" | "openai" | "fake";
 export type ImageProviderKey = "modelscope" | "openai" | "fake";
-export type VideoProviderKey = "openai" | "doubao" | "fake";
+export type VideoProviderKey = "openai" | "doubao" | "kling" | "vidu" | "zhipu" | "minimax" | "dashscope" | "veo" | "fake";
 
 export interface ProjectProviderOverridesPayload {
 	text_provider_override?: TextProviderKey | null;

@@ -20,6 +20,7 @@ from app.models.project import Project
 from app.models.style_template import StyleTemplate
 from app.models.universe import SharedCharacter, Universe
 from app.schemas.project import ProviderResolution
+from app.services.provider_resolution import VIDEO_VENDOR_KEYS
 from app.skills.catalog import get_skill
 
 
@@ -64,6 +65,7 @@ async def _effective_provider_config(session: AsyncSession, settings: Settings) 
         "DOUBAO_VIDEO_MODEL": pick("DOUBAO_VIDEO_MODEL"),
         "DOUBAO_VIDEO_DURATION": pick("DOUBAO_VIDEO_DURATION"),
         "DOUBAO_VIDEO_RATIO": pick("DOUBAO_VIDEO_RATIO"),
+        "VIDEO_RATIO": pick("VIDEO_RATIO"),
         "TTS_ENABLED": pick("TTS_ENABLED"),
         "BGM_ENABLED": pick("BGM_ENABLED"),
         "CRITIQUE_ENABLED": pick("CRITIQUE_ENABLED"),
@@ -212,7 +214,13 @@ async def build_run_context_snapshot(
         "video_inline_local_images": provider_config["VIDEO_INLINE_LOCAL_IMAGES"],
         "public_base_url": provider_config["PUBLIC_BASE_URL"],
         "duration": provider_config["DOUBAO_VIDEO_DURATION"] if video_key == "doubao" else None,
-        "ratio": provider_config["DOUBAO_VIDEO_RATIO"] if video_key == "doubao" else None,
+        "ratio": (
+            provider_config["DOUBAO_VIDEO_RATIO"]
+            if video_key == "doubao"
+            else provider_config["VIDEO_RATIO"]
+            if video_key in VIDEO_VENDOR_KEYS
+            else None
+        ),
         "credential_keys": [] if video_key == "fake" else [
             "DOUBAO_API_KEY" if video_key == "doubao" else "VIDEO_API_KEY"
         ],

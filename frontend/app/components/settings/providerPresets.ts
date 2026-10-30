@@ -2,15 +2,17 @@
  * 设置页「服务商预设」。
  *
  * 每个预设都来自服务商官方文档（sources），核对日期见 PRESETS_VERIFIED_AT。
- * 预设只是把已有配置项填好：它映射到现有 provider 类型
- * （openai 兼容 / anthropic / modelscope / doubao / fake），不引入新协议。
+ * 预设只是把已有配置项填好：它映射到 provider 类型（openai 兼容 / anthropic /
+ * modelscope / doubao / fake，以及视频服务商原生接口 kling / vidu / zhipu /
+ * minimax / dashscope / veo）。
  * 官方接口和 openOii 的请求形状对不上的服务商不放进来，原因写在 docs/providers.md。
  */
 
 export const PRESETS_VERIFIED_AT = "2026-10-30";
 
 export type PresetService = "text" | "image" | "video";
-export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake";
+export type VideoVendor = "kling" | "vidu" | "zhipu" | "minimax" | "dashscope" | "veo";
+export type PresetProvider = "openai" | "anthropic" | "modelscope" | "doubao" | "fake" | VideoVendor;
 export type PresetGroup = "domestic" | "global" | "local";
 
 export const PRESET_GROUP_LABEL: Record<PresetGroup, string> = {
@@ -738,6 +740,161 @@ const VIDEO_PRESETS: ProviderPreset[] = [
 		],
 	},
 	{
+		id: "kling",
+		service: "video",
+		provider: "kling",
+		group: "domestic",
+		name: "可灵 Kling",
+		mark: "可",
+		logo: "kling",
+		tagline: "文生 / 图生视频",
+		regions: [
+			{ id: "cn", label: "北京", baseUrl: "https://api-beijing.klingai.com" },
+			{ id: "intl", label: "新加坡", baseUrl: "https://api-singapore.klingai.com" },
+		],
+		defaultModel: "kling-3.0",
+		models: ["kling-4.0", "kling-3.0", "kling-3.0-turbo", "kling-2.6", "kling-2.5-turbo"],
+		keyHint: "API Key（不支持旧版 AK/SK）",
+		keyUrl: "https://app.klingai.com/cn/dev/console",
+		docsUrl: "https://kling.ai/document-api/api/video/3-0-omni/text-to-video",
+		sources: [
+			"https://kling.ai/document-api/api/video/4-0/text-to-video",
+			"https://kling.ai/document-api/api/video/3-0-omni/text-to-video",
+			"https://kling.ai/document-api/api/video/2-6/text-to-video",
+		],
+		notes: ["时长：4.0 为 3–30 秒，3.0 为 3–15 秒，更早的为 5 或 10 秒。"],
+	},
+	{
+		id: "vidu",
+		service: "video",
+		provider: "vidu",
+		group: "domestic",
+		name: "Vidu",
+		mark: "V",
+		logo: "vidu",
+		tagline: "生数科技 · 文生 / 图生视频",
+		regions: [
+			{ id: "cn", label: "国内", baseUrl: "https://api.vidu.cn" },
+			{ id: "intl", label: "海外", baseUrl: "https://api.vidu.com" },
+		],
+		defaultModel: "viduq3-turbo",
+		models: ["viduq3-turbo", "viduq3-pro"],
+		keyHint: "API Key",
+		keyUrl: "https://platform.vidu.cn/api-keys",
+		docsUrl: "https://platform.vidu.cn/docs/api-reference/video-models/vidu-q3/text-to-video",
+		sources: ["https://platform.vidu.cn/docs/api-reference/video-models/vidu-q3/text-to-video"],
+		notes: ["Q3 时长 1–16 秒；图生视频跟随首帧画幅。"],
+	},
+	{
+		id: "zhipu-video",
+		service: "video",
+		provider: "zhipu",
+		group: "domestic",
+		name: "智谱 CogVideoX",
+		mark: "智",
+		logo: "zhipu",
+		tagline: "文生 / 图生视频",
+		regions: [
+			{ id: "cn", label: "国内", baseUrl: "https://open.bigmodel.cn/api/paas/v4" },
+			{ id: "intl", label: "Z.ai", baseUrl: "https://api.z.ai/api/paas/v4" },
+		],
+		defaultModel: "cogvideox-3",
+		models: ["cogvideox-3", "cogvideox-flash"],
+		keyHint: "API Key",
+		keyUrl: "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+		docsUrl: "https://docs.bigmodel.cn/cn/guide/models/video-generation/cogvideox-3",
+		sources: ["https://docs.bigmodel.cn/api-reference/%E6%A8%A1%E5%9E%8B-api/%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90%E5%BC%82%E6%AD%A5"],
+		notes: ["时长 5 或 10 秒；提示词最多 512 字。"],
+	},
+	{
+		id: "minimax-video",
+		service: "video",
+		provider: "minimax",
+		group: "domestic",
+		name: "MiniMax 海螺",
+		mark: "海",
+		logo: "hailuo",
+		tagline: "Hailuo 文生 / 图生视频",
+		regions: [
+			{ id: "cn", label: "国内", baseUrl: "https://api.minimaxi.com/v1" },
+			{ id: "intl", label: "海外", baseUrl: "https://api.minimax.io/v1" },
+		],
+		defaultModel: "MiniMax-Hailuo-2.3",
+		models: ["MiniMax-Hailuo-2.3", "MiniMax-Hailuo-02"],
+		keyHint: "API Key（国内 / 海外分开）",
+		keyUrl: "https://platform.minimaxi.com/",
+		docsUrl: "https://platform.minimax.io/docs/api-reference/video-generation-t2v",
+		sources: [
+			"https://platform.minimax.io/docs/api-reference/video-generation-t2v",
+			"https://platform.minimax.io/docs/api-reference/video-generation-query",
+		],
+		notes: ["时长 6 或 10 秒（768P）；不支持选画幅。"],
+	},
+	{
+		id: "wan",
+		service: "video",
+		provider: "dashscope",
+		group: "domestic",
+		name: "通义万相",
+		mark: "万",
+		logo: "bailian",
+		tagline: "阿里云百炼 · Wan 视频",
+		regions: [
+			{ id: "cn-beijing", label: "北京", baseUrl: "https://dashscope.aliyuncs.com/api/v1" },
+			{ id: "ap-southeast-1", label: "新加坡", baseUrl: "https://dashscope-intl.aliyuncs.com/api/v1" },
+			{ id: "ws-cn-beijing", label: "北京 · 专属域名", baseUrl: "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/api/v1" },
+		],
+		defaultModel: "wan2.7-t2v",
+		models: ["wan2.7-t2v", "wan2.6-t2v", "wan2.5-t2v-preview"],
+		keyHint: "百炼 API Key（按地域区分）",
+		keyUrl: "https://bailian.console.aliyun.com/?tab=model#/api-key",
+		docsUrl: "https://help.aliyun.com/zh/model-studio/text-to-video-api-reference",
+		sources: [
+			"https://help.aliyun.com/zh/model-studio/text-to-video-api-reference",
+			"https://help.aliyun.com/zh/model-studio/image-to-video-general-api-reference",
+		],
+		fields: [
+			{
+				id: "workspaceId",
+				label: "业务空间 ID",
+				placeholder: "llm-xxxxxxxx",
+				help: "百炼控制台 → 业务空间详情；只有专属域名需要。",
+				pattern: "[A-Za-z0-9-]+",
+			},
+		],
+		notes: ["图生视频自动换成对应的 -i2v 模型；wan2.6 及以上时长 2–15 秒。"],
+	},
+	{
+		id: "veo",
+		service: "video",
+		provider: "veo",
+		group: "global",
+		name: "Google Veo",
+		mark: "G",
+		logo: "deepmind",
+		tagline: "Vertex AI · Veo 3.1",
+		regions: [
+			{ id: "express", label: "Express 模式", baseUrl: "https://aiplatform.googleapis.com/v1" },
+			{
+				id: "project",
+				label: "项目 · us-central1",
+				baseUrl: "https://us-central1-aiplatform.googleapis.com/v1/projects/{projectId}/locations/us-central1",
+			},
+		],
+		defaultModel: "veo-3.1-fast-generate-001",
+		models: ["veo-3.1-fast-generate-001", "veo-3.1-generate-001", "veo-3.1-lite-generate-001"],
+		keyHint: "API Key，或 ya29. 开头的访问令牌",
+		keyUrl: "https://console.cloud.google.com/vertex-ai",
+		docsUrl: "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text",
+		sources: [
+			"https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text",
+			"https://ai.google.dev/gemini-api/docs/deprecations",
+		],
+		fields: [{ id: "projectId", label: "项目 ID", placeholder: "my-project", help: "Google Cloud 项目 ID", pattern: "[a-z0-9-]+" }],
+		experimental: true,
+		notes: ["Gemini API 里的 Veo 已下线，这里走 Vertex AI。", "时长 4 / 6 / 8 秒，画幅 16:9 或 9:16。"],
+	},
+	{
 		id: "custom-video",
 		service: "video",
 		provider: "openai",
@@ -807,6 +964,7 @@ export function presetKeys(preset: ProviderPreset): PresetKeys {
 	}
 	if (preset.provider === "fake") return { provider: "VIDEO_PROVIDER" };
 	if (preset.provider === "doubao") return { provider: "VIDEO_PROVIDER", model: "DOUBAO_VIDEO_MODEL", apiKey: "DOUBAO_API_KEY" };
+	if (preset.provider !== "openai") return { provider: "VIDEO_PROVIDER", baseUrl: "VIDEO_BASE_URL", model: "VIDEO_MODEL", apiKey: "VIDEO_API_KEY" };
 	return { provider: "VIDEO_PROVIDER", baseUrl: "VIDEO_BASE_URL", endpoint: "VIDEO_ENDPOINT", model: "VIDEO_MODEL", apiKey: "VIDEO_API_KEY" };
 }
 

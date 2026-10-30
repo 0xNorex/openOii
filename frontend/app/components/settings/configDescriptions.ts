@@ -54,12 +54,13 @@ export function getConfigDescription(key: string): string {
 
 		// 视频服务
 		VIDEO_PROVIDER:
-			"视频服务提供商：openai（OpenAI 兼容）/ doubao（豆包）/ fake（本地测试）",
+			"视频服务提供商：openai（OpenAI 兼容）/ doubao（豆包）/ kling / vidu / zhipu / minimax / dashscope / veo（服务商原生接口）/ fake（本地测试）",
 		VIDEO_BASE_URL: "视频生成服务地址（OpenAI 兼容接口）",
 		VIDEO_API_KEY: "视频生成 API 密钥",
 		VIDEO_MODEL: "视频生成模型名称",
 		VIDEO_ENDPOINT: "视频生成 API 端点路径",
 		VIDEO_MODE: "视频生成模式：text（文生视频）或 image（图生视频）",
+		VIDEO_RATIO: "画幅：16:9 / 9:16 / 1:1 / 4:3 / 3:4；服务商不支持时自动回落（MiniMax 与图生视频跟随首帧）",
 		ENABLE_IMAGE_TO_VIDEO: "是否启用图生视频（I2V）功能",
 		FAKE_VIDEO_FIXTURE_URL:
 			"Fake 视频 Provider 固定返回的视频 URL；推荐使用 /static/videos/*.mp4，本地测试不调用外部视频 API。",

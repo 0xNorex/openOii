@@ -429,6 +429,24 @@ async def test_video_connection_doubao_lists_tasks(monkeypatch, test_settings):
 
 
 @pytest.mark.asyncio
+async def test_video_connection_vendor_is_auth_only(monkeypatch, test_settings):
+    monkeypatch.setattr(test_settings, "video_provider", "dashscope")
+    monkeypatch.setattr(test_settings, "video_base_url", "https://dashscope.aliyuncs.com/api/v1")
+    monkeypatch.setattr(test_settings, "video_api_key", "sk-vendor")
+    monkeypatch.setattr(test_settings, "video_model", "wan2.7-t2v")
+    seen: list[httpx.Request] = []
+    _patch_probe_transport(monkeypatch, _models_transport(200, {"output": {"task_status": "UNKNOWN"}}, seen))
+
+    result = await config_routes._test_video_connection(test_settings)
+
+    assert result.success is True
+    assert [r.method for r in seen] == ["GET"]
+    assert "/tasks/" in seen[0].url.path
+    assert "video-synthesis" not in str(seen[0].url)
+    assert "sk-vendor" not in (result.details or "")
+
+
+@pytest.mark.asyncio
 async def test_video_connection_openai_maps_429(monkeypatch, test_settings):
     monkeypatch.setattr(test_settings, "video_provider", "openai")
     monkeypatch.setattr(test_settings, "video_base_url", "https://api.x.ai/v1")

@@ -39,6 +39,14 @@ import {
   withAiActivity,
 } from "../ai-operation.js";
 import { operationSpanAttributes, withProviderSpan } from "../observability.js";
+import {
+  VIDEO_JOB_ADAPTERS,
+  isVideoJobProvider,
+  runVideoJob,
+  videoJobDuration,
+  type VideoJobAdapter,
+  type VideoJobProvider,
+} from "./video-jobs/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -51,13 +59,15 @@ export interface MediaSettings {
   enableImageToImage: boolean;
   fakeImageFixtureUrl: string | null;
 
-  videoProvider: "fake" | "openai" | "doubao";
+  videoProvider: "fake" | "openai" | "doubao" | VideoJobProvider;
   videoBaseUrl: string;
   videoApiKey: string | null;
   videoModel: string;
   videoEndpoint: string;
   enableImageToVideo: boolean;
   videoMode: string;
+  /** 服务商原生接口的画幅（VIDEO_RATIO），不支持时由各模块回落 */
+  videoRatio: string;
   fakeVideoFixtureUrl: string | null;
   fakeVideoFixturePath: string | null;
   doubaoApiKey: string | null;
@@ -157,7 +167,7 @@ export function resolveMediaSettings(
     ? asBoolean(videoSnapshot.enable_image_to_video, false)
     : pick("ENABLE_IMAGE_TO_VIDEO", "ENABLE_IMAGE_TO_VIDEO", "false") === "true") || videoMode === "image";
   const videoProvider: MediaSettings["videoProvider"] =
-    videoProviderRaw === "openai" || videoProviderRaw === "doubao"
+    videoProviderRaw === "openai" || videoProviderRaw === "doubao" || isVideoJobProvider(videoProviderRaw)
       ? videoProviderRaw
       : "fake";
   const textProvider = String(
@@ -213,7 +223,7 @@ export function resolveMediaSettings(
     videoProvider,
     videoBaseUrl,
     videoApiKey:
-      videoProvider === "openai"
+      videoProvider !== "fake" && videoProvider !== "doubao"
         ? videoSnapshot
           ? videoSecret
           : optional("VIDEO_API_KEY", "VIDEO_API_KEY")
@@ -226,6 +236,9 @@ export function resolveMediaSettings(
       : pick("VIDEO_ENDPOINT", "VIDEO_ENDPOINT", "/videos/generations"),
     enableImageToVideo,
     videoMode,
+    videoRatio: videoSnapshot
+      ? String(videoSnapshot.ratio ?? "16:9")
+      : pick("VIDEO_RATIO", "VIDEO_RATIO", "16:9"),
     videoImageMode: videoSnapshot && "video_image_mode" in videoSnapshot
       ? String(videoSnapshot.video_image_mode ?? "first_frame")
       : pick("VIDEO_IMAGE_MODE", "VIDEO_IMAGE_MODE", "first_frame"),
@@ -362,9 +375,12 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
 
 /**
  * Whole seconds for every video provider (an OpenAI-compatible endpoint may
- * reject `4.5`); doubao only accepts 5 or 10.
+ * reject `4.5`); doubao only accepts 5 or 10; vendor-native providers snap to
+ * the values their model allows (e.g. Veo 4/6/8, MiniMax 6/10).
  */
-export function normalizeVideoDuration(provider: string, duration: number): number {
+export function normalizeVideoDuration(provider: string, duration: number, model = ""): number {
+  const vendor = videoJobDuration(provider, model, duration);
+  if (vendor !== null) return vendor;
   const seconds = Math.max(1, Math.round(Number.isFinite(duration) ? duration : 5));
   if (provider === "doubao") return seconds === 10 ? 10 : 5;
   return seconds;
@@ -913,6 +929,9 @@ export class MediaService {
       throw new Error("doubao video generation timed out");
     }
 
+    const adapter = VIDEO_JOB_ADAPTERS[this.settings.videoProvider];
+    if (adapter) return this.generateVendorVideo(adapter, args);
+
     if (!this.settings.videoApiKey) throw new Error("VIDEO_API_KEY is required");
     this.throwIfAborted();
     const endpoint = joinEndpoint(this.settings.videoBaseUrl, this.settings.videoEndpoint);
@@ -948,6 +967,49 @@ export class MediaService {
       "video",
       this.settings.videoBaseUrl,
     );
+  }
+
+  /**
+   * Vendor-native async video (Kling, Vidu, CogVideoX, MiniMax, Wan, Veo):
+   * the adapter shapes submit / poll, the runner owns pacing, backoff,
+   * timeout and cancellation; the result is stored locally (public-address
+   * check for foreign hosts) or written from inline bytes.
+   */
+  private async generateVendorVideo(
+    adapter: VideoJobAdapter,
+    args: { prompt: string; imageUrl?: string | null; duration?: number },
+  ): Promise<string> {
+    const apiKey = this.settings.videoApiKey;
+    if (!apiKey) throw new Error(`${adapter.label}需要 VIDEO_API_KEY`);
+    const baseUrl = this.settings.videoBaseUrl;
+    const model = this.settings.videoModel;
+    const image = args.imageUrl && this.settings.enableImageToVideo ? await this.videoImageUrl(args.imageUrl) : null;
+    const result = await runVideoJob(
+      adapter,
+      {
+        baseUrl,
+        apiKey,
+        post: (url, init) =>
+          this.postProvider(url, { ...init, headers: { ...(init.headers as Record<string, string>), ...this.idempotencyHeaders() } }),
+        request: (url, init = {}) => fetch(url, this.requestInit(init)),
+      },
+      {
+        model,
+        prompt: args.prompt,
+        image,
+        duration: normalizeVideoDuration(adapter.id, args.duration ?? 5, model),
+        ratio: this.settings.videoRatio,
+      },
+      {
+        pollMs: videoTaskPollMs(),
+        maxWaitMs: VIDEO_TASK_MAX_WAIT_MS,
+        wait: (ms) => this.wait(ms),
+        throwIfAborted: () => this.throwIfAborted(),
+        isAborted: () => Boolean(this.abortSignal?.aborted),
+      },
+    );
+    if ("bytes" in result) return this.persistBytes(result.bytes, ".mp4");
+    return this.persistProviderMedia(result.url, "video", baseUrl);
   }
 
   /**

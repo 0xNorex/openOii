@@ -70,4 +70,25 @@ def create_video_service(settings: Settings) -> VideoServiceProtocol:
         from app.services.fake_video import FakeVideoService
 
         return FakeVideoService(settings)
+    from app.services.provider_resolution import VIDEO_VENDOR_KEYS
+
+    if provider in VIDEO_VENDOR_KEYS:
+        return EngineOnlyVideoService(provider)
     raise ValueError(f"Unsupported video provider: {settings.video_provider}")
+
+
+class EngineOnlyVideoService:
+    """可灵 / Vidu / CogVideoX / MiniMax / 通义万相 / Veo 只在 TS 引擎里生成。
+
+    后端只在 ReviewAgent 分类重跑范围时构造 AgentContext，不会真的调用视频生成；
+    万一被调用，给出明确的中文错误而不是静默失败。
+    """
+
+    def __init__(self, provider: str) -> None:
+        self.provider = provider
+
+    async def generate_url(self, **_: Any) -> str:
+        raise RuntimeError(f"视频服务商 {self.provider} 只能通过生成引擎调用")
+
+    async def merge_urls(self, video_urls: list[str]) -> str:
+        raise RuntimeError(f"视频服务商 {self.provider} 只能通过生成引擎调用")

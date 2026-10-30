@@ -17,6 +17,11 @@
 | 文本 | 沿用原来的一次极短文本请求（`probe_text_provider`） |
 | 图像 / 视频（OpenAI 兼容、ModelScope） | `GET {API 根}/models`（Bearer）。返回 404/405 时提示「服务可达，但无法免费验证密钥」，不去生成图片或视频 |
 | 视频（豆包 Seedance） | `GET https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks?page_size=1` |
+| 视频（可灵） | `GET {base}/account/costs`（账户资源包，只读） |
+| 视频（Vidu） | `GET {base}/ent/v2/tasks?pager.pagesz=1`（任务列表，只读） |
+| 视频（CogVideoX / 通义万相） | `GET` 一个不存在的任务 ID，只看鉴权：401/403 为密钥无效，404 或 UNKNOWN 视为已通过 |
+| 视频（MiniMax） | `GET {base}/query/video_generation?task_id=<不存在>`，按 `base_resp.status_code`（1004 / 2049 为密钥无效） |
+| 视频（Veo，实验性） | `POST {base}/publishers/google/models/{model}:fetchPredictOperation`（不存在的 operation），只看鉴权 |
 | Fake | 直接成功 |
 
 错误统一翻译成中文：
@@ -76,6 +81,19 @@
 
 ## 视频服务（写入 `VIDEO_*`（豆包为 `DOUBAO_*`））
 
+可灵、Vidu、CogVideoX、MiniMax 海螺、通义万相、Veo 走各自的**原生异步接口**（`VIDEO_PROVIDER` = `kling` / `vidu` / `zhipu` / `minimax` / `dashscope` / `veo`），由引擎 `engine/src/media/video-jobs/` 里每个服务商一个模块实现：提交 → 轮询 → 下载。轮询间隔 `OPENOII_VIDEO_POLL_MS`（默认 5 秒），最长 15 分钟；网络错误和 429 / 5xx 退避重试，连续 5 次失败才放弃；401 / 403 / 参数错误立即失败。取消运行只停止本地轮询，服务商侧已排队的任务不会撤回（这些接口大多没有取消 API）。成片下载到本地，非服务商域名的地址要先通过公网地址检查。分镜时长和 `VIDEO_RATIO`（画幅，默认 16:9）按下表取到服务商允许的值。接口均于 2026-10-30 按官方文档核对，**没有用真实密钥调用过**。
+
+| 服务商 | 文生 / 图生 | 时长（秒） | 画幅 | 特殊处理 |
+| --- | --- | --- | --- | --- |
+| [可灵](https://kling.ai/document-api/api/video/3-0-omni/text-to-video) `kling` | ✓ / ✓ | 4.0：3–30；3.0 / 3.0-turbo：3–15；2.6 / 2.5-turbo：5 或 10 | 16:9、9:16、1:1（4.0 另有 21:9） | 模型名写在路径里 `/text-to-video/{model}`；固定 720p；首帧以去掉 `data:` 前缀的 Base64 发送；只支持新版 API Key（Bearer），旧版 AK/SK 不接 |
+| [Vidu](https://platform.vidu.cn/docs/api-reference/video-models/vidu-q3/text-to-video) `vidu` | ✓ / ✓ | Q3：1–16；Q2：1–10 | 16:9、9:16、3:4、4:3、1:1（图生视频跟随首帧） | `Authorization: Token {key}`；结果地址 24 小时有效 |
+| [智谱 CogVideoX](https://docs.bigmodel.cn/cn/guide/models/video-generation/cogvideox-3) `zhipu` | ✓ / ✓ | 5 或 10 | 用 `size` 表示：16:9 → 1920x1080，9:16 → 1080x1920，1:1 → 1024x1024 | 提示词截到 512 字；结果从 `/async-result/{id}` 读取 |
+| [MiniMax 海螺](https://platform.minimax.io/docs/api-reference/video-generation-t2v) `minimax` | ✓ / ✓ | Hailuo-2.3 / 02：6 或 10（768P）；其它 6 | 不支持（按模型默认 / 跟随首帧） | 业务错误在 HTTP 200 的 `base_resp` 里；成功后用 `file_id` 换 1 小时有效的下载地址；V2 / H3 新接口未接 |
+| [通义万相](https://help.aliyun.com/zh/model-studio/text-to-video-api-reference) `dashscope` | ✓ / ✓ | wan2.6 / 2.7：2–15；wan2.5：5 或 10；更早固定 5 | wan2.7 用 `ratio`；旧版用 `size`（720P，wan2.2 为 1080P） | 请求头 `X-DashScope-Async: enable`；图生视频自动把 `-t2v` 换成 `-i2v`；wan2.7 首帧用 `media[{type:first_frame}]`，旧版用 `img_url` |
+| [Google Veo](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text) `veo` | ✓ / ✓（仅内联图片） | 4 / 6 / 8 | 16:9、9:16 | **实验性**。走 Vertex AI `predictLongRunning` + `fetchPredictOperation`，不设 `storageUri`，视频字节直接返回并写盘；`ya29.` 开头的密钥按 OAuth 令牌（Bearer）发送，其它按 `x-goog-api-key`（express 模式，是否能调用 Veo 未经验证） |
+
+未经真实密钥验证的点：`wan2.7-i2v` 这个不带日期的模型名（文档示例是 `wan2.7-i2v-2026-04-25`）；Veo express 模式 API Key；可灵对去前缀 Base64 的接受情况；Vidu 未传 `resolution` / `audio` 时的默认值。
+
 | 分组 | 预设 | 类型 | 地址 | 接口路径 | 推荐模型 | 特殊配置 / 说明 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 国内 | [火山方舟 Seedance](https://ark.volcengine.com/region:cn-beijing/docs/list-video-generation-tasks-api) | `doubao` | — | — | `doubao-seedance-2-5-260628`, `doubao-seedance-1-5-pro-251215` | 固定使用北京地域；时长和画幅在高级设置里调整。 |
@@ -101,14 +119,13 @@
 
 | 服务商 / 能力 | 原因 |
 | --- | --- |
-| 可灵 Kling（视频） | AK/SK 签 JWT 鉴权，不是 Bearer Key |
-| Vidu（视频） | `Token` 鉴权头，任务轮询接口也是私有格式 |
-| 智谱 CogVideoX（视频） | 结果从 `/async-result/{id}` 读取，和引擎的轮询格式不同 |
-| MiniMax 海螺视频 / image-01 | 原生接口，不兼容 `/images/generations`、`/videos/generations` |
-| 阿里云万相 Wan（图像 / 视频） | 需要 `X-DashScope-Async` 请求头和 DashScope 原生任务接口 |
+| 可灵旧版 AK/SK | 只接新版 API Key（Bearer）；AK/SK 签 JWT 的旧鉴权不接 |
+| MiniMax image-01 / 视频 V2 接口 | 图像是原生接口；视频只接 V1 `video_generation` |
+| 阿里云万相 Wan 图像 | 需要 DashScope 原生图像任务接口（视频已接） |
 | 硅基流动 图像 / 视频 | 参数是 `image_size`，返回 `images[]`，和引擎的请求 / 响应格式不同 |
-| OpenAI Sora（视频） | 成片要通过 `/videos/{id}/content` 单独下载 |
-| Google Veo（视频） | 不在 Gemini 的 OpenAI 兼容端点上 |
+| OpenAI Sora（视频） | OpenAI Videos API 和 sora-2 / sora-2-pro 已于 2026-09-24 关停，没有替代接口（[video-generation 指南](https://developers.openai.com/api/docs/guides/video-generation)、[deprecations](https://developers.openai.com/api/docs/deprecations)） |
+| Gemini API 里的 Veo | Veo 3.1 Preview 已于 2026-10-22 在 Gemini API 下线，veo-2 / 3.0 于 2026-06-30 退役（[deprecations](https://ai.google.dev/gemini-api/docs/deprecations)）；GA 版本只在 Vertex AI，见上表 |
+| Gemini Omni Flash 视频 | Interactions API，形状不同，未接 |
 | xAI 图像 | 用 `aspect_ratio` 而不是 `size` |
 | Amazon Bedrock（SigV4） | 只支持 Bedrock API Key（Bearer），不做 AWS 签名 |
 | Azure 旧版部署地址 | `/deployments/{name}?api-version=` 请用「自定义」手动填写 |
@@ -149,7 +166,9 @@ logo 是各公司的商标，这里只用来标明服务商，openOii 与它们�
 | Ollama | ollama.svg | Ollama |
 | LM Studio | lmstudio.svg | LMStudio |
 | ModelScope | modelscope.svg | ModelScope |
-| 可灵 / Vidu / 海螺 / Sora / Veo（视频适配预留）| kling.svg、vidu.svg、hailuo.svg、sora.svg、deepmind.svg | Kling、Vidu、Hailuo、Sora、DeepMind |
+| 可灵 / Vidu / MiniMax 海螺 / Google Veo（视频）| kling.svg、vidu.svg、hailuo.svg、deepmind.svg | Kling、Vidu、Hailuo、DeepMind |
+| 智谱 CogVideoX / 通义万相（视频）| zhipu.svg、bailian.svg | Zhipu、Bailian |
+| Sora（未接入，见上文）| sora.svg | Sora |
 
 自定义和 Fake 选项没有品牌，继续用文字标记。新增预设时在 `providerPresets.ts` 里填 `logo`，单元测试会检查文件存在、单色、无脚本和外链、小于 4 KB。
 

@@ -978,6 +978,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       const duration = normalizeVideoDuration(
         ctx.mediaSettings.videoProvider,
         shot.duration && shot.duration > 0 ? shot.duration : defaultDuration,
+        ctx.mediaSettings.videoModel,
       );
       const videoUrl = await ctx.media.generateVideoUrl({
         prompt: videoPrompt,

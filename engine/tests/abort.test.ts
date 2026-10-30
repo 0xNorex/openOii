@@ -18,6 +18,7 @@ function settings(overrides: Partial<MediaSettings>): MediaSettings {
     videoModel: "test-model",
     enableImageToVideo: false,
     videoMode: "auto",
+    videoRatio: "16:9",
     fakeVideoFixtureUrl: null,
     fakeVideoFixturePath: null,
     doubaoApiKey: null,

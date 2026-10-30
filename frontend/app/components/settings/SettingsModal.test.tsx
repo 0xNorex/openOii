@@ -257,6 +257,33 @@ describe("SettingsModal", () => {
 		});
 	});
 
+	it("选可灵预设切到服务商原生接口，只显示该服务商的协议和原生配置", async () => {
+		const user = userEvent.setup();
+		const item = (key: string, value: string, is_sensitive = false) => ({ key, value, is_sensitive, is_masked: is_sensitive, source: "db" });
+		vi.mocked(configApi.get).mockResolvedValue([
+			item("VIDEO_PROVIDER", "openai"),
+			item("VIDEO_BASE_URL", "https://video-openai.example.com"),
+			item("VIDEO_ENDPOINT", "/videos/generations"),
+			item("VIDEO_MODEL", "muse-video"),
+			item("VIDEO_RATIO", "16:9"),
+		] as never);
+		renderComponent();
+
+		await user.click(await screen.findByRole("tab", { name: /视频服务/ }));
+		await user.click(await screen.findByRole("radio", { name: /可灵 Kling/ }));
+		await openAdvanced();
+
+		await waitFor(() => {
+			expect(screen.getByRole("radio", { name: /可灵 Kling/ })).toHaveAttribute("aria-checked", "true");
+			expect(screen.getByText("服务商原生接口配置")).toBeInTheDocument();
+			expect(screen.getByDisplayValue("https://api-beijing.klingai.com")).toBeInTheDocument();
+		});
+		const protocols = advanced().getAllByRole("radio").map((r) => r.getAttribute("value"));
+		expect(protocols).toContain("kling");
+		expect(protocols).not.toContain("vidu");
+		expect(screen.queryByDisplayValue("/videos/generations")).not.toBeInTheDocument();
+	});
+
 	it("支持 text_provider 小写字段作为回退来源", async () => {
 		const textProviderConfig: ConfigItem[] = [
 			{

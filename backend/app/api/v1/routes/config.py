@@ -21,7 +21,8 @@ from app.schemas.config import (
 from app.services import connection_probe
 from app.services.config_service import ConfigService
 from app.services.connection_probe import ProbeOutcome, describe_error_text, describe_exception
-from app.services.provider_resolution import probe_text_provider
+from app.services.provider_resolution import VIDEO_VENDOR_KEYS, probe_text_provider
+from app.services.video_vendor_probe import probe_video_vendor
 
 router = APIRouter()
 
@@ -94,6 +95,7 @@ _ALLOWED_OVERRIDE_FIELDS = {
     "video_endpoint",
     "video_provider",
     "video_mode",
+    "video_ratio",
     "enable_image_to_video",
     "video_image_mode",
     "video_inline_local_images",
@@ -282,6 +284,14 @@ async def _test_video_connection(settings) -> TestConnectionResponse:
             api_key=settings.doubao_api_key, model=settings.doubao_video_model
         )
         return _probe_response(outcome, "doubao", settings.doubao_video_model)
+    if settings.video_provider in VIDEO_VENDOR_KEYS:
+        outcome = await probe_video_vendor(
+            provider=settings.video_provider,
+            base_url=settings.video_base_url,
+            api_key=settings.video_api_key,
+            model=settings.video_model,
+        )
+        return _probe_response(outcome, settings.video_provider, settings.video_model)
     outcome = await connection_probe.probe_openai_compatible(
         label="视频",
         base_url=settings.video_base_url,

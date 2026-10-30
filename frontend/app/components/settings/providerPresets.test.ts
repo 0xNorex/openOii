@@ -127,6 +127,26 @@ describe("presetConfigValues", () => {
 		expect(presetConfigValues(presetById("image", "fake-image")!)).toEqual({ IMAGE_PROVIDER: "fake" });
 	});
 
+	it("视频服务商原生预设写 VIDEO_* 键，不写接口路径", () => {
+		const vendors = ["kling", "vidu", "zhipu-video", "minimax-video", "wan", "veo"];
+		for (const id of vendors) {
+			const preset = presetById("video", id)!;
+			expect(preset.provider, id).not.toBe("openai");
+			const values = presetConfigValues(preset);
+			expect(values.VIDEO_PROVIDER).toBe(preset.provider);
+			expect(values.VIDEO_MODEL).toBe(preset.defaultModel);
+			expect(values.VIDEO_ENDPOINT, id).toBeUndefined();
+		}
+		expect(presetConfigValues(presetById("video", "kling")!, { regionId: "intl" }).VIDEO_BASE_URL).toBe(
+			"https://api-singapore.klingai.com",
+		);
+		expect(presetConfigValues(presetById("video", "veo")!, { regionId: "project", fields: { projectId: "demo-1" } }).VIDEO_BASE_URL).toBe(
+			"https://us-central1-aiplatform.googleapis.com/v1/projects/demo-1/locations/us-central1",
+		);
+		// Sora（OpenAI Videos API 已于 2026-09-24 关停）不提供预设
+		expect(PROVIDER_PRESETS.video.some((p) => /sora/i.test(p.id + p.defaultModel))).toBe(false);
+	});
+
 	it("Claude 预设走 OpenAI 兼容层，原生 Anthropic 用 ANTHROPIC_* 键", () => {
 		const compat = presetById("text", "anthropic")!;
 		expect(presetConfigValues(compat).TEXT_BASE_URL).toBe("https://api.anthropic.com/v1");

@@ -158,6 +158,10 @@ class Settings(BaseSettings):
         default=False,
         description="是否启用图生视频（分镜视频 I2V 参考图）",
     )
+    video_ratio: str = Field(
+        default="16:9",
+        description="视频画幅（服务商原生接口）：16:9、9:16、1:1 等，不支持的值回落到服务商默认",
+    )
 
     # ============================================
     # 豆包视频生成服务（火山引擎 Ark API）
@@ -202,7 +206,10 @@ class Settings(BaseSettings):
     # 视频服务提供商选择
     video_provider: str = Field(
         default="openai",
-        description="视频服务提供商：openai（OpenAI 兼容接口）、doubao（豆包）或 fake（本地开发/测试）",
+        description=(
+            "视频服务提供商：openai（OpenAI 兼容接口）、doubao（豆包）、kling（可灵）、vidu、"
+            "zhipu（CogVideoX）、minimax（海螺）、dashscope（通义万相）、veo 或 fake（本地开发/测试）"
+        ),
     )
 
     # ============================================
