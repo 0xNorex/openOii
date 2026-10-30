@@ -214,7 +214,7 @@ export function ProjectsPage() {
 					) : (
 						<div className="overflow-hidden rounded-lg border border-line bg-surface">
 							{/* 表头只服务 sm+ 的表格网格；<sm 是卡片式行，表头隐藏 */}
-							<div className={"hidden border-b border-line bg-paper-200/70 py-1.5 label text-ink-muted sm:grid sm:gap-3 sm:px-3 " + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
+							<div className={HEADER_CLASS + (selecting ? ROW_COLS_SELECTING : ROW_COLS)}>
 								{selecting ? <span /> : null}
 								<span>项目</span>
 								<span>状态</span>
@@ -258,6 +258,9 @@ export function ProjectsPage() {
 
 const ROW_COLS = "sm:grid-cols-[minmax(0,1fr)_7rem_7rem_2.75rem]";
 const ROW_COLS_SELECTING = "sm:grid-cols-[2.75rem_minmax(0,1fr)_7rem_7rem_2.75rem]";
+// 真实行与骨架行共用：骨架用同一套网格、内边距和行内元素（文字透明），两者高度天然一致
+const ROW_CLASS = "grid min-h-20 items-start gap-x-2 gap-y-1 px-2 py-3 sm:items-center sm:gap-3 sm:px-3 sm:py-4 ";
+const HEADER_CLASS = "hidden border-b border-line bg-paper-200/70 py-1.5 label text-ink-muted sm:grid sm:gap-3 sm:px-3 ";
 
 function ProjectRow({
 	project,
@@ -277,7 +280,7 @@ function ProjectRow({
 
 	return (
 		// <sm 卡片式三列（勾选｜内容｜删除，状态行落到第二行）；sm+ 维持五列表格网格
-		<article className={"grid min-h-20 items-start gap-x-2 gap-y-1 px-2 py-3 transition-colors duration-fast hover:bg-paper-200/55 sm:items-center sm:gap-3 sm:px-3 sm:py-4 " + (selecting ? "grid-cols-[auto_minmax(0,1fr)_auto] " + ROW_COLS_SELECTING : "grid-cols-[minmax(0,1fr)_auto] " + ROW_COLS)}>
+		<article className={ROW_CLASS + " transition-colors duration-fast hover:bg-paper-200/55 " + (selecting ? "grid-cols-[auto_minmax(0,1fr)_auto] " + ROW_COLS_SELECTING : "grid-cols-[minmax(0,1fr)_auto] " + ROW_COLS)}>
 			{selecting ? (
 			<label className="touch-target flex cursor-pointer items-center justify-center rounded-md hover:bg-paper-200">
 				<input
@@ -341,33 +344,72 @@ function ProjectRow({
 	);
 }
 
-/** 骨架行：沿用表格的列宽与行高，加载完成时版面不跳（DESIGN.md §5 States） */
+/**
+ * 骨架行：与 ProjectRow 同结构（同网格、同字号行盒、同胶囊和按钮尺寸），文字透明、
+ * 换成网点条。数据到达时表头、行高都不变，零布局位移（DESIGN.md §5 States）。
+ */
 function LoadingState() {
 	return (
 		<div
 			className="overflow-hidden rounded-lg border border-line bg-surface"
 			role="status"
 			aria-busy="true"
+			data-testid="projects-skeleton"
 		>
 			<span className="sr-only">正在加载项目…</span>
-			<div className="divide-y divide-ink/10" aria-hidden="true">
-				{[0, 1, 2, 3].map((row) => (
-					<div
-						key={row}
-						className={"grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 px-2 py-3 sm:gap-3 sm:px-3 sm:py-4 " + ROW_COLS}
-					>
-						<div className="min-w-0">
-							<div className="skeleton-line h-3.5 w-2/5" />
-							<div className="skeleton-line mt-2 h-3 w-3/4" />
-							<div className="skeleton-line mt-2 h-3 w-1/4" />
+			<div aria-hidden="true">
+				<div className={HEADER_CLASS + ROW_COLS}>
+					<span>项目</span>
+					<span>状态</span>
+					<span>更新</span>
+					<span className="text-right">操作</span>
+				</div>
+				<div className="divide-y divide-ink/10">
+					{SKELETON_ROWS.map((width, row) => (
+						<div key={row} className={ROW_CLASS + "grid-cols-[minmax(0,1fr)_auto] " + ROW_COLS}>
+							<div className="min-w-0 py-0.5 pr-2">
+								<div className="flex min-w-0 items-center gap-1.5">
+									<span className="skeleton-line h-3.5 w-3.5 shrink-0" />
+									<p className="m-0 text-sm font-bold">
+										<SkeletonText className={width.title} />
+									</p>
+								</div>
+								<p className="m-0 mt-0.5 text-xs">
+									<SkeletonText className={width.story} />
+								</p>
+								<div className="mt-1 flex gap-1.5 text-xs font-semibold">
+									<SkeletonText className="w-8" />
+									<SkeletonText className="w-16" />
+								</div>
+							</div>
+							<div className="col-start-1 row-start-2 flex flex-wrap items-center gap-x-2 gap-y-1 sm:contents">
+								<span className="skeleton-line inline-flex min-h-7 w-16 rounded-full text-xs" />
+								<span className="text-xs">
+									<SkeletonText className="w-20" />
+								</span>
+							</div>
+							<span className="skeleton-line col-start-2 row-start-1 h-8 w-8 justify-self-end sm:col-auto sm:row-auto" />
 						</div>
-						<div className="skeleton-line hidden h-5 w-16 sm:block" />
-						<div className="skeleton-line hidden h-3 w-20 sm:block" />
-						<div className="skeleton-line h-7 w-7 justify-self-end" />
-					</div>
-				))}
+					))}
+				</div>
 			</div>
 		</div>
+	);
+}
+
+const SKELETON_ROWS = [
+	{ title: "w-24", story: "w-3/4" },
+	{ title: "w-20", story: "w-2/3" },
+	{ title: "w-28", story: "w-4/5" },
+	{ title: "w-16", story: "w-3/5" },
+];
+
+/** 一行透明文字撑出真实行盒高度，条本身只占字高的中段 */
+function SkeletonText({ className }: { className: string }) {
+	return (
+		<span className={"skeleton-line inline-block max-w-full align-top text-transparent select-none " + className}>
+			占位
+		</span>
 	);
 }
 
