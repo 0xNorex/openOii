@@ -14,6 +14,8 @@ export interface VideoJobRequest {
   duration: number;
   /** 用户配置的画幅（16:9 等），服务商不支持时由模块自己回落 */
   ratio: string;
+  /** 反向提示词：有原生字段的服务商单独发送（万相、Veo），其它只靠正向提示词里的 Avoid 段 */
+  negativePrompt?: string;
 }
 
 export interface VideoJobHttp {

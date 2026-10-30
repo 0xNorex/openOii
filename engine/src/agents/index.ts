@@ -26,6 +26,8 @@ import {
   buildCharacterPrompt,
   buildShotPrompt,
   buildVideoPrompt,
+  videoNegativePrompt,
+  VIDEO_STYLE_FRONT_LOCK,
   type ResolvedStylePrompt,
 } from "../style.js";
 import type { AiOperation } from "../ai-operation.js";
@@ -1259,9 +1261,9 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       }
       const videoPrompt = (prompt: string): string =>
         imageUrl
-          ? useReferenceBoard
+          ? `${VIDEO_STYLE_FRONT_LOCK} ` + (useReferenceBoard
             ? `The input is a 3x3 reference board. Use the top-center panel as the first frame and the other panels only for character identity and continuity. Generate one full-frame video; do not reproduce the grid. Preserve the comic/anime style and do not redesign characters. ${prompt}`
-            : `Use the provided image as the first-frame visual anchor. Preserve visible characters, outfits, hair colors, scene layout, framing, camera distance, and the 2D comic/anime style. Do not convert it to live-action, photorealistic, hyperrealistic, or realistic 3D footage; do not redesign characters. ${prompt}`
+            : `Use the provided image as the first-frame visual anchor. Preserve visible characters, outfits, hair colors, scene layout, framing, camera distance, and the 2D comic/anime style. Do not convert it to live-action, photorealistic, hyperrealistic, or realistic 3D footage; do not redesign characters. ${prompt}`)
           : prompt;
       // Providers take whole seconds (doubao only 5 or 10); the stored shot
       // duration is the length of the clip that was actually requested.
@@ -1279,6 +1281,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       for (let attempt = 0; ; attempt += 1) {
         videoUrl = await ctx.media.generateVideoUrl({
           prompt: videoPrompt(basePrompt(note)),
+          negativePrompt: ctx.style ? videoNegativePrompt(ctx.style) : undefined,
           imageUrl,
           duration,
         });

@@ -281,6 +281,26 @@ export function buildCharacterPrompt(args: {
 export const ART_STYLE_LOCK =
   "画风锁定：角色造型、头身比、眼睛大小与形状（设定图里的大而可爱的眼睛）、线条和上色方式必须与角色设定图完全一致，全片不改画风，不变写实";
 
+/**
+ * Video models weight the start of the prompt most. Measured on 乌鸦喝水
+ * S04/S06 (2026-10-30): with the lock only in the middle the crow turned into a
+ * realistic raven with small eyes within 2s; leading with this lock plus the
+ * realism negatives kept the round storybook look. A second reference image
+ * (character sheet) made the clip drift away from the first frame instead.
+ */
+export const VIDEO_STYLE_FRONT_LOCK =
+  "画风锁定（最高优先级）：与首帧完全相同的2D手绘插画，相同线条与上色；角色保持设定图里的眼睛大小、脸型和圆润头身比例，从第一帧到最后一帧都不变成写实风格。";
+
+/** What realistic drift looks like in a clip: added to every video negative. */
+const VIDEO_REALISM_NEGATIVE =
+  "realistic animal anatomy, real animal photo, realistic feathers, detailed feather or fur texture, " +
+  "wildlife photography, small beady eyes, macro close-up, photographic lighting";
+
+/** Negative terms for a clip: the style's negatives plus realistic drift. */
+export function videoNegativePrompt(style: ResolvedStylePrompt): string {
+  return [style.negativePrompt, VIDEO_REALISM_NEGATIVE].filter(Boolean).join(", ");
+}
+
 /** The project's visual/prop bible, trimmed for a prompt. */
 function bibleLine(visualBible: string | null | undefined): string {
   const bible = visualBible?.trim();
@@ -338,7 +358,7 @@ export function buildVideoPrompt(args: {
   if (characters.length > 0) parts.push(`Continuity lock: ${VIDEO_CONTINUITY_LOCK}`, ART_STYLE_LOCK);
   const bible = bibleLine(visualBible);
   if (bible) parts.push(bible);
-  parts.push(`Visual style lock: ${style.stylePrompt}`, `Avoid: ${style.negativePrompt}`);
+  parts.push(`Visual style lock: ${style.stylePrompt}`, `Avoid: ${videoNegativePrompt(style)}`);
   const feedback = stripFocusPrefix(userFeedback);
   if (feedback) parts.push(`用户反馈：${feedback}`);
   return parts.join(", ");

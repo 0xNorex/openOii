@@ -93,6 +93,8 @@
 | [通义万相](https://help.aliyun.com/zh/model-studio/text-to-video-api-reference) `dashscope` | ✓ / ✓ | wan2.6 / 2.7：2–15；wan2.5：5 或 10；更早固定 5 | wan2.7 用 `ratio`；旧版用 `size`（720P，wan2.2 为 1080P） | 请求头 `X-DashScope-Async: enable`；图生视频自动把 `-t2v` 换成 `-i2v`；wan2.7 首帧用 `media[{type:first_frame}]`，旧版用 `img_url` |
 | [Google Veo](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/video/generate-videos-from-text) `veo` | ✓ / ✓（仅内联图片） | 4 / 6 / 8 | 16:9、9:16 | **实验性**。走 Vertex AI `predictLongRunning` + `fetchPredictOperation`，不设 `storageUri`，视频字节直接返回并写盘；`ya29.` 开头的密钥按 OAuth 令牌（Bearer）发送，其它按 `x-goog-api-key`（express 模式，是否能调用 Veo 未经验证） |
 
+画风防漂移（所有服务商）：图生视频的提示词**开头**先放「画风锁定（最高优先级）」一句（与首帧相同的 2D 手绘插画、保持设定图的眼睛大小和头身比例），结尾的 `Avoid:` 段在画风反向词之外再加写实漂移词（realistic animal anatomy、wildlife photography、small beady eyes 等）。有原生反向提示词字段的服务商另外单独发送：通义万相 `input.negative_prompt`（[文档](https://help.aliyun.com/zh/model-studio/text-to-video-api-reference)，最多 500 字符）、Veo `parameters.negativePrompt`；其它服务商（可灵 Omni、Vidu、MiniMax、CogVideoX、豆包、OpenAI 兼容网关）没有这个字段，只靠提示词。不额外发送角色设定图：2026-10-30 在乌鸦喝水 S04/S06 上对比，多传一张设定图会让视频偏离首帧构图（首帧本身已经是画风参考）。
+
 未经真实密钥验证的点：`wan2.7-i2v` 这个不带日期的模型名（文档示例是 `wan2.7-i2v-2026-04-25`）；Veo express 模式 API Key；可灵对去前缀 Base64 的接受情况；Vidu 未传 `resolution` / `audio` 时的默认值。
 
 | 分组 | 预设 | 类型 | 地址 | 接口路径 | 推荐模型 | 特殊配置 / 说明 |

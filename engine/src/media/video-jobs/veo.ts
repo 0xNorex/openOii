@@ -33,7 +33,12 @@ export const veo: VideoJobAdapter = {
     }
     const payload = {
       instances: [instance],
-      parameters: { sampleCount: 1, durationSeconds: req.duration, aspectRatio: fitRatio(["16:9", "9:16"], req.ratio) },
+      parameters: {
+        sampleCount: 1,
+        durationSeconds: req.duration,
+        aspectRatio: fitRatio(["16:9", "9:16"], req.ratio),
+        ...(req.negativePrompt ? { negativePrompt: req.negativePrompt } : {}),
+      },
     };
     const body = await readJson({ label }, "提交任务", await http.post(modelUrl(http, req.model, "predictLongRunning"), jsonInit(veoAuth(http), payload)));
     const name = text(body.name);

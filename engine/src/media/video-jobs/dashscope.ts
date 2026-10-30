@@ -33,6 +33,8 @@ export const dashscope: VideoJobAdapter = {
     const fixed = Array.isArray(durations(req.model)) && (durations(req.model) as number[]).length === 1;
     const parameters: Record<string, unknown> = fixed ? {} : { duration: req.duration };
     const input: Record<string, unknown> = { prompt: req.prompt };
+    // 文档：negative_prompt 不超过 500 字符，超出会被截断
+    if (req.negativePrompt) input.negative_prompt = req.negativePrompt.slice(0, 500);
     let model = req.model;
     if (req.image) {
       model = req.model.replace("-t2v", "-i2v");

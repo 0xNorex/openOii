@@ -841,6 +841,7 @@ export class MediaService {
     prompt: string;
     imageUrl?: string | null;
     duration?: number;
+    negativePrompt?: string;
   }): Promise<string> {
     return withAiActivity(this.operation ?? undefined, "视频生成", () =>
       withProviderSpan(
@@ -855,6 +856,7 @@ export class MediaService {
     prompt: string;
     imageUrl?: string | null;
     duration?: number;
+    negativePrompt?: string;
   }): Promise<string> {
     const { prompt } = args;
     if (this.settings.fakeVideoFixtureUrl) return this.settings.fakeVideoFixtureUrl;
@@ -977,7 +979,7 @@ export class MediaService {
    */
   private async generateVendorVideo(
     adapter: VideoJobAdapter,
-    args: { prompt: string; imageUrl?: string | null; duration?: number },
+    args: { prompt: string; imageUrl?: string | null; duration?: number; negativePrompt?: string },
   ): Promise<string> {
     const apiKey = this.settings.videoApiKey;
     if (!apiKey) throw new Error(`${adapter.label}需要 VIDEO_API_KEY`);
@@ -996,6 +998,7 @@ export class MediaService {
       {
         model,
         prompt: args.prompt,
+        negativePrompt: args.negativePrompt,
         image,
         duration: normalizeVideoDuration(adapter.id, args.duration ?? 5, model),
         ratio: this.settings.videoRatio,
