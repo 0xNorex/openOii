@@ -22,6 +22,7 @@ import {
 } from "../llm.js";
 import { normalizeVideoDuration, sniffImageMime, type MediaService } from "../media/media.js";
 import type { MediaSettings } from "../media/media.js";
+import { estimatedSpeechSeconds, type SubtitleSegment } from "../media/subtitles.js";
 import {
   buildCharacterPrompt,
   buildShotPrompt,
@@ -1413,17 +1414,21 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
   const characters = ctx.shared.charactersForProject(ctx.projectId);
   const byId = new Map(characters.map((character) => [character.id, character]));
   const videoUrls: string[] = [];
+  const subtitles = ctx.mediaSettings.subtitleMode ?? "off";
+  const segments: SubtitleSegment[] = [];
+  let filmOffset = 0;
   const worker = new BackendWorker(ctx.signal);
   try {
     for (const shot of shots) {
       const live = ctx.shared.getLiveShot(shot.id);
       if (!live?.video_url) continue;
       let videoUrl = live.video_url;
+      let ttsUrl = live.tts_url;
+      const shotCast = parseJsonColumn(live.character_ids, [] as number[])
+        .map((id) => byId.get(id))
+        .filter((character): character is CharacterRow => character !== undefined);
+      const line = splitDialogueSpeaker(live.dialogue, shotCast, characters);
       if (ctx.media.audioEnabled && !live.tts_url && !live.bgm_type) {
-        const shotCast = parseJsonColumn(live.character_ids, [] as number[])
-          .map((id) => byId.get(id))
-          .filter((character): character is CharacterRow => character !== undefined);
-        const line = splitDialogueSpeaker(live.dialogue, shotCast, characters);
         const speaker = line.speaker;
         let audio: Awaited<ReturnType<BackendWorker["processAudio"]>> | null = null;
         try {
@@ -1465,6 +1470,7 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         }
         if (processedAudio) {
           videoUrl = processedAudio.video_url;
+          ttsUrl = processedAudio.tts_url;
           if (videoUrl !== live.video_url || processedAudio.tts_url || processedAudio.bgm_type) {
             const updated = {
               ...live,
@@ -1503,11 +1509,43 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         }
       }
       videoUrls.push(videoUrl);
+      if (subtitles !== "off") {
+        // 字幕跟着配音走：配音从镜头开头开始，时长取配音本身（被镜头截断的部分不算）
+        const clip = (await ctx.media.mediaDuration(videoUrl)) ?? live.duration ?? 5;
+        const spoken = line.text?.trim() ?? "";
+        if (spoken) {
+          const voice = ctx.mediaSettings.ttsEnabled ? await ctx.media.mediaDuration(ttsUrl) : null;
+          const window = Math.min(clip, voice ?? estimatedSpeechSeconds(spoken));
+          segments.push({ offset: filmOffset, window, text: spoken });
+        }
+        filmOffset += clip;
+      }
     }
   } finally {
     await worker.close();
   }
-  const mergedUrl = await ctx.media.mergeVideos(videoUrls);
+  let mergedUrl = await ctx.media.mergeVideos(videoUrls);
+  if (subtitles !== "off") {
+    try {
+      const subtitled = await ctx.media.addSubtitles(
+        mergedUrl,
+        segments,
+        subtitles,
+        ctx.mediaSettings.subtitleFont ?? "Smiley Sans",
+      );
+      if (subtitled) {
+        mergedUrl = subtitled.videoUrl;
+        await ctx.emitter.sendMessage(
+          "compose",
+          `已加上 ${subtitled.cues} 条${subtitles === "burn" ? "烧录" : "软"}字幕（按剧本台词生成）。字幕文件：${subtitled.srtUrl}`,
+        );
+      }
+    } catch (error) {
+      if (ctx.signal.aborted) throw error;
+      const reason = error instanceof Error ? error.message : String(error);
+      await ctx.emitter.sendMessage("compose", `⚠️ 字幕没加上（${reason.slice(0, 120)}），成片先不带字幕。`);
+    }
+  }
   ctx.emitter.commit("project_updated", () => {
     ctx.shared.updateProject(ctx.projectId, { video_url: mergedUrl, status: "ready" });
     return { project: { id: ctx.projectId, video_url: mergedUrl, status: "ready" } };

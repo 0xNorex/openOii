@@ -265,6 +265,14 @@ class Settings(BaseSettings):
         default="static/bgm",
         description="BGM 文件目录（相对于 app 目录）",
     )
+    subtitle_mode: str = Field(
+        default="off",
+        description="字幕：off（不加）、soft（软字幕，播放器里可关）、burn（烧进画面）；项目里可单独选",
+    )
+    subtitle_font: str = Field(
+        default="Smiley Sans",
+        description="烧录字幕用的字体名（系统里没装时自动换成 Noto Sans CJK SC 等中文字体）",
+    )
 
     # ============================================
     # 思考链可视化

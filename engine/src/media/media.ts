@@ -40,6 +40,15 @@ import {
 } from "../ai-operation.js";
 import { operationSpanAttributes, withProviderSpan } from "../observability.js";
 import {
+  buildSubtitleCues,
+  renderAss,
+  renderSrt,
+  subtitleLayout,
+  subtitleMode,
+  type SubtitleMode,
+  type SubtitleSegment,
+} from "./subtitles.js";
+import {
   VIDEO_JOB_ADAPTERS,
   isVideoJobProvider,
   runVideoJob,
@@ -89,6 +98,9 @@ export interface MediaSettings {
   ttsVolume: number;
   bgmVolume: number;
   bgmDirectory: string;
+  /** 字幕：off / soft / burn（项目可覆盖），默认 off */
+  subtitleMode?: SubtitleMode;
+  subtitleFont?: string;
   textProvider: string;
   staticDir: string;
 }
@@ -307,6 +319,12 @@ export function resolveMediaSettings(
     bgmDirectory: policy && "bgm_directory" in policy
       ? String(policy.bgm_directory ?? "static/bgm")
       : pick("BGM_DIRECTORY", "BGM_DIRECTORY", "static/bgm"),
+    subtitleMode: subtitleMode(
+      policy && "subtitle_mode" in policy ? policy.subtitle_mode : pick("SUBTITLE_MODE", "SUBTITLE_MODE", "off"),
+    ),
+    subtitleFont: policy && "subtitle_font" in policy
+      ? String(policy.subtitle_font ?? "Smiley Sans") || "Smiley Sans"
+      : pick("SUBTITLE_FONT", "SUBTITLE_FONT", "Smiley Sans"),
     textProvider,
     staticDir,
   };
@@ -1245,6 +1263,92 @@ export class MediaService {
       return this.publishManagedFile(tempOutput, ".mp4");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  /** Duration in seconds of a local media file (clip or voice track); null when unknown. */
+  async mediaDuration(url: string | null | undefined): Promise<number | null> {
+    if (!url) return null;
+    const path = this.localPathFor(url);
+    if (!path || !existsSync(path)) return null;
+    try {
+      const probe = await execFileAsync(
+        "ffprobe",
+        ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+        { signal: this.abortSignal ?? undefined },
+      );
+      const duration = Number(String(probe.stdout).trim());
+      return Number.isFinite(duration) && duration > 0 ? duration : null;
+    } catch (error) {
+      if (this.abortSignal?.aborted) throw error;
+      return null;
+    }
+  }
+
+  /**
+   * Add script subtitles to the merged film. soft = a mov_text track players can
+   * switch off; burn = rendered into the picture with libass (brand font, safe
+   * area). Also publishes the .srt. Returns null when there is nothing to add.
+   */
+  async addSubtitles(
+    videoUrl: string,
+    segments: SubtitleSegment[],
+    mode: SubtitleMode,
+    font: string,
+  ): Promise<{ videoUrl: string; srtUrl: string; cues: number } | null> {
+    if (mode === "off") return null;
+    const source = this.localPathFor(videoUrl);
+    if (!source || !existsSync(source)) throw new Error("字幕：找不到本地成片文件");
+    const signal = this.abortSignal ?? undefined;
+    const probe = await execFileAsync(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", source],
+      { signal },
+    );
+    const [width, height] = String(probe.stdout).trim().split("x").map(Number);
+    if (!width || !height) throw new Error("字幕：读不到画面尺寸");
+    const { maxChars } = subtitleLayout(width, height);
+    const cues = buildSubtitleCues(segments, maxChars);
+    if (cues.length === 0) return null;
+    const outputDir = join(this.settings.staticDir, "videos");
+    mkdirSync(outputDir, { recursive: true });
+    const dir = mkdtempSync(join(outputDir, ".subs-"));
+    try {
+      const srt = renderSrt(cues);
+      const srtPath = join(dir, "subs.srt");
+      writeFileSync(srtPath, srt, "utf8");
+      const out = join(dir, "output.mp4");
+      if (mode === "soft") {
+        await execFileAsync(
+          "ffmpeg",
+          [
+            "-v", "error", "-y", "-i", source, "-i", srtPath,
+            "-map", "0:v", "-map", "0:a?", "-map", "1:0",
+            "-c:v", "copy", "-c:a", "copy", "-c:s", "mov_text",
+            "-metadata:s:s:0", "language=chi", "-metadata:s:s:0", "title=中文",
+            "-movflags", "+faststart", out,
+          ],
+          { signal },
+        );
+      } else {
+        const assPath = join(dir, "subs.ass");
+        writeFileSync(assPath, renderAss(cues, width, height, font), "utf8");
+        await execFileAsync(
+          "ffmpeg",
+          [
+            "-v", "error", "-y", "-i", source,
+            "-vf", `ass=${assPath}`,
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p",
+            "-c:a", "copy", "-movflags", "+faststart", out,
+          ],
+          { signal },
+        );
+      }
+      if (this.abortSignal?.aborted) throw new Error("run cancelled");
+      const srtUrl = this.writeManagedFile(srt, ".srt");
+      return { videoUrl: this.publishManagedFile(out, ".mp4"), srtUrl, cues: cues.length };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   }
 

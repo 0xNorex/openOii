@@ -70,6 +70,8 @@ const LABELS: Record<string, string> = {
 	TTS_MODEL: "配音模型",
 	TTS_DEFAULT_VOICE: "默认配音音色",
 	TTS_VOLUME: "配音音量",
+	SUBTITLE_MODE: "字幕",
+	SUBTITLE_FONT: "字幕字体",
 	BGM_ENABLED: "背景音乐",
 	BGM_VOLUME: "背景音乐音量",
 	BGM_DIRECTORY: "背景音乐目录",

@@ -71,6 +71,8 @@ async def _effective_provider_config(session: AsyncSession, settings: Settings) 
         "VIDEO_RATIO": pick("VIDEO_RATIO"),
         "TTS_ENABLED": pick("TTS_ENABLED"),
         "BGM_ENABLED": pick("BGM_ENABLED"),
+        "SUBTITLE_MODE": pick("SUBTITLE_MODE"),
+        "SUBTITLE_FONT": pick("SUBTITLE_FONT"),
         "CRITIQUE_ENABLED": pick("CRITIQUE_ENABLED"),
         "CRITIQUE_SCORE_THRESHOLD": pick("CRITIQUE_SCORE_THRESHOLD"),
         "CRITIQUE_MAX_ROUNDS": pick("CRITIQUE_MAX_ROUNDS"),
@@ -269,6 +271,8 @@ async def build_run_context_snapshot(
             "bgm_enabled": _project_choice(project, "bgm", provider_config["BGM_ENABLED"]),
             "bgm_volume": provider_config["BGM_VOLUME"],
             "bgm_directory": provider_config["BGM_DIRECTORY"],
+            "subtitle_mode": _project_choice(project, "subtitles", provider_config["SUBTITLE_MODE"]),
+            "subtitle_font": provider_config["SUBTITLE_FONT"],
         },
         "skill": (
             {

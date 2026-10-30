@@ -90,6 +90,8 @@ export function getConfigDescription(key: string): string {
 		TTS_BASE_URL: "云端配音的基础地址，选预设会自动填好。",
 		TTS_API_KEY: "云端配音的密钥；Edge 免费配音不需要。",
 		TTS_MODEL: "云端配音的模型（豆包填资源 ID）。",
+		SUBTITLE_MODE: "默认字幕方式：off 不加、soft 软字幕（播放器里可关）、burn 烧进画面；每个项目可单独选。",
+		SUBTITLE_FONT: "烧录字幕的字体名，默认 Smiley Sans（得意黑）；系统没装时自动换成其它中文字体。",
 		BGM_ENABLED: "是否启用背景音乐合成；关闭后最终视频不叠加 BGM。",
 		BGM_VOLUME: "背景音乐音量，范围 0-1；数值越大 BGM 越响。",
 		TTS_VOLUME: "TTS 人声音量，范围 0-1；数值越大对白越响。",

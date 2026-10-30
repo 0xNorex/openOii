@@ -28,8 +28,8 @@ export const TAB_CONFIG: Record<string, { icon: IconName; title: string; desc: s
 	},
 	tts: {
 		icon: "microphone",
-		title: "配音",
-		desc: "成片里的台词配音：默认 Edge 免费配音，也可以换成云端服务商；每个项目可以在属性面板里单独关掉",
+		title: "配音与字幕",
+		desc: "成片里的台词配音（默认 Edge 免费配音，也可以换成云端服务商）和字幕；每个项目可以在属性面板里单独开关",
 	},
 };
 
@@ -198,6 +198,11 @@ PROVIDER_TABS.tts = {
 		{
 			title: "配音选项",
 			match: (k) => k.startsWith("tts_") && k !== "tts_provider" && !TTS_LINK.includes(k),
+		},
+		{
+			title: "字幕",
+			match: (k) => k.startsWith("subtitle_"),
+			note: "字幕按剧本台词生成，时间跟着配音走；soft 是播放器里可以关的字幕轨，burn 直接画进画面。",
 		},
 	],
 };

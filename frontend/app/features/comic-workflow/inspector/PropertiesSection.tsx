@@ -121,10 +121,18 @@ const TOGGLE_OPTIONS = [
 	["off", "关"],
 ] as const;
 
+const SUBTITLE_OPTIONS = [
+	["default", "跟随设置"],
+	["off", "不要字幕"],
+	["soft", "软字幕（可关）"],
+	["burn", "烧进画面"],
+] as const;
+type SubtitleChoice = (typeof SUBTITLE_OPTIONS)[number][0];
+
 const toToggle = (value: boolean | null | undefined): Toggle => (value == null ? "default" : value ? "on" : "off");
 const fromToggle = (value: Toggle): boolean | null => (value === "default" ? null : value === "on");
 
-/** 成片选项：配音 / 背景音乐。只影响之后的合成，运行中也可以改（下次运行生效）。 */
+/** 成片选项：配音 / 字幕 / 背景音乐。只影响之后的合成，运行中也可以改（下次运行生效）。 */
 function MediaOptionsForm({ projectId, project }: { projectId: number; project: Project }) {
 	const queryClient = useQueryClient();
 	const [saving, setSaving] = useState(false);
@@ -162,6 +170,13 @@ function MediaOptionsForm({ projectId, project }: { projectId: number; project: 
 				options={TOGGLE_OPTIONS}
 				disabled={saving}
 				onChange={(value) => save({ tts: fromToggle(value) })}
+			/>
+			<SelectInput<SubtitleChoice>
+				label="字幕"
+				value={current.subtitles ?? "default"}
+				options={SUBTITLE_OPTIONS}
+				disabled={saving}
+				onChange={(value) => save({ subtitles: value === "default" ? null : value })}
 			/>
 			<SelectInput
 				label="背景音乐"
