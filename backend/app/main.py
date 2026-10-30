@@ -11,13 +11,13 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.db.session import init_db
 from app.exceptions import AppException
+from app.http_cache import JsonGZipMiddleware, MediaStaticFiles
 from app.ws.manager import ws_manager
 
 logger = logging.getLogger(__name__)
@@ -77,6 +77,15 @@ _HTTP_STATUS_CODES: dict[int, str] = {
 }
 _RETRYABLE_HTTP_STATUSES = {408, 429, 500, 502, 503, 504}
 
+_TAIL_ACTIVE_POLL_S = 0.25
+_TAIL_IDLE_POLL_S = 1.0
+_TAIL_IDLE_AFTER_POLLS = 8
+
+
+def _tail_poll_interval(idle_polls: int) -> float:
+    """WS event-tail cadence: fast while rows arrive, 1s once ~2s have been empty."""
+    return _TAIL_IDLE_POLL_S if idle_polls >= _TAIL_IDLE_AFTER_POLLS else _TAIL_ACTIVE_POLL_S
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -90,8 +99,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(JsonGZipMiddleware)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+    app.mount("/static", MediaStaticFiles(directory=str(STATIC_DIR)), name="static")
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
@@ -282,6 +292,7 @@ def create_app() -> FastAPI:
         from sqlalchemy import text
 
         last_seq = after_seq
+        idle_polls = 0
         try:
             while True:
                 async with async_session_maker() as session:
@@ -320,8 +331,11 @@ def create_app() -> FastAPI:
                         event_type=etype,
                         data=data if isinstance(data, dict) else {},
                     )
-                # Short enough that live llm_stream previews (200ms frames) read as streaming.
-                await asyncio.sleep(0.25)
+                # Short enough that live llm_stream previews (200ms frames) read as streaming
+                # while events flow; an idle tab (no run, or parked at a gate) backs off to 1s
+                # after ~2s of empty polls instead of querying 4x/s forever.
+                idle_polls = 0 if rows else idle_polls + 1
+                await asyncio.sleep(_tail_poll_interval(idle_polls))
         except asyncio.CancelledError:
             return
         except Exception:  # noqa: BLE001

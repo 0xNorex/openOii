@@ -8,11 +8,17 @@ from __future__ import annotations
 import io
 import logging
 
-import cv2
-import numpy as np
 from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+# cv2 / numpy 只在真正裁脸时才导入：它们约占后端启动时间 80ms，而多数进程从不裁脸。
+def _cv():
+    import cv2
+    import numpy as np
+
+    return cv2, np
+
 
 # InsightFace 模型首次加载会自动下载 buffalo_l 模型（~300MB）
 # 后续使用从缓存读取
@@ -66,6 +72,7 @@ def detect_faces(image_bytes: bytes) -> list[dict]:
         return []
 
     # bytes → numpy array
+    cv2, np = _cv()
     img_array = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
     if img_array is None:
         return []
@@ -107,6 +114,7 @@ def crop_face_from_image(
     x1, y1, x2, y2 = [int(v) for v in best_face["bbox"]]
 
     # 解码原图
+    cv2, np = _cv()
     img_array = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
     if img_array is None:
         return None

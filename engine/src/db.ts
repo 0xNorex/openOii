@@ -109,7 +109,6 @@ export class EngineDatabase {
     return Number(info.lastInsertRowid);
   }
 
-  /** Keep only the final frame of one `llm_stream` (see pipeline/llm-stream.ts). */
   /** `llm_stream` frames are snapshots: keep the newest, plus error frames. */
   compactStreamEvents(runId: number, keepSeq: number): void {
     this.db

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
@@ -500,15 +500,24 @@ async def _restore_previous_version(
     return changed
 
 
+_UNSET: Any = object()
+
+
 async def _settle_stopped_run(
-    *, session: AsyncSession, ws: ConnectionManager | None, project_id: int
+    *,
+    session: AsyncSession,
+    ws: ConnectionManager | None,
+    project_id: int,
+    latest: AgentRun | None = _UNSET,
 ) -> None:
     """A stopped regenerate returns the project to its last finished version.
 
     The engine terminalises a stop on its own schedule, so this runs on the next
     read after the run is cancelled (and right away when the API cancels it).
+    Callers that already loaded the latest terminal run pass it as ``latest``.
     """
-    latest = await _latest_run_for_project(session, project_id, _TERMINAL_RUN_STATUS_TUPLE)
+    if latest is _UNSET:
+        latest = await _latest_run_for_project(session, project_id, _TERMINAL_RUN_STATUS_TUPLE)
     if latest is None or latest.status != "cancelled":
         return
     await _restore_previous_version(session=session, ws=ws, run=latest, reason="stopped")
@@ -618,11 +627,12 @@ async def get_current_run(
             state="active",
         )
 
-    await _settle_stopped_run(session=session, ws=ws, project_id=project_id)
-    resumable_run = (
-        _surface_recoverable(newly_recoverable)
-        if newly_recoverable is not None
-        else await _latest_recoverable_run(session, project_id)
+    # One read of the latest terminal run serves both the stop settlement and the
+    # recoverable surface (this endpoint is polled; it used to load it twice).
+    latest_terminal = await _latest_run_for_project(session, project_id, _TERMINAL_RUN_STATUS_TUPLE)
+    await _settle_stopped_run(session=session, ws=ws, project_id=project_id, latest=latest_terminal)
+    resumable_run = _surface_recoverable(
+        newly_recoverable if newly_recoverable is not None else latest_terminal
     )
     if resumable_run is not None:
         return await build_recovery_control_surface(
