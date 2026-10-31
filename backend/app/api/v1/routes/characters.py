@@ -124,7 +124,10 @@ async def regenerate_character(
         description=payload.description,
         image_url=payload.image_url,
     )
-    await invalidate_character_downstream_outputs(session, project, character_id)
+    # Edits apply now and make the cut stale; a plain redraw only does once the
+    # engine commits the new image (it marks the project superseded then).
+    if payload.description is not None or payload.image_url is not None:
+        await invalidate_character_downstream_outputs(session, project, character_id)
     await commit_versioned(session, character, entity="character")
     await session.refresh(character)
     await session.refresh(project)

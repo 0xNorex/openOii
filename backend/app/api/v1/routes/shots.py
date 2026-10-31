@@ -18,7 +18,6 @@ from app.services.run_lifecycle import (
     create_local_run,
     project_updated_event,
 )
-from app.services.creative_control import invalidate_shot_clip_output
 from app.services.revision import assert_expected_revision, commit_versioned
 from app.ws.manager import ConnectionManager
 
@@ -194,18 +193,15 @@ async def regenerate_shot(
     except RunConflict as exc:
         raise HTTPException(status_code=409, detail=exc.detail) from exc
 
+    # The current cut stays current until the engine commits the new keyframe
+    # or clip (it marks the project superseded then); a regenerate that fails
+    # leaves nothing changed, so it must not mark the film 已过期.
     if payload.type == "image":
-        project.status = "superseded" if project.video_url else project.status
-        await commit_versioned(session, project, entity="project")
-        await session.refresh(project)
         await ws.send_event(
             project_id, {"type": "shot_updated", "data": {"shot": _shot_read(shot)}}
         )
         stage = "render_shots"
     else:
-        await invalidate_shot_clip_output(session, project)
-        await commit_versioned(session, project, entity="project")
-        await session.refresh(project)
         stage = "compose_videos"
 
     await ws.send_event(project_id, await project_updated_event(session, project))

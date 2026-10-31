@@ -196,7 +196,8 @@ async def test_regenerate_shot(async_client, test_session, monkeypatch):
     await test_session.refresh(project)
     assert shot.video_url == "http://test.com/approved-shot.mp4"
     assert project.video_url == "http://test.com/project-final.mp4"
-    assert project.status == "superseded"
+    # The cut stays current until the engine commits the new clip.
+    assert project.status != "superseded"
 
 
 @pytest.mark.asyncio

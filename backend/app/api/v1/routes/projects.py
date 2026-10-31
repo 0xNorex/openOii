@@ -39,10 +39,6 @@ from app.services.run_lifecycle import (
     create_local_run,
     project_updated_event,
 )
-from app.services.creative_control import (
-    invalidate_shot_clip_output,
-    invalidate_shot_storyboard_outputs,
-)
 from app.services.file_cleaner import get_local_path
 from app.services.project_deletion import delete_project_by_id, delete_projects_by_ids
 from app.services.revision import assert_expected_revision, commit_versioned
@@ -470,15 +466,12 @@ async def fill_empty_shots(
         empty = [s for s in shots if s.id is not None and not s.image_url]
         if not empty:
             raise HTTPException(status_code=400, detail="All shot cells already have images")
-        for shot in empty:
-            await invalidate_shot_storyboard_outputs(session, project, shot)
         stage = "render_shots"
         resource_type = "shot_fill_image"
     else:
         empty = [s for s in shots if s.id is not None and not s.video_url]
         if not empty:
             raise HTTPException(status_code=400, detail="All shot cells already have videos")
-        await invalidate_shot_clip_output(session, project)
         stage = "compose_videos"
         resource_type = "shot_fill_video"
 

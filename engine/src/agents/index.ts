@@ -614,6 +614,7 @@ export async function runRenderCharacters(ctx: StageContext): Promise<void> {
       } catch (error) {
         if (ctx.signal.aborted) throw error;
         console.warn(`Face embedding skipped (character ${character.id})`);
+        await ctx.emitter.sendMessage("render", `⚠️ ${character.name} 的面部特征没算出来（${error instanceof Error ? error.message.slice(0, 120) : String(error).slice(0, 120)}），之后的分镜无法用它核对长相。`);
       }
       const before = ctx.shared.getCharacter(character.id);
       if (!before) continue;
@@ -779,6 +780,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
           } catch (error) {
             if (ctx.signal.aborted) throw error;
             console.warn(`Character references skipped (shot ${shot.id})`);
+            await ctx.emitter.sendMessage("render", `⚠️ ${shotLabel(shot)} 没拿到角色设定图（${error instanceof Error ? error.message.slice(0, 120) : String(error).slice(0, 120)}），这一镜只按文字描述画角色。`);
           }
         }
         if (previousImage) {
@@ -791,6 +793,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
           } catch (error) {
             if (ctx.signal.aborted) throw error;
             console.warn(`Previous keyframe skipped (shot ${shot.id})`);
+            await ctx.emitter.sendMessage("render", `⚠️ ${shotLabel(shot)} 读不到上一镜画面（${error instanceof Error ? error.message.slice(0, 120) : String(error).slice(0, 120)}），这一镜没有沿用上一镜的场景和道具。`);
           }
         }
       }
@@ -1260,6 +1263,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
         } catch (error) {
           if (ctx.signal.aborted) throw error;
           console.warn(`Nine-grid reference skipped (shot ${shot.id})`);
+          await ctx.emitter.sendMessage("render", `⚠️ ${shotLabel(shot)} 的九宫格参考图没拼出来（${error instanceof Error ? error.message.slice(0, 120) : String(error).slice(0, 120)}），改用这一镜的首帧生成视频。`);
         }
       }
       const videoPrompt = (prompt: string): string =>
@@ -1465,6 +1469,7 @@ export async function runComposeMerge(ctx: StageContext): Promise<void> {
         } catch (error) {
           if (ctx.signal.aborted) throw error;
           console.warn(`Audio processing skipped (shot ${shot.id})`);
+          await ctx.emitter.sendMessage("compose", `⚠️ ${shotLabel(live)} 的配音和音效处理失败（${error instanceof Error ? error.message.slice(0, 120) : String(error).slice(0, 120)}），这一镜用原声拼接。`);
         }
         if (ctx.signal.aborted) throw new Error("run cancelled");
         const processedAudio = audio;

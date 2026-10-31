@@ -78,8 +78,9 @@ class ImageComposer:
             try:
                 img = await self._download_image(url)
                 char_imgs.append(img)
-            except Exception:
-                # 下载失败则跳过该角色
+            except Exception as e:
+                # 下载失败则跳过该角色，但要留下记录
+                logger.warning("Character reference download failed, skipping %.80s: %s", url, e)
                 continue
 
         # 如果没有角色图，直接返回分镜图
@@ -247,8 +248,9 @@ class ImageComposer:
         for url in urls:
             try:
                 img = await self._download_image(url)
-            except Exception:
+            except Exception as e:
                 # Hard fallback: solid cell keeps board geometry stable.
+                logger.warning("Grid cell download failed, using a blank cell for %.80s: %s", url, e)
                 img = Image.new("RGB", (cell_size, cell_size), color=(40, 40, 48))
             cells.append(self._fit_into_cell(img, cell_size))
 
@@ -311,7 +313,8 @@ class ImageComposer:
                 buf = io.BytesIO()
                 img.save(buf, format="PNG")
                 char_img_bytes.append(buf.getvalue())
-            except Exception:
+            except Exception as e:
+                logger.warning("Character reference download failed, skipping %.80s: %s", url, e)
                 continue
 
         if not char_imgs:

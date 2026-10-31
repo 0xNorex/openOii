@@ -862,6 +862,27 @@ export class MediaService {
       return url;
     }
     if (!this.registerMedia) return url;
+    // A provider URL expires (or its tunnel goes away), so a copy that fails
+    // is retried and then fails the step loudly instead of keeping the URL.
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.copyProviderMedia(url, kind, providerBaseUrl);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        // Cancellation and the operation deadline are not download errors.
+        if (this.abortSignal?.aborted || /exceeded its deadline|aborted: run cancelled/.test(message)) throw error;
+        if (attempt >= 3) {
+          throw new Error(
+            `生成的${kind === "image" ? "图片" : "视频"}没能存到本地（已重试 3 次：${message.slice(0, 160)}），这一步算失败，点继续会重新生成`,
+          );
+        }
+        console.warn(`media: local copy of ${kind} failed (attempt ${attempt}/3): ${message.slice(0, 200)}`);
+        await this.wait(1000 * attempt);
+      }
+    }
+  }
+
+  private async copyProviderMedia(url: string, kind: "image" | "video", providerBaseUrl: string): Promise<string> {
     let tempDir: string | null = null;
     try {
       tempDir = mkdtempSync(join(this.managedMediaDirectory(), `.${kind}-`));
@@ -882,11 +903,6 @@ export class MediaService {
         extension = IMAGE_EXTENSIONS[mime] ?? ".png";
       }
       return this.publishManagedFile(destination, extension);
-    } catch (error) {
-      if (this.abortSignal?.aborted) throw error;
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`media: keeping remote ${kind} URL, local copy failed: ${message.slice(0, 200)}`);
-      return url;
     } finally {
       if (tempDir) rmSync(tempDir, { recursive: true, force: true });
     }
