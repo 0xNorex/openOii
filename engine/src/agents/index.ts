@@ -759,6 +759,7 @@ export async function runRenderShots(ctx: StageContext): Promise<void> {
             universeStyle: ctx.universeStyle,
             userFeedback: feedback || undefined,
             visualBible,
+            neighbors: { previous: allShots[order - 1]?.description, next: allShots[order + 1]?.description },
           })
         : [
             `分镜首帧：${shot.description}`,
@@ -952,15 +953,27 @@ async function askCritic(
   images: LlmImageInput[],
 ): Promise<{ verdict: CriticVerdict | null; failure: string }> {
   let data: Record<string, unknown> | null = null;
-  try {
-    data = await callLlm(ctx, "critic", systemPrompt, prompt, 1024, {
-      validate: OUTPUT_SHAPES.critique,
-      images,
-    });
-  } catch (error) {
-    if (ctx.signal.aborted) throw error;
-    return { verdict: null, failure: error instanceof Error ? error.message : String(error) };
+  // A shot review passes only on its story checks; a reply that skips them
+  // (small vision models often fall back to the bare score format) is asked
+  // once more instead of passing on the score alone.
+  const wantsChecks = prompt.includes(SHOT_CHECK_OUTPUT);
+  for (let ask = 0; ask < (wantsChecks ? 2 : 1); ask += 1) {
+    try {
+      data = await callLlm(
+        ctx,
+        "critic",
+        systemPrompt,
+        ask === 0 ? prompt : `${prompt}\n上一次回答缺少 checks。必须给出 checks 里全部 5 项的 true/false。`,
+        1024,
+        { validate: OUTPUT_SHAPES.critique, images },
+      );
+    } catch (error) {
+      if (ctx.signal.aborted) throw error;
+      return { verdict: null, failure: error instanceof Error ? error.message : String(error) };
+    }
+    if (isRecord(data.checks)) break;
   }
+  if (!data) return { verdict: null, failure: "" };
   const score = critiqueScore(data);
   if (score === null) return { verdict: null, failure: "" };
   const rawDimensions = isRecord(data.dimensions) ? data.dimensions : {};
@@ -983,7 +996,11 @@ async function askCritic(
       issues: Array.isArray(data.issues) ? data.issues.map(String) : [],
       suggestions: Array.isArray(data.suggestions) ? data.suggestions.map(String) : [],
       failedChecks,
-      passed: score >= ctx.critiqueScoreThreshold && failedChecks.length === 0,
+      // Without checks, a reported issue is the only story signal left.
+      passed:
+        score >= ctx.critiqueScoreThreshold &&
+        failedChecks.length === 0 &&
+        !(wantsChecks && !isRecord(data.checks) && Array.isArray(data.issues) && data.issues.length > 0),
     },
     failure: "",
   };
@@ -1041,11 +1058,12 @@ export async function runCritique(
   ctx: StageContext,
   entityType: "character" | "shot",
 ): Promise<CritiqueOutcome> {
-  const entities: Array<CharacterRow | ShotRow> =
-    entityType === "character"
-      ? ctx.shared.charactersForProject(ctx.projectId)
-      : ctx.shared.shotsForProject(ctx.projectId);
-  const allShots = entityType === "shot" ? (entities as ShotRow[]) : [];
+  const allShots = entityType === "shot" ? ctx.shared.shotsForProject(ctx.projectId) : [];
+  // A targeted redraw (or a critique redo) reviews only the entities it drew.
+  const targets = entityType === "character" ? ctx.targetCharacterIds : ctx.targetShotIds;
+  const entities: Array<CharacterRow | ShotRow> = (
+    entityType === "character" ? ctx.shared.charactersForProject(ctx.projectId) : allShots
+  ).filter((entity) => !targets?.length || targets.includes(entity.id));
   const rounds = entityType === "character" ? ctx.critiqueRounds.characters : ctx.critiqueRounds.shots;
   const down = entities.length > 0 ? await visionUnavailable(ctx) : null;
   if (down) {
@@ -1232,6 +1250,7 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
       const boundCharacters = parseJsonColumn(shot.character_ids, [] as number[])
         .map((id) => byId.get(id))
         .filter((character): character is CharacterRow => character !== undefined);
+      const shotOrder = allShots.findIndex((item) => item.id === shot.id);
       const basePrompt = (note: string): string => {
         const feedback = [ctx.userFeedback, note ? `上一版检查未通过，这次必须修正：${note}` : ""]
           .filter(Boolean)
@@ -1243,6 +1262,10 @@ export async function runComposeVideos(ctx: StageContext): Promise<void> {
               style: ctx.style,
               userFeedback: feedback || undefined,
               visualBible,
+              neighbors: {
+                previous: allShots[shotOrder - 1]?.description,
+                next: allShots[shotOrder + 1]?.description,
+              },
             })
           : [shot.prompt || shot.description, feedback].filter(Boolean).join("\n");
       };

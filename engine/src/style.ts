@@ -301,6 +301,45 @@ export function videoNegativePrompt(style: ResolvedStylePrompt): string {
   return [style.negativePrompt, VIDEO_REALISM_NEGATIVE].filter(Boolean).join(", ");
 }
 
+const STATE_MARK = "\n画面状态：";
+
+/** A planned shot's end state ("<action>\n画面状态：<end state>"), or "". */
+function endState(description: string | null | undefined): string {
+  const text = description ?? "";
+  const at = text.indexOf(STATE_MARK);
+  return at < 0 ? "" : text.slice(at + STATE_MARK.length).trim();
+}
+
+/** Neighbouring shots' descriptions, so a shot's start/end state can be locked. */
+export interface ShotNeighbors {
+  previous?: string | null;
+  next?: string | null;
+}
+
+/**
+ * Hard story-state constraints for one shot. The start is the previous shot's
+ * end state, the end is this shot's own; the next shot's end state is what the
+ * model must not run ahead to (counts and levels drift first otherwise).
+ */
+function stateLock(
+  description: string,
+  neighbors: ShotNeighbors | undefined,
+  kind: "keyframe" | "clip",
+): { lock: string; avoid: string } {
+  const start = endState(neighbors?.previous);
+  const end = endState(description);
+  const next = endState(neighbors?.next);
+  const lines =
+    kind === "keyframe"
+      ? [start ? `首帧状态（硬性要求）：${start}` : ""]
+      : [
+          start ? `本镜开始时（硬性要求）：${start}` : "",
+          end ? `本镜结束时（硬性要求）：${end}，停在这个状态` : "",
+        ];
+  const avoid = next && next !== end ? `下一镜的状态（${next}）` : "";
+  return { lock: lines.filter(Boolean).join("；"), avoid };
+}
+
 /** The project's visual/prop bible, trimmed for a prompt. */
 function bibleLine(visualBible: string | null | undefined): string {
   const bible = visualBible?.trim();
@@ -314,9 +353,11 @@ export function buildShotPrompt(args: {
   universeStyle?: string;
   userFeedback?: string | null;
   visualBible?: string | null;
+  neighbors?: ShotNeighbors;
 }): string {
   const { shot, characters, style, universeStyle, userFeedback, visualBible } = args;
-  const parts: string[] = [(shot.image_prompt || shot.description).trim()];
+  const state = stateLock(shot.description, args.neighbors, "keyframe");
+  const parts: string[] = [(shot.image_prompt || shot.description).trim(), state.lock];
   for (const character of characters) {
     const bible = buildCharacterBible(character);
     if (bible) parts.push(`Character ${character.name}: ${bible}`);
@@ -330,7 +371,8 @@ export function buildShotPrompt(args: {
   const feedback = stripFocusPrefix(userFeedback);
   if (feedback) parts.push(`用户反馈：${feedback}`);
   const prompt = parts.filter(Boolean).join(", ");
-  return style.negativePrompt ? `${prompt} || negative: ${style.negativePrompt}` : prompt;
+  const negative = [style.negativePrompt, state.avoid].filter(Boolean).join(", ");
+  return negative ? `${prompt} || negative: ${negative}` : prompt;
 }
 
 export function buildVideoPrompt(args: {
@@ -339,14 +381,13 @@ export function buildVideoPrompt(args: {
   style: ResolvedStylePrompt;
   userFeedback?: string | null;
   visualBible?: string | null;
+  neighbors?: ShotNeighbors;
 }): string {
   const { shot, characters, style, userFeedback, visualBible } = args;
-  const parts = [(shot.prompt || shot.description).trim()];
-  // The planned end state is where the clip stops; later beats belong to later shots.
-  const stateAt = shot.description.indexOf("\n画面状态：");
-  if (shot.prompt && stateAt >= 0) {
-    parts.push(`结束画面：${shot.description.slice(stateAt + "\n画面状态：".length).trim()}，停在这个状态，不要演出后面的情节`);
-  }
+  // The planned start/end state leads the prompt (video models weight the
+  // front most); later beats belong to later shots.
+  const state = stateLock(shot.description, args.neighbors, "clip");
+  const parts = [state.lock, (shot.prompt || shot.description).trim()].filter(Boolean);
   // The user's motion note is the most direct direction for the clip.
   const motion = shot.motion_note?.trim();
   if (motion) parts.push(`Motion: ${motion}`);
@@ -358,7 +399,10 @@ export function buildVideoPrompt(args: {
   if (characters.length > 0) parts.push(`Continuity lock: ${VIDEO_CONTINUITY_LOCK}`, ART_STYLE_LOCK);
   const bible = bibleLine(visualBible);
   if (bible) parts.push(bible);
-  parts.push(`Visual style lock: ${style.stylePrompt}`, `Avoid: ${videoNegativePrompt(style)}`);
+  parts.push(
+    `Visual style lock: ${style.stylePrompt}`,
+    `Avoid: ${[videoNegativePrompt(style), state.avoid].filter(Boolean).join(", ")}`,
+  );
   const feedback = stripFocusPrefix(userFeedback);
   if (feedback) parts.push(`用户反馈：${feedback}`);
   return parts.join(", ");

@@ -147,8 +147,12 @@ describe("targeted runs", () => {
     const types = edb.eventsForRun(runId).map((e) => e.type);
     expect(types).toContain("run_started");
     expect(types).toContain("run_completed");
-    // Only one shot_updated should exist: the scoped one.
-    expect(types.filter((t) => t === "shot_updated")).toHaveLength(1);
+    // Only the scoped shot is updated (its keyframe, then its review status).
+    const updated = edb
+      .eventsForRun(runId)
+      .filter((e) => e.type === "shot_updated")
+      .map((e) => (JSON.parse(String(e.payload)) as { shot: { id: number } }).shot.id);
+    expect(new Set(updated)).toEqual(new Set([target.id]));
     expect(after.find((s) => s.id === target.id)?.image_url).toContain("/static/managed-v1/");
     edb.close();
   }, 60000);

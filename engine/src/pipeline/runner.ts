@@ -901,6 +901,41 @@ export class PipelineRunner {
     return { status: "failed", error: message };
   }
 
+  /**
+   * After a targeted render, review what it drew; true when the critic sent
+   * some of it back, with the targets narrowed to those for the redraw.
+   */
+  private async critiqueTargets(
+    stage: StageId,
+    request: PipelineRequest,
+    ctx: StageContext,
+    emitter: PipelineEmitter,
+  ): Promise<boolean> {
+    if (!ctx.critiqueEnabled || (stage !== "render_shots" && stage !== "render_characters")) return false;
+    const entityType = stage === "render_characters" ? "character" : "shot";
+    const critique: StageId = entityType === "character" ? "critique_character_images" : "critique_shot_images";
+    const outcome = await this.executeStageAttempt(critique, request, emitter, async (attempt, operation) => {
+      ctx.shared = this.shared.withFrozenStageInput(readFrozenStageInput(attempt));
+      ctx.operation = operation;
+      try {
+        return await runCritique(ctx, entityType);
+      } finally {
+        ctx.operation = null;
+        ctx.shared = this.shared;
+      }
+    });
+    this.shared.assertExecutionFence();
+    ctx.critiqueRounds[entityType === "character" ? "characters" : "shots"] += 1;
+    if (!outcome.willRegenerate) return false;
+    if (entityType === "character") ctx.targetCharacterIds = outcome.regenerateEntityIds;
+    else ctx.targetShotIds = outcome.regenerateEntityIds;
+    const kind = entityType === "character" ? "character_image" : "shot_image";
+    const checkpoints = outcome.regenerateEntityIds.map((id) => targetCheckpointStage(kind, id));
+    this.db.deleteCheckpoints(request.runId, checkpoints);
+    for (const checkpoint of checkpoints) ctx.completedTargets.delete(checkpoint);
+    return true;
+  }
+
   /** Run an explicit stage list under the normal fence/attempt discipline. */
   private async runStages(
     request: PipelineRequest,
@@ -948,9 +983,11 @@ export class PipelineRunner {
       },
       ...resolveStageStyleContext(this.db, this.shared.getProject(request.projectId) ?? null),
       critiqueRounds: { characters: 0, shots: 0 },
-      critiqueEnabled: false,
-      critiqueScoreThreshold: 0,
-      critiqueMaxRounds: 0,
+      // A targeted redraw is checked like a full run: keyframes after render,
+      // each clip inside compose_videos.
+      critiqueEnabled: this.boolPolicy("critique_enabled", "CRITIQUE_ENABLED", true),
+      critiqueScoreThreshold: this.numberPolicy("critique_score_threshold", "CRITIQUE_SCORE_THRESHOLD", 6),
+      critiqueMaxRounds: this.numberPolicy("critique_max_rounds", "CRITIQUE_MAX_ROUNDS", 2),
       completionInfo: null,
       willRegenerate: false,
     };
@@ -982,7 +1019,8 @@ export class PipelineRunner {
     }
 
     try {
-      for (const stage of stages) {
+      for (let index = 0; index < stages.length; index += 1) {
+        const stage = stages[index]!;
         this.shared.assertExecutionFence();
         if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
         await this.executeStageAttempt(stage, request, emitter, async (attempt, operation) => {
@@ -1015,6 +1053,7 @@ export class PipelineRunner {
             ctx.shared = this.shared;
           }
         });
+        if (await this.critiqueTargets(stage, request, ctx, emitter)) index -= 1;
       }
       this.shared.assertExecutionFence();
       if (this.shouldCancel(request.runId)) return await this.finishCancelled(request, emitter);
